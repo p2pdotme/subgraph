@@ -1,64 +1,54 @@
 type Circle @entity {
-  id: ID!
-  name: String! # Circle Name
-  circleId: String! # Circle ID
-  owner: String! # Owner Address
-  token: String! # Token Address
+  id: Bytes!
 
-  stake: [CircleStake!]! @derivedFrom(field: "circle")
+  circleId: BigInt!
+  admin: String!
+  currency: Bytes!
+  name: String!
+  communityLink: String!
+  isAutoApprovedPCEnabled: Boolean! 
+
+  metrics: CircleMetrics @relation(name: "circle")
+
+  blockNumber: BigInt! 
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
 }
-
-type CircleStake @entity {
-  id: ID!
-  circleId: String! # Circle ID
-  amount: BigInt! # Staked Amount
-  stakedBy: String! # Staked By Address
-
-  Circle: Circle! @derivedFrom(field: "stake")
-}
-
 
 type Staker @entity {
-  id: ID!
+  id: Bytes!
+
+  staker: String!
+
+  totalStaked: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type StakedOnCircle @entity {
+  id: Bytes!
+
+  circle: Circle!
+  staker: Staker!
   
-  totalStaked: BigInt! # Total Staked Amount
+  amount: BigInt!
 
-  claimableRewards: [StakerClaimableRewards!]! @derivedFrom(field: "staker")
-  earnedRewards: [StakerEarnedRewards!]! @derivedFrom(field: "staker")
-
-  stakedCircles: [String!]! # Staked Circles ids
-}
-
-type StakerEarnedRewards @entity {
-  id: ID!
-  staker: String! # Staker Address
-  circleId: String! # Circle ID
-  earnedRewards: BigInt! # Earned Rewards Amount
-  earnedAt: BigInt! # Earned At
-}
-
-type StakerClaimableRewards @entity {
-  id: ID!
-  staker: String! # Staker Address
-  circleId: String! # Circle ID
-  claimableRewards: BigInt! # Claimable Rewards Amount
-  claimableAt: BigInt! # Claimable At
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
 }
 
 type CircleMetrics @entity {
-  id: ID!
-  circleId: String! # Circle ID
+  id: Bytes!
 
-  circleTotalVolume: BigInt! # Total Volume
+  circle: Circle @relation(name: "metrics")
 
-  totalStaked: BigInt! # Total Staked Amount
-  adminStaked: BigInt! # Admin Staked Amount
+  totalStaked: BigInt!
+  adminStaked: BigInt!
 
-  totalMerchantsCount: BigInt! # Total Merchants Count
-  activeMerchantsCount: BigInt! # Active Merchants Count
-
-  totalDisputesCount: BigInt! # Total Disputes Count
-  pendingDisputesCount: BigInt! # Pending Disputes Count
-  resolvedDisputesCount: BigInt! # Resolved Disputes Count
-  challengedDisputesCount: BigInt! # Challenged Disputes Count
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
 }
