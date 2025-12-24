@@ -1,212 +1,64 @@
-type AdditionalOrderDetails @entity(immutable: true) {
-  id: Bytes!
-  orderId: BigInt! # uint256
-  details_fixedFeePaid: BigInt! # uint64
-  details_tipsPaid: BigInt! # uint64
-  details_acceptedTimestamp: BigInt! # uint128
-  details_paidTimestamp: BigInt! # uint128
-  details_reserved2: BigInt! # uint128
-  details_actualUsdtAmount: BigInt! # uint256
-  details_actualFiatAmount: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type Circle @entity {
+  id: ID!
+  name: String! # Circle Name
+  circleId: String! # Circle ID
+  owner: String! # Owner Address
+  token: String! # Token Address
+
+  stake: [CircleStake!]! @derivedFrom(field: "circle")
 }
 
-type CancelledOrders @entity(immutable: true) {
-  id: Bytes!
-  orderId: BigInt! # uint256
-  _order_amount: BigInt! # uint256
-  _order_fiatAmount: BigInt! # uint256
-  _order_placedTimestamp: BigInt! # uint256
-  _order_completedTimestamp: BigInt! # uint256
-  _order_userCompletedTimestamp: BigInt! # uint256
-  _order_acceptedMerchant: Bytes! # address
-  _order_user: Bytes! # address
-  _order_recipientAddr: Bytes! # address
-  _order_pubkey: String! # string
-  _order_encUpi: String! # string
-  _order_userCompleted: Boolean! # bool
-  _order_status: Int! # uint8
-  _order_orderType: Int! # uint8
-  _order_disputeInfo_raisedBy: Int! # uint8
-  _order_disputeInfo_status: Int! # uint8
-  _order_disputeInfo_redactTransId: BigInt! # uint256
-  _order_disputeInfo_accountNumber: BigInt! # uint256
-  _order_id: BigInt! # uint256
-  _order_userPubKey: String! # string
-  _order_encMerchantUpi: String! # string
-  _order_acceptedAccountNo: BigInt! # uint256
-  _order_assignedAccountNos: [BigInt!]! # uint256[]
-  _order_currency: Bytes! # bytes32
-  _order_preferredPaymentChannelConfigId: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type CircleStake @entity {
+  id: ID!
+  circleId: String! # Circle ID
+  amount: BigInt! # Staked Amount
+  stakedBy: String! # Staked By Address
+
+  Circle: Circle! @derivedFrom(field: "stake")
 }
 
-type MerchantAssignedNewOrder @entity(immutable: true) {
-  id: Bytes!
-  orderId: BigInt! # uint256
-  merchant: Bytes! # address
-  _order_amount: BigInt! # uint256
-  _order_fiatAmount: BigInt! # uint256
-  _order_placedTimestamp: BigInt! # uint256
-  _order_completedTimestamp: BigInt! # uint256
-  _order_userCompletedTimestamp: BigInt! # uint256
-  _order_acceptedMerchant: Bytes! # address
-  _order_user: Bytes! # address
-  _order_recipientAddr: Bytes! # address
-  _order_pubkey: String! # string
-  _order_encUpi: String! # string
-  _order_userCompleted: Boolean! # bool
-  _order_status: Int! # uint8
-  _order_orderType: Int! # uint8
-  _order_disputeInfo_raisedBy: Int! # uint8
-  _order_disputeInfo_status: Int! # uint8
-  _order_disputeInfo_redactTransId: BigInt! # uint256
-  _order_disputeInfo_accountNumber: BigInt! # uint256
-  _order_id: BigInt! # uint256
-  _order_userPubKey: String! # string
-  _order_encMerchantUpi: String! # string
-  _order_acceptedAccountNo: BigInt! # uint256
-  _order_assignedAccountNos: [BigInt!]! # uint256[]
-  _order_currency: Bytes! # bytes32
-  _order_preferredPaymentChannelConfigId: BigInt! # uint256
-  accountNo: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+
+type Staker @entity {
+  id: ID!
+  
+  totalStaked: BigInt! # Total Staked Amount
+
+  claimableRewards: [StakerClaimableRewards!]! @derivedFrom(field: "staker")
+  earnedRewards: [StakerEarnedRewards!]! @derivedFrom(field: "staker")
+
+  stakedCircles: [String!]! # Staked Circles ids
 }
 
-type MerchantReAssignedNewOrder @entity(immutable: true) {
-  id: Bytes!
-  orderId: BigInt! # uint256
-  merchant: Bytes! # address
-  _order_amount: BigInt! # uint256
-  _order_fiatAmount: BigInt! # uint256
-  _order_placedTimestamp: BigInt! # uint256
-  _order_completedTimestamp: BigInt! # uint256
-  _order_userCompletedTimestamp: BigInt! # uint256
-  _order_acceptedMerchant: Bytes! # address
-  _order_user: Bytes! # address
-  _order_recipientAddr: Bytes! # address
-  _order_pubkey: String! # string
-  _order_encUpi: String! # string
-  _order_userCompleted: Boolean! # bool
-  _order_status: Int! # uint8
-  _order_orderType: Int! # uint8
-  _order_disputeInfo_raisedBy: Int! # uint8
-  _order_disputeInfo_status: Int! # uint8
-  _order_disputeInfo_redactTransId: BigInt! # uint256
-  _order_disputeInfo_accountNumber: BigInt! # uint256
-  _order_id: BigInt! # uint256
-  _order_userPubKey: String! # string
-  _order_encMerchantUpi: String! # string
-  _order_acceptedAccountNo: BigInt! # uint256
-  _order_assignedAccountNos: [BigInt!]! # uint256[]
-  _order_currency: Bytes! # bytes32
-  _order_preferredPaymentChannelConfigId: BigInt! # uint256
-  accountNo: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type StakerEarnedRewards @entity {
+  id: ID!
+  staker: String! # Staker Address
+  circleId: String! # Circle ID
+  earnedRewards: BigInt! # Earned Rewards Amount
+  earnedAt: BigInt! # Earned At
 }
 
-type MerchantVolume @entity(immutable: true) {
-  id: Bytes!
-  merchant: Bytes! # address
-  accountNo: BigInt! # uint256
-  dailyVolume: BigInt! # uint256
-  monthlyVolume: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type StakerClaimableRewards @entity {
+  id: ID!
+  staker: String! # Staker Address
+  circleId: String! # Circle ID
+  claimableRewards: BigInt! # Claimable Rewards Amount
+  claimableAt: BigInt! # Claimable At
 }
 
-type MerchantsReAssigned @entity(immutable: true) {
-  id: Bytes!
-  orderId: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
+type CircleMetrics @entity {
+  id: ID!
+  circleId: String! # Circle ID
 
-type OrderCancelledBy @entity(immutable: true) {
-  id: Bytes!
-  orderId: BigInt! # uint256
-  cancelledBy: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
+  circleTotalVolume: BigInt! # Total Volume
 
-type OrderPlaced @entity(immutable: true) {
-  id: Bytes!
-  orderId: BigInt! # uint256
-  user: Bytes! # address
-  merchant: Bytes! # address
-  amount: BigInt! # uint256
-  orderType: Int! # uint8
-  placedTimestamp: BigInt! # uint256
-  _order_amount: BigInt! # uint256
-  _order_fiatAmount: BigInt! # uint256
-  _order_placedTimestamp: BigInt! # uint256
-  _order_completedTimestamp: BigInt! # uint256
-  _order_userCompletedTimestamp: BigInt! # uint256
-  _order_acceptedMerchant: Bytes! # address
-  _order_user: Bytes! # address
-  _order_recipientAddr: Bytes! # address
-  _order_pubkey: String! # string
-  _order_encUpi: String! # string
-  _order_userCompleted: Boolean! # bool
-  _order_status: Int! # uint8
-  _order_orderType: Int! # uint8
-  _order_disputeInfo_raisedBy: Int! # uint8
-  _order_disputeInfo_status: Int! # uint8
-  _order_disputeInfo_redactTransId: BigInt! # uint256
-  _order_disputeInfo_accountNumber: BigInt! # uint256
-  _order_id: BigInt! # uint256
-  _order_userPubKey: String! # string
-  _order_encMerchantUpi: String! # string
-  _order_acceptedAccountNo: BigInt! # uint256
-  _order_assignedAccountNos: [BigInt!]! # uint256[]
-  _order_currency: Bytes! # bytes32
-  _order_preferredPaymentChannelConfigId: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
+  totalStaked: BigInt! # Total Staked Amount
+  adminStaked: BigInt! # Admin Staked Amount
 
-type SellOrderUpiSet @entity(immutable: true) {
-  id: Bytes!
-  orderId: BigInt! # uint256
-  user: Bytes! # address
-  _order_amount: BigInt! # uint256
-  _order_fiatAmount: BigInt! # uint256
-  _order_placedTimestamp: BigInt! # uint256
-  _order_completedTimestamp: BigInt! # uint256
-  _order_userCompletedTimestamp: BigInt! # uint256
-  _order_acceptedMerchant: Bytes! # address
-  _order_user: Bytes! # address
-  _order_recipientAddr: Bytes! # address
-  _order_pubkey: String! # string
-  _order_encUpi: String! # string
-  _order_userCompleted: Boolean! # bool
-  _order_status: Int! # uint8
-  _order_orderType: Int! # uint8
-  _order_disputeInfo_raisedBy: Int! # uint8
-  _order_disputeInfo_status: Int! # uint8
-  _order_disputeInfo_redactTransId: BigInt! # uint256
-  _order_disputeInfo_accountNumber: BigInt! # uint256
-  _order_id: BigInt! # uint256
-  _order_userPubKey: String! # string
-  _order_encMerchantUpi: String! # string
-  _order_acceptedAccountNo: BigInt! # uint256
-  _order_assignedAccountNos: [BigInt!]! # uint256[]
-  _order_currency: Bytes! # bytes32
-  _order_preferredPaymentChannelConfigId: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  totalMerchantsCount: BigInt! # Total Merchants Count
+  activeMerchantsCount: BigInt! # Active Merchants Count
+
+  totalDisputesCount: BigInt! # Total Disputes Count
+  pendingDisputesCount: BigInt! # Pending Disputes Count
+  resolvedDisputesCount: BigInt! # Resolved Disputes Count
+  challengedDisputesCount: BigInt! # Challenged Disputes Count
 }
