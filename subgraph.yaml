@@ -1,0 +1,50 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: OrderFlow
+    network: mainnet
+    source:
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      abi: OrderFlow
+      startBlock: 200000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - AdditionalOrderDetails
+        - CancelledOrders
+        - MerchantAssignedNewOrder
+        - MerchantReAssignedNewOrder
+        - MerchantVolume
+        - MerchantsReAssigned
+        - OrderCancelledBy
+        - OrderPlaced
+        - SellOrderUpiSet
+      abis:
+        - name: OrderFlow
+          file: ./abis/OrderFlow.json
+      eventHandlers:
+        - event: AdditionalOrderDetails(indexed uint256,(uint64,uint64,uint128,uint128,uint128,uint256,uint256))
+          handler: handleAdditionalOrderDetails
+        - event: CancelledOrders(indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256))
+          handler: handleCancelledOrders
+        - event: MerchantAssignedNewOrder(indexed uint256,indexed address,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256),uint256)
+          handler: handleMerchantAssignedNewOrder
+        - event: MerchantReAssignedNewOrder(indexed uint256,indexed address,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256),uint256)
+          handler: handleMerchantReAssignedNewOrder
+        - event: MerchantVolume(indexed address,uint256,uint256,uint256)
+          handler: handleMerchantVolume
+        - event: MerchantsReAssigned(indexed uint256)
+          handler: handleMerchantsReAssigned
+        - event: OrderCancelledBy(indexed uint256,address)
+          handler: handleOrderCancelledBy
+        - event: OrderPlaced(indexed uint256,indexed address,indexed address,uint256,uint8,uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256))
+          handler: handleOrderPlaced
+        - event: SellOrderUpiSet(indexed uint256,indexed address,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256))
+          handler: handleSellOrderUpiSet
+      file: ./src/order-flow.ts
