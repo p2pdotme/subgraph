@@ -70,3 +70,15 @@ type CircleMetrics @entity {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
+
+type CircleMerchant @entity {
+  id: Bytes!
+
+  merchant: String!
+  circle: Circle!
+  stakedAmount: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}

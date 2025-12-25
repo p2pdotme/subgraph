@@ -1,5 +1,5 @@
 import { Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Circle, CircleMetrics } from "../../generated/schema";
+import { Circle, CircleMerchant, CircleMetrics } from "../../generated/schema";
 
 export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
   let circle = Circle.load(key);
@@ -25,4 +25,17 @@ export function loadCircleMetrics(key: Bytes, event: ethereum.Event): CircleMetr
   circleMetrics.transactionHash = event.transaction.hash;
 
   return circleMetrics;
+}
+
+export function loadCircleMerchant(key: Bytes, event: ethereum.Event): CircleMerchant {
+  let circleMerchant = CircleMerchant.load(key);
+  if (!circleMerchant) {
+    circleMerchant = new CircleMerchant(key);
+  }
+
+  circleMerchant.blockNumber = event.block.number;
+  circleMerchant.blockTimestamp = event.block.timestamp;
+  circleMerchant.transactionHash = event.transaction.hash;
+
+  return circleMerchant;
 }
