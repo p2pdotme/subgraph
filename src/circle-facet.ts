@@ -56,7 +56,7 @@ export function handleCircleProtocolTokenStaked(
 
   circleStakeRecord.circle = circle.id;
   circleStakeRecord.staker = staker.id;
-  circleStakeRecord.amount = event.params.stake;
+  circleStakeRecord.amount = circleStakeRecord.amount.plus(event.params.stake);
 
   circleStakeRecord.save();
 
