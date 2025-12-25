@@ -27,6 +27,8 @@ export function handleExitRequested(event: ExitRequestedEvent): void {
   circleUnstakeRecord.status = BigInt.fromI32(STATUS_PENDING);
   circleUnstakeRecord.availableAt = event.params.availableAt;
 
+  staker.circleUnstakeRecords.push(circleUnstakeRecord.id);
+
   circleUnstakeRecord.save();
 }
 

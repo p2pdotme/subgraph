@@ -22,6 +22,9 @@ type Staker @entity {
 
   totalStaked: BigInt!
 
+  circleStakeRecords: [CircleStakeRecords!]!
+  circleUnstakeRecords: [CircleUnstakeRecords!]!
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!

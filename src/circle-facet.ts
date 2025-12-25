@@ -41,7 +41,6 @@ export function handleCircleProtocolTokenStaked(
 
   staker.totalStaked = staker.totalStaked.plus(event.params.stake);
 
-  staker.save();
 
   // UPDATE CIRCLE
   const circle = loadCircle(
@@ -57,8 +56,10 @@ export function handleCircleProtocolTokenStaked(
   circleStakeRecord.circle = circle.id;
   circleStakeRecord.staker = staker.id;
   circleStakeRecord.amount = circleStakeRecord.amount.plus(event.params.stake);
-
+  staker.circleStakeRecords.push(circleStakeRecord.id);
+  
   circleStakeRecord.save();
+  staker.save();
 
   // UPDATE CIRCLE METRICS
   const circleMetrics = loadCircleMetrics(
