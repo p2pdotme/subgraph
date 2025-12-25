@@ -26,3 +26,25 @@ dataSources:
         - event: CircleProtocolTokenStaked(indexed uint256,indexed address,uint256)
           handler: handleCircleProtocolTokenStaked
       file: ./src/circle-facet.ts
+  - kind: ethereum
+    name: USDCStakeDelegationFacet
+    network: mainnet
+    source:
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      abi: USDCStakeDelegationFacet
+      startBlock: 200000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - USDCStakeDelegationFacet
+      abis:
+        - name: USDCStakeDelegationFacet
+          file: ./abis/USDCStakeDelegationFacet.json
+      eventHandlers:
+        - event: ExitRequested(indexed address,indexed uint256,uint256,uint256)
+          handler: handleExitRequested
+        - event: ExitProceedsWithdrawn(indexed address,indexed uint256,uint256)
+          handler: handleExitProceedsWithdrawn
+      file: ./src/stake-delegation-facet.ts

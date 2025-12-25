@@ -7,12 +7,12 @@ import {
   loadStaker,
   loadCircle,
   loadCircleMetrics,
-  loadStakedOnCircle,
+  loadCircleStakeRecords,
 } from "./utils";
 
 export function handleCircleCreated(event: CircleCreatedEvent): void {
-  const key = Bytes.fromHexString(event.params.circleId.toString());
-  let circle = loadCircle(key, event);
+  const id = Bytes.fromHexString(event.params.circleId.toString());
+  let circle = loadCircle(id, event);
 
   circle.circleId = event.params.circleId;
   circle.admin = event.params.admin.toString();
@@ -22,7 +22,7 @@ export function handleCircleCreated(event: CircleCreatedEvent): void {
   circle.isAutoApprovedPCEnabled = event.params.isAutoApprovedPCEnabled;
 
   // CREATE CIRCLE METRICS
-  const circleMetrics = loadCircleMetrics(key, event);
+  const circleMetrics = loadCircleMetrics(id, event);
 
   circleMetrics.circle = circle.id;
 
@@ -49,16 +49,16 @@ export function handleCircleProtocolTokenStaked(
     event
   );
 
-  const circleStaked = loadStakedOnCircle(
-    event.transaction.hash.concatI32(event.logIndex.toI32()),
+  const circleStakeRecord = loadCircleStakeRecords(
+    Bytes.fromHexString(`${event.params.circleId.toString()}-${event.params.staker.toHexString()}`),
     event
   );
 
-  circleStaked.circle = circle.id;
-  circleStaked.staker = staker.id;
-  circleStaked.amount = event.params.stake;
+  circleStakeRecord.circle = circle.id;
+  circleStakeRecord.staker = staker.id;
+  circleStakeRecord.amount = event.params.stake;
 
-  circleStaked.save();
+  circleStakeRecord.save();
 
   // UPDATE CIRCLE METRICS
   const circleMetrics = loadCircleMetrics(

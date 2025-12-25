@@ -27,13 +27,28 @@ type Staker @entity {
   transactionHash: Bytes!
 }
 
-type StakedOnCircle @entity {
+type CircleStakeRecords @entity {
   id: Bytes!
 
   circle: Circle!
   staker: Staker!
   
   amount: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type CircleUnstakeRecords @entity {
+  id: Bytes!
+
+  circle: Circle!
+  staker: Staker!
+  
+  status: BigInt!
+  amount: BigInt!
+  availableAt: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

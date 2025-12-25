@@ -1,5 +1,5 @@
 import { Address, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { StakedOnCircle, Staker } from "../../generated/schema";
+import { CircleStakeRecords, CircleUnstakeRecords, Staker } from "../../generated/schema";
 
 export function loadStaker(key: Address, event: ethereum.Event): Staker {
   let staker = Staker.load(key);
@@ -15,16 +15,30 @@ export function loadStaker(key: Address, event: ethereum.Event): Staker {
   return staker;
 }
 
-export function loadStakedOnCircle(key: Bytes, event: ethereum.Event): StakedOnCircle {
-  let stakedOnCircle = StakedOnCircle.load(key);
+export function loadCircleStakeRecords(key: Bytes, event: ethereum.Event): CircleStakeRecords {
+  let circleStakeRecord = CircleStakeRecords.load(key);
 
-  if (!stakedOnCircle) {
-    stakedOnCircle = new StakedOnCircle(key);
+  if (!circleStakeRecord) {
+    circleStakeRecord = new CircleStakeRecords(key);
   }
 
-  stakedOnCircle.blockNumber = event.block.number;
-  stakedOnCircle.blockTimestamp = event.block.timestamp;
-  stakedOnCircle.transactionHash = event.transaction.hash;
+  circleStakeRecord.blockNumber = event.block.number;
+  circleStakeRecord.blockTimestamp = event.block.timestamp;
+  circleStakeRecord.transactionHash = event.transaction.hash;
 
-  return stakedOnCircle;
+  return circleStakeRecord;
+}
+
+export function loadCircleUnstakeRecords(key: Bytes, event: ethereum.Event): CircleUnstakeRecords {
+  let circleUnstakeRecord = CircleUnstakeRecords.load(key);
+
+  if (!circleUnstakeRecord) {
+    circleUnstakeRecord = new CircleUnstakeRecords(key);
+  }
+
+  circleUnstakeRecord.blockNumber = event.block.number;
+  circleUnstakeRecord.blockTimestamp = event.block.timestamp;
+  circleUnstakeRecord.transactionHash = event.transaction.hash;
+
+  return circleUnstakeRecord;
 }
