@@ -63,8 +63,20 @@ type CircleMetrics @entity {
 
   circle: Circle @relation(name: "metrics")
 
+  # STAKING METRICS
   totalStaked: BigInt!
   adminStaked: BigInt!
+
+  # VOLUME METRICS
+  totalVolume: BigInt!
+
+  # ORDER METRICS
+  completedOrdersCount: BigInt!
+  cancelledOrdersCount: BigInt!
+
+  # DISPUTE METRICS
+  raisedDisputesCount: BigInt!
+  resolvedDisputesCount: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
