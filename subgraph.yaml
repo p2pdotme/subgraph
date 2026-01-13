@@ -43,11 +43,13 @@ dataSources:
         - name: USDCStakeDelegationFacet
           file: ./abis/USDCStakeDelegationFacet.json
       eventHandlers:
+        - event: UsdcStakedForDelegationInCircle(indexed address,indexed uint256,uint256)
+          handler: handleUsdcStakedForDelegationInCircle
         - event: ExitRequested(indexed address,indexed uint256,uint256,uint256)
           handler: handleExitRequested
         - event: ExitProceedsWithdrawn(indexed address,indexed uint256,uint256)
           handler: handleExitProceedsWithdrawn
-      file: ./src/stake-delegation-facet.ts
+      file: ./src/stake-delegation.ts
   - kind: ethereum
     name: CircleMerchantFacet
     network: base-sepolia

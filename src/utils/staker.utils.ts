@@ -1,11 +1,19 @@
-import { Address, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { CircleStakeRecords, CircleUnstakeRecords, Staker } from "../../generated/schema";
+import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import {
+  CircleStakeRecords,
+  CircleUnstakeRecords,
+  Staker,
+} from "../../generated/schema";
 
 export function loadStaker(key: Address, event: ethereum.Event): Staker {
   let staker = Staker.load(key);
 
   if (!staker) {
     staker = new Staker(key);
+    staker.staker = key.toHexString();
+    staker.totalStaked = BigInt.fromI32(0);
+    staker.circleStakeRecords = [];
+    staker.circleUnstakeRecords = [];
   }
 
   staker.blockNumber = event.block.number;
@@ -15,11 +23,15 @@ export function loadStaker(key: Address, event: ethereum.Event): Staker {
   return staker;
 }
 
-export function loadCircleStakeRecords(key: Bytes, event: ethereum.Event): CircleStakeRecords {
+export function loadCircleStakeRecords(
+  key: Bytes,
+  event: ethereum.Event
+): CircleStakeRecords {
   let circleStakeRecord = CircleStakeRecords.load(key);
 
   if (!circleStakeRecord) {
     circleStakeRecord = new CircleStakeRecords(key);
+    circleStakeRecord.amount = BigInt.fromI32(0);
   }
 
   circleStakeRecord.blockNumber = event.block.number;
@@ -29,11 +41,15 @@ export function loadCircleStakeRecords(key: Bytes, event: ethereum.Event): Circl
   return circleStakeRecord;
 }
 
-export function loadCircleUnstakeRecords(key: Bytes, event: ethereum.Event): CircleUnstakeRecords {
+export function loadCircleUnstakeRecords(
+  key: Bytes,
+  event: ethereum.Event
+): CircleUnstakeRecords {
   let circleUnstakeRecord = CircleUnstakeRecords.load(key);
 
   if (!circleUnstakeRecord) {
     circleUnstakeRecord = new CircleUnstakeRecords(key);
+    circleUnstakeRecord.amount = BigInt.fromI32(0);
   }
 
   circleUnstakeRecord.blockNumber = event.block.number;
