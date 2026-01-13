@@ -6,11 +6,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: CircleFacet
-    network: mainnet
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0xa79f32b94F3F689A2b300BaCd7Db2A328b0772c5"
       abi: CircleFacet
-      startBlock: 200000
+      startBlock: 36126596
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -21,18 +21,18 @@ dataSources:
         - name: CircleFacet
           file: ./abis/CircleFacet.json
       eventHandlers:
-        - event: CircleCreated(indexed uint256,indexed address,bytes32,string,string,bool,uint256)
+        - event: CircleCreated(indexed address,indexed uint256,bytes32,string,string,string,bool)
           handler: handleCircleCreated
-        - event: CircleProtocolTokenStaked(indexed uint256,indexed address,uint256)
-          handler: handleCircleProtocolTokenStaked
+        # - event: CircleProtocolTokenStaked(indexed uint256,indexed address,uint256)
+        #   handler: handleCircleProtocolTokenStaked
       file: ./src/circle-facet.ts
   - kind: ethereum
     name: USDCStakeDelegationFacet
-    network: mainnet
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0xa79f32b94F3F689A2b300BaCd7Db2A328b0772c5"
       abi: USDCStakeDelegationFacet
-      startBlock: 200000
+      startBlock: 36126596
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -50,11 +50,11 @@ dataSources:
       file: ./src/stake-delegation-facet.ts
   - kind: ethereum
     name: CircleMerchantFacet
-    network: mainnet
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0xa79f32b94F3F689A2b300BaCd7Db2A328b0772c5"
       abi: CircleMerchantFacet
-      startBlock: 200000
+      startBlock: 36126596
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -70,11 +70,11 @@ dataSources:
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: OrderFlowHelper
-    network: mainnet
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0xa79f32b94F3F689A2b300BaCd7Db2A328b0772c5"
       abi: OrderFlowHelper
-      startBlock: 200000
+      startBlock: 36126596
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -90,11 +90,11 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: OrderProcessorFacet
-    network: mainnet
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0xa79f32b94F3F689A2b300BaCd7Db2A328b0772c5"
       abi: OrderProcessorFacet
-      startBlock: 200000
+      startBlock: 36126596
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -110,11 +110,11 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: OrderFlowFacet
-    network: mainnet
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0xa79f32b94F3F689A2b300BaCd7Db2A328b0772c5"
       abi: OrderFlowFacet
-      startBlock: 200000
+      startBlock: 36126596
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -128,3 +128,23 @@ dataSources:
         - event: CancelledOrders(indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256))
           handler: handleCancelledOrders
       file: ./src/order.ts
+  - kind: ethereum
+    name: MerchantOnboardFacet
+    network: base-sepolia
+    source:
+      address: "0xa79f32b94F3F689A2b300BaCd7Db2A328b0772c5"
+      abi: MerchantOnboardFacet
+      startBlock: 36126596
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - MerchantOnboardFacet
+      abis:
+        - name: MerchantOnboardFacet
+          file: ./abis/MerchantOnboardFacet.json
+      eventHandlers:
+        - event: MerchantWithoutFundsTracker(indexed address,(string,uint8,(uint256,uint256,string,uint8,bool,uint256,uint256)[]),(uint256,uint256,bool,uint256,uint256,uint256,uint256,bool,bytes32,uint256,(uint256,uint256,uint256)),uint256)
+          handler: handleMerchantWithoutFundsTracker
+      file: ./src/circle-merchants.ts

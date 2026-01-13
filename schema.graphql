@@ -78,6 +78,9 @@ type CircleMetrics @entity {
   raisedDisputesCount: BigInt!
   resolvedDisputesCount: BigInt!
 
+  #merchant metrics
+  totalMerchantsCount: BigInt!
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!

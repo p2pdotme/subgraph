@@ -1,8 +1,12 @@
 {
-  "mainnet": {
+  "base-sepolia": {
     "OrderFlow": {
-      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
-      "startBlock": 200000
+      "address": "0xa79f32b94F3F689A2b300BaCd7Db2A328b0772c5",
+      "startBlock": 36126596
+    },
+    "CircleFacet": {
+      "address": "0xa79f32b94F3F689A2b300BaCd7Db2A328b0772c5",
+      "startBlock": 36126596
     }
   }
 }

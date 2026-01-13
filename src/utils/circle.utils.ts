@@ -1,4 +1,4 @@
-import { Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import { Circle, CircleMerchant, CircleMetrics } from "../../generated/schema";
 
 export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
@@ -18,6 +18,14 @@ export function loadCircleMetrics(key: Bytes, event: ethereum.Event): CircleMetr
   let circleMetrics = CircleMetrics.load(key);
   if (!circleMetrics) {
     circleMetrics = new CircleMetrics(key);
+    circleMetrics.totalStaked = BigInt.zero();
+    circleMetrics.adminStaked = BigInt.zero();
+    circleMetrics.totalVolume = BigInt.zero();
+    circleMetrics.completedOrdersCount = BigInt.zero();
+    circleMetrics.cancelledOrdersCount = BigInt.zero();
+    circleMetrics.resolvedDisputesCount = BigInt.zero();
+    circleMetrics.raisedDisputesCount = BigInt.zero();
+    circleMetrics.totalMerchantsCount = BigInt.zero();
   }
 
   circleMetrics.blockNumber = event.block.number;
