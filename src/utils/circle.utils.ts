@@ -25,6 +25,7 @@ export function loadCircleMetrics(key: Bytes, event: ethereum.Event): CircleMetr
     circleMetrics.resolvedDisputesCount = BigInt.zero();
     circleMetrics.raisedDisputesCount = BigInt.zero();
     circleMetrics.totalMerchantsCount = BigInt.zero();
+    circleMetrics.totalStakersCount = BigInt.zero();
   }
 
   circleMetrics.blockNumber = event.block.number;

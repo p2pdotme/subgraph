@@ -65,6 +65,7 @@ export function handleUsdcStakedForDelegationInCircle(event: UsdcStakedForDelega
   staker.save();
 
   const circleMetrics = loadCircleMetrics(circle.id, event);
+  circleMetrics.totalStakersCount = circleMetrics.totalStakersCount.plus(BigInt.fromI32(1));
   circleMetrics.totalStaked = circleMetrics.totalStaked.plus(event.params.amount);
   if(event.params.user.toHexString() == circle.admin) {
     circleMetrics.adminStaked = circleMetrics.adminStaked.plus(event.params.amount);

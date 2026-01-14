@@ -66,6 +66,7 @@ type CircleMetrics @entity {
   # STAKING METRICS
   totalStaked: BigInt!
   adminStaked: BigInt!
+  totalStakersCount: BigInt!
 
   # VOLUME METRICS
   totalVolume: BigInt!
