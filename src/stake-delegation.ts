@@ -40,10 +40,13 @@ export function handleExitProceedsWithdrawn(
   const stakeRecordKey = Bytes.fromHexString(
     `${event.params.circleId.toString()}-${event.params.user.toHexString()}`
   );
+
+  // UPDATE CIRCLE UNSTAKE RECORD
   let unstakeRecord = loadCircleUnstakeRecords(stakeRecordKey, event);
   unstakeRecord.status =  BigInt.fromI32(UNSTAKE_REQUEST_WITHDRAWN)
   unstakeRecord.save()
 
+  // UPDATE CIRCLE STAKE RECORD
   const stakeRecord = loadCircleStakeRecords(stakeRecordKey, event);
   stakeRecord.amount = stakeRecord.amount.minus(event.params.amount);
   stakeRecord.save()
@@ -57,6 +60,11 @@ export function handleExitProceedsWithdrawn(
     circleMetrics.adminStaked = circleMetrics.adminStaked.minus(event.params.amount);
   }
   circleMetrics.save();
+
+  // UPDATE STAKER
+  const staker = loadStaker(event.params.user, event);
+  staker.totalStaked = staker.totalStaked.minus(event.params.amount);
+  staker.save();
 }
 
 export function handleUsdcStakedForDelegationInCircle(event: UsdcStakedForDelegationInCircleEvent): void {
