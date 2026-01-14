@@ -21,8 +21,7 @@ export function loadCircleMetrics(key: Bytes, event: ethereum.Event): CircleMetr
     circleMetrics.totalStaked = BigInt.zero();
     circleMetrics.adminStaked = BigInt.zero();
     circleMetrics.totalVolume = BigInt.zero();
-    circleMetrics.completedOrdersCount = BigInt.zero();
-    circleMetrics.cancelledOrdersCount = BigInt.zero();
+    circleMetrics.totalPlacedOrdersCount = BigInt.zero();
     circleMetrics.resolvedDisputesCount = BigInt.zero();
     circleMetrics.raisedDisputesCount = BigInt.zero();
     circleMetrics.totalMerchantsCount = BigInt.zero();
@@ -39,6 +38,9 @@ export function loadCircleMerchant(key: Bytes, event: ethereum.Event): CircleMer
   let circleMerchant = CircleMerchant.load(key);
   if (!circleMerchant) {
     circleMerchant = new CircleMerchant(key);
+    circleMerchant.merchant = key.toHexString();
+    circleMerchant.stakedAmount = BigInt.zero();
+    circleMerchant.circle = Bytes.fromI32(0);
   }
 
   circleMerchant.blockNumber = event.block.number;

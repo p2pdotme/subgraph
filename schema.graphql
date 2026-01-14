@@ -71,8 +71,7 @@ type CircleMetrics @entity {
   totalVolume: BigInt!
 
   # ORDER METRICS
-  completedOrdersCount: BigInt!
-  cancelledOrdersCount: BigInt!
+  totalPlacedOrdersCount: BigInt!
 
   # DISPUTE METRICS
   raisedDisputesCount: BigInt!

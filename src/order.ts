@@ -4,7 +4,7 @@ import { OrderDispute as OrderDisputeEvent } from "../generated/OrderProcessorFa
 import { loadCircleMerchant, loadCircleMetrics } from "./utils";
 import { CircleMetrics } from "../generated/schema";
 import { DISPUTE_STATUS_RAISED, DISPUTE_STATUS_SETTLED } from "./constants/status";
-import { CancelledOrders as CancelledOrdersEvent } from "../generated/OrderFlowFacet/OrderFlowFacet";
+import { CancelledOrders as CancelledOrdersEvent, OrderPlaced as OrderPlacedEvent } from "../generated/OrderFlowFacet/OrderFlowFacet";
 
 export function handleOrderCompleted(event: OrderCompletedEvent): void {
   const merchant = loadCircleMerchant(
@@ -25,9 +25,6 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
 
   circleMetrics.totalVolume = circleMetrics.totalVolume.plus(
     event.params._order.amount
-  );
-  circleMetrics.completedOrdersCount = circleMetrics.completedOrdersCount.plus(
-    BigInt.fromI32(1)
   );
 
   circleMetrics.save();
@@ -93,10 +90,32 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
   let circleMetrics = loadCircleMetrics(circle, event);
 
   if (!circleMetrics) return;
-
-  circleMetrics.cancelledOrdersCount = circleMetrics.cancelledOrdersCount.plus(
-    BigInt.fromI32(1)
-  );
   
   circleMetrics.save();
 }
+
+export function handleOrderPlaced(event: OrderPlacedEvent): void {
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params._order.acceptedMerchant.toString()),
+    event
+  );
+
+  const circle =
+    merchant && merchant.circle
+      ? Bytes.fromHexString(merchant.circle.toString())
+      : null;
+
+  if (!circle) return;
+
+  let circleMetrics = loadCircleMetrics(circle, event);
+
+  if (!circleMetrics) return;
+
+  circleMetrics.totalPlacedOrdersCount = circleMetrics.totalPlacedOrdersCount.plus(
+    BigInt.fromI32(1)
+  );
+  
+  circleMetrics.circle = circle;
+  
+  circleMetrics.save();
+} 
