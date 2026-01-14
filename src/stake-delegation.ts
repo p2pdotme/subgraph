@@ -6,7 +6,7 @@ import {
 } from "../generated/USDCStakeDelegationFacet/USDCStakeDelegationFacet";
 import { loadCircleStakeRecords, loadCircleUnstakeRecords, loadStaker } from "./utils/staker.utils";
 import { loadCircle, loadCircleMetrics } from "./utils/circle.utils";
-import { UNSTAKE_REQUEST_WITHDRAWN } from "./constants";
+import { UNSTAKE_REQUEST_RAISED, UNSTAKE_REQUEST_WITHDRAWN } from "./constants";
 
 export function handleExitRequested(event: ExitRequestedEvent): void {
   const stakeRecordKey = Bytes.fromHexString(
@@ -23,6 +23,7 @@ export function handleExitRequested(event: ExitRequestedEvent): void {
   circleUnstakeRecord.circle = circle.id;
   circleUnstakeRecord.staker = staker.id;
   circleUnstakeRecord.amount = event.params.amount;
+  circleUnstakeRecord.status = BigInt.fromI32(UNSTAKE_REQUEST_RAISED)
   circleUnstakeRecord.availableAt = event.params.availableAt;
 
   staker.circleUnstakeRecords.push(circleUnstakeRecord.id);
