@@ -79,6 +79,9 @@ type CircleMetrics @entity {
   totalStaked: BigInt!
   adminStaked: BigInt!
 
+  # DELEGATION METRICS
+  totalDelegatedStake: BigInt!
+
   # VOLUME METRICS
   totalVolume: BigInt!
 
@@ -105,6 +108,7 @@ type CircleMerchant @entity {
   merchant: String!
   circle: Circle!
   stakedAmount: BigInt!
+  delegatedStakedAmount: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
