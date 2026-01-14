@@ -23,7 +23,6 @@ type Staker @entity {
   totalStaked: BigInt!
 
   circleStakeRecords: [CircleStakeRecords!]!
-  circleUnstakeRecords: [CircleUnstakeRecords!]!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -43,21 +42,6 @@ type CircleStakeRecords @entity {
   transactionHash: Bytes!
 }
 
-type CircleUnstakeRecords @entity {
-  id: Bytes!
-
-  circle: Circle!
-  staker: Staker!
-  
-  status: BigInt!
-  amount: BigInt!
-  availableAt: BigInt!
-
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
 type CircleMetrics @entity {
   id: Bytes!
 
@@ -66,7 +50,6 @@ type CircleMetrics @entity {
   # STAKING METRICS
   totalStaked: BigInt!
   adminStaked: BigInt!
-  totalStakersCount: BigInt!
 
   # VOLUME METRICS
   totalVolume: BigInt!

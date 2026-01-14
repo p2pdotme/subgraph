@@ -4,46 +4,17 @@ import {
   ExitProceedsWithdrawn as ExitProceedsWithdrawnEvent,
   UsdcStakedForDelegationInCircle as UsdcStakedForDelegationInCircleEvent,
 } from "../generated/USDCStakeDelegationFacet/USDCStakeDelegationFacet";
-import { loadCircleStakeRecords, loadCircleUnstakeRecords, loadStaker } from "./utils/staker.utils";
+import { loadCircleStakeRecords, loadStaker } from "./utils/staker.utils";
 import { loadCircle, loadCircleMerchant, loadCircleMetrics } from "./utils/circle.utils";
 import { STATUS_PENDING, STATUS_COMPLETED } from "./constants";
 
 export function handleExitRequested(event: ExitRequestedEvent): void {
-  const id = Bytes.fromHexString(
-    `${event.params.circleId.toString()}-${event.params.user.toHexString()}`
-  );
-
-  const circle = loadCircle(
-    Bytes.fromHexString(event.params.circleId.toString()),
-    event
-  );
-
-  const staker = loadStaker(event.params.user, event);
-
-  let circleUnstakeRecord = loadCircleUnstakeRecords(id, event);
-
-  circleUnstakeRecord.circle = circle.id;
-  circleUnstakeRecord.staker = staker.id;
-  circleUnstakeRecord.amount = event.params.amount;
-  circleUnstakeRecord.status = BigInt.fromI32(STATUS_PENDING);
-  circleUnstakeRecord.availableAt = event.params.availableAt;
-
-  staker.circleUnstakeRecords.push(circleUnstakeRecord.id);
-
-  circleUnstakeRecord.save();
 }
 
 export function handleExitProceedsWithdrawn(
   event: ExitProceedsWithdrawnEvent
 ): void {
-  const id = Bytes.fromHexString(
-    `${event.params.circleId.toString()}-${event.params.user.toHexString()}`
-  );
-  let circleUnstakeRecord = loadCircleUnstakeRecords(id, event);
 
-  circleUnstakeRecord.status = BigInt.fromI32(STATUS_COMPLETED);
-
-  circleUnstakeRecord.save();
 }
 
 export function handleUsdcStakedForDelegationInCircle(event: UsdcStakedForDelegationInCircleEvent): void {
@@ -65,7 +36,6 @@ export function handleUsdcStakedForDelegationInCircle(event: UsdcStakedForDelega
   staker.save();
 
   const circleMetrics = loadCircleMetrics(circle.id, event);
-  circleMetrics.totalStakersCount = circleMetrics.totalStakersCount.plus(BigInt.fromI32(1));
   circleMetrics.totalStaked = circleMetrics.totalStaked.plus(event.params.amount);
   if(event.params.user.toHexString() == circle.admin) {
     circleMetrics.adminStaked = circleMetrics.adminStaked.plus(event.params.amount);

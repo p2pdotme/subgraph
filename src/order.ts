@@ -1,7 +1,7 @@
 import { BigInt, Bytes } from "@graphprotocol/graph-ts";
 import { OrderCompleted as OrderCompletedEvent} from "../generated/OrderFlowHelper/OrderFlowHelper";
 import { OrderDispute as OrderDisputeEvent } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
-import { loadCircleMerchant, loadCircleMetrics } from "./utils";
+import { loadCircle, loadCircleMerchant, loadCircleMetrics } from "./utils";
 import { CircleMetrics } from "../generated/schema";
 import { DISPUTE_STATUS_RAISED, DISPUTE_STATUS_SETTLED } from "./constants/status";
 import { CancelledOrders as CancelledOrdersEvent, OrderPlaced as OrderPlacedEvent } from "../generated/OrderFlowFacet/OrderFlowFacet";
@@ -95,19 +95,14 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
 }
 
 export function handleOrderPlaced(event: OrderPlacedEvent): void {
-  const merchant = loadCircleMerchant(
-    Bytes.fromHexString(event.params._order.acceptedMerchant.toString()),
+  const circle = loadCircle(
+    changetype<Bytes>(Bytes.fromBigInt(event.params._order.circleId)),
     event
   );
 
-  const circle =
-    merchant && merchant.circle
-      ? Bytes.fromHexString(merchant.circle.toString())
-      : null;
-
   if (!circle) return;
 
-  let circleMetrics = loadCircleMetrics(circle, event);
+  let circleMetrics = loadCircleMetrics(circle.id, event);
 
   if (!circleMetrics) return;
 
@@ -115,7 +110,7 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
     BigInt.fromI32(1)
   );
   
-  circleMetrics.circle = circle;
+  circleMetrics.circle = circle.id;
   
   circleMetrics.save();
 } 

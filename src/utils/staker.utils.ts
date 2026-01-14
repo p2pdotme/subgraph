@@ -1,7 +1,6 @@
 import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   CircleStakeRecords,
-  CircleUnstakeRecords,
   Staker,
 } from "../../generated/schema";
 
@@ -13,7 +12,6 @@ export function loadStaker(key: Address, event: ethereum.Event): Staker {
     staker.staker = key.toHexString();
     staker.totalStaked = BigInt.fromI32(0);
     staker.circleStakeRecords = [];
-    staker.circleUnstakeRecords = [];
   }
 
   staker.blockNumber = event.block.number;
@@ -41,20 +39,3 @@ export function loadCircleStakeRecords(
   return circleStakeRecord;
 }
 
-export function loadCircleUnstakeRecords(
-  key: Bytes,
-  event: ethereum.Event
-): CircleUnstakeRecords {
-  let circleUnstakeRecord = CircleUnstakeRecords.load(key);
-
-  if (!circleUnstakeRecord) {
-    circleUnstakeRecord = new CircleUnstakeRecords(key);
-    circleUnstakeRecord.amount = BigInt.fromI32(0);
-  }
-
-  circleUnstakeRecord.blockNumber = event.block.number;
-  circleUnstakeRecord.blockTimestamp = event.block.timestamp;
-  circleUnstakeRecord.transactionHash = event.transaction.hash;
-
-  return circleUnstakeRecord;
-}
