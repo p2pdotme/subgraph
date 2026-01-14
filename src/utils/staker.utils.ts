@@ -4,6 +4,7 @@ import {
   CircleUnstakeRecords,
   Staker,
 } from "../../generated/schema";
+import { UNSTAKE_REQUEST_RAISED } from "../constants";
 
 export function loadStaker(key: Address, event: ethereum.Event): Staker {
   let staker = Staker.load(key);
@@ -51,6 +52,7 @@ export function loadCircleUnstakeRecords(
     circleUnstakeRecord = new CircleUnstakeRecords(key);
     circleUnstakeRecord.amount = BigInt.fromI32(0);
     circleUnstakeRecord.availableAt = BigInt.fromI32(0);
+    circleUnstakeRecord.status = BigInt.fromI32(UNSTAKE_REQUEST_RAISED);
   }
 
   circleUnstakeRecord.blockNumber = event.block.number;

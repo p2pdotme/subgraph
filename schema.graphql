@@ -60,6 +60,8 @@ type CircleUnstakeRecords @entity {
   
   amount: BigInt!
   availableAt: BigInt!
+
+  status: BigInt!
   
   blockNumber: BigInt!
   blockTimestamp: BigInt!
