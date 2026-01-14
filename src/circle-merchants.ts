@@ -9,7 +9,7 @@ export function handleMerchantRegistered(event: MerchantRegisteredEvent): void {
   const merchant = loadCircleMerchant(Bytes.fromHexString(event.params.merchant.toHexString()), event);
 
   merchant.circle = circle.id;
-  merchant.merchant = event.params.merchant.toString();
+  merchant.merchant = event.params.merchant.toHexString();
   merchant.stakedAmount = event.params.stakeAmount;
 
   merchant.save();
@@ -24,7 +24,7 @@ export function handleMerchantWithoutFundsTracker(event: MerchantWithoutFundsTra
   const merchant = loadCircleMerchant(Bytes.fromHexString(event.params.merchant.toHexString()), event);
 
   merchant.circle = circle.id;
-  merchant.merchant = event.params.merchant.toString();
+  merchant.merchant = event.params.merchant.toHexString();
   merchant.stakedAmount = event.params.stake;
 
   merchant.save();
