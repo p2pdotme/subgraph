@@ -1,3 +1,4 @@
+# CIRCLE
 type Circle @entity {
   id: Bytes!
 
@@ -15,6 +16,8 @@ type Circle @entity {
   transactionHash: Bytes!
 }
 
+# STAKER
+# An individual who stakes in any circle
 type Staker @entity {
   id: Bytes!
 
@@ -23,12 +26,15 @@ type Staker @entity {
   totalStaked: BigInt!
 
   circleStakeRecords: [CircleStakeRecords!]!
+  circleUnstakeRecords: [CircleUnstakeRecords!]!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
 
+# CIRCLE STAKE RECORDS 
+# A record of a staker's stake in a circle
 type CircleStakeRecords @entity {
   id: Bytes!
 
@@ -37,11 +43,31 @@ type CircleStakeRecords @entity {
   
   amount: BigInt!
 
+  unstakeRequest: CircleUnstakeRecords
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
 
+# CIRCLE UNSTAKE RECORDS
+# A record of a staker's unstake in a circle
+type CircleUnstakeRecords @entity {
+  id: Bytes!
+  
+  circle: Circle!
+  staker: Staker!
+  
+  amount: BigInt!
+  availableAt: BigInt!
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CIRCLE METRICS
+# Metrics for a circle
 type CircleMetrics @entity {
   id: Bytes!
 
@@ -69,6 +95,8 @@ type CircleMetrics @entity {
   transactionHash: Bytes!
 }
 
+# CIRCLE MERCHANT
+# A merchant who is registered in a circle
 type CircleMerchant @entity {
   id: Bytes!
 

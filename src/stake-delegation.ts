@@ -4,17 +4,39 @@ import {
   ExitProceedsWithdrawn as ExitProceedsWithdrawnEvent,
   UsdcStakedForDelegationInCircle as UsdcStakedForDelegationInCircleEvent,
 } from "../generated/USDCStakeDelegationFacet/USDCStakeDelegationFacet";
-import { loadCircleStakeRecords, loadStaker } from "./utils/staker.utils";
+import { loadCircleStakeRecords, loadCircleUnstakeRecords, loadStaker } from "./utils/staker.utils";
 import { loadCircle, loadCircleMerchant, loadCircleMetrics } from "./utils/circle.utils";
 import { STATUS_PENDING, STATUS_COMPLETED } from "./constants";
 
 export function handleExitRequested(event: ExitRequestedEvent): void {
+  const stakeRecordKey = Bytes.fromHexString(
+    `${event.params.circleId.toString()}-${event.params.user.toHexString()}`
+  );
+
+  const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
+  const circle = loadCircle(circleKey, event);
+
+  const staker = loadStaker(event.params.user, event);
+
+  let circleUnstakeRecord = loadCircleUnstakeRecords(stakeRecordKey, event);
+
+  circleUnstakeRecord.circle = circle.id;
+  circleUnstakeRecord.staker = staker.id;
+  circleUnstakeRecord.amount = event.params.amount;
+  circleUnstakeRecord.availableAt = event.params.availableAt;
+
+  staker.circleUnstakeRecords.push(circleUnstakeRecord.id);
+
+  circleUnstakeRecord.save();
+
+  const stakeRecord = loadCircleStakeRecords(stakeRecordKey, event);
+  stakeRecord.unstakeRequest = circleUnstakeRecord.id;
+  stakeRecord.save();
 }
 
 export function handleExitProceedsWithdrawn(
   event: ExitProceedsWithdrawnEvent
 ): void {
-
 }
 
 export function handleUsdcStakedForDelegationInCircle(event: UsdcStakedForDelegationInCircleEvent): void {
