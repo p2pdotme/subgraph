@@ -53,16 +53,15 @@ const updateDisputeMetrics = (
 
 export function handleOrderDispute(event: OrderDisputeEvent): void {
   const merchant = loadCircleMerchant(
-    Bytes.fromHexString(event.params._order.acceptedMerchant.toString()),
+    Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
     event
   );
 
-  const circle =
-    merchant && merchant.circle
-      ? Bytes.fromHexString(merchant.circle.toString())
-      : null;
+  // merchant.circle is already Bytes - no conversion needed
+  const circle = merchant.circle;
 
-  if (!circle) return;
+  // Check if circle is the default placeholder value (Bytes.fromI32(0))
+  if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
   let circleMetrics = loadCircleMetrics(circle, event);
 
@@ -97,16 +96,15 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
   );
 
   const merchant = loadCircleMerchant(
-    Bytes.fromHexString(event.params._order.acceptedMerchant.toString()),
+    Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
     event
   );
 
-  const circle =
-    merchant && merchant.circle
-      ? Bytes.fromHexString(merchant.circle.toString())
-      : null;
+  // merchant.circle is already Bytes - no conversion needed
+  const circle = merchant.circle;
 
-  if (!circle) return;
+  // Check if circle is the default placeholder value (Bytes.fromI32(0))
+  if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
   let circleMetrics = loadCircleMetrics(circle, event);
 
@@ -183,7 +181,7 @@ export function handleMerchantAssignedNewOrder(
   );
 
   const merchant = loadCircleMerchant(
-    Bytes.fromHexString(event.params.merchant.toString()),
+    Bytes.fromHexString(event.params.merchant.toHexString()),
     event
   );
 
@@ -238,7 +236,7 @@ export function handleMerchantReAssignedNewOrder(
   );
 
   const merchant = loadCircleMerchant(
-    Bytes.fromHexString(event.params.merchant.toString()),
+    Bytes.fromHexString(event.params.merchant.toHexString()),
     event
   );
 
@@ -344,7 +342,7 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
   );
 
   const merchant = loadCircleMerchant(
-    Bytes.fromHexString(event.params._order.acceptedMerchant.toString()),
+    Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
     event
   );
 
@@ -392,16 +390,15 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
   );
 
   const merchant = loadCircleMerchant(
-    Bytes.fromHexString(event.params._order.acceptedMerchant.toString()),
+    Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
     event
   );
 
-  const circle =
-    merchant && merchant.circle
-      ? Bytes.fromHexString(merchant.circle.toString())
-      : null;
+  // merchant.circle is already Bytes - no conversion needed
+  const circle = merchant.circle;
 
-  if (!circle) return;
+  // Check if circle is the default placeholder value (Bytes.fromI32(0))
+  if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
   let circleMetrics = loadCircleMetrics(circle, event);
 

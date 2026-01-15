@@ -1,4 +1,4 @@
-import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { Bytes, ethereum } from "@graphprotocol/graph-ts";
 import { AssignedMerchants } from "../../generated/schema";
 
 export function loadAssignedMerchants(
