@@ -1,10 +1,16 @@
 import { BigInt, Bytes } from "@graphprotocol/graph-ts";
 import { MerchantRegisteredToCircle as MerchantRegisteredToCircleEvent } from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
-import { loadCircle, loadCircleMerchant, loadCircleMetrics } from "./utils";
+import {
+  loadCircle,
+  loadCircleMerchant,
+  loadCircleMetrics,
+  loadMerchantPaymentChannels,
+} from "./utils";
 import {
   OnlineOfflineToggled as OnlineOfflineToggledEvent,
   BlacklistMerchant as BlacklistMerchantEvent,
   MerchantOngoingOrder as MerchantOngoingOrderEvent,
+  Merchant as MerchantEvent,
 } from "../generated/MerchantRegistryFacet/MerchantRegistryFacet";
 
 export function handleMerchantRegisteredToCircle(
@@ -73,4 +79,34 @@ export function handleMerchantOngoingOrder(
   );
   merchant.isOngoingOrder = event.params.isOngoing;
   merchant.save();
+}
+
+export function handleMerchant(event: MerchantEvent): void {
+  let merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event
+  );
+
+  let paymentChannels: Bytes[] = [];
+
+  // ADD/UPDATE MERCHANT PAYMENT CHANNELS
+  for (let i = 0; i < event.params.merchantConfig.paymentChannels.length; i++) {
+    let paymentChannelDetails = event.params.merchantConfig.paymentChannels[i];
+
+    const pcKey = Bytes.fromHexString(
+      `${event.params.merchant.toHexString()}-${paymentChannelDetails.accountNo.toString()}`
+    );
+    let paymentChannel = loadMerchantPaymentChannels(pcKey, event);
+    paymentChannel.merchant = merchant.id;
+    paymentChannel.pcConfigId = paymentChannelDetails.paymentChannelConfigId;
+    paymentChannel.accountNo = paymentChannelDetails.accountNo;
+    paymentChannel.label = paymentChannelDetails.label;
+    paymentChannel.isActive = paymentChannelDetails.isActive;
+    paymentChannel.status = paymentChannelDetails.status;
+    paymentChannel.save();
+    paymentChannels.push(paymentChannel.id);
+  }
+
+  merchant.paymentChannels = paymentChannels;
+  merchant.save()
 }

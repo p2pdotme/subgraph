@@ -182,4 +182,6 @@ dataSources:
           handler: handleBlacklistMerchant
         - event: MerchantOngoingOrder(indexed address,bool,bytes32)
           handler: handleMerchantOngoingOrder
+        - event: Merchant(indexed address,(string,uint8,(uint256,uint256,string,uint8,bool,uint256,uint256)[]),(uint256,uint256,uint256,bool,uint256,uint256,uint256,bool,bytes32,uint256,(uint256,uint256,uint256)),uint256,uint256,uint256,uint256)
+          handler: handleMerchant
       file: ./src/circle-merchants.ts
