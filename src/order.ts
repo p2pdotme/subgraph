@@ -4,7 +4,9 @@ import {
   BuyOrderPaid as BuyOrderPaidEvent,
   OrderAccepted as OrderAcceptedEvent,
 } from "../generated/OrderFlowHelper/OrderFlowHelper";
-import { OrderDispute as OrderDisputeEvent } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
+import {
+  OrderDispute as OrderDisputeEvent,
+} from "../generated/OrderProcessorFacet/OrderProcessorFacet";
 import {
   loadAssignedMerchants,
   loadCircle,
@@ -24,6 +26,7 @@ import {
   SellOrderUpiSet as SellOrderUpiSetEvent,
   MerchantAssignedNewOrder as MerchantAssignedNewOrderEvent,
   MerchantReAssignedNewOrder as MerchantReAssignedNewOrderEvent,
+  OrderCancelledBy as OrderCancelledByEvent,
 } from "../generated/OrderFlowFacet/OrderFlowFacet";
 
 /**
@@ -384,4 +387,13 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
   );
 
   circleMetrics.save();
+}
+
+export function handleOrderCancelledBy(event: OrderCancelledByEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event
+  );
+  order.cancelledBy = event.params.cancelledBy;
+  order.save();
 }
