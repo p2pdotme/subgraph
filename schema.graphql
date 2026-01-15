@@ -116,3 +116,48 @@ type CircleMerchant @entity {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
+
+# ORDERS
+# A order in a circle
+type Orders @entity(immutable: false) {
+  id: Bytes!
+  orderId: BigInt!
+  type: Int!
+  status: Int!
+
+  userAddress: Bytes!
+  usdcRecipientAddress: Bytes!
+
+  usdcAmount: BigInt!
+  fiatAmount: BigInt!
+
+  currency: String!
+
+  assignedMerchants: [String!]
+
+  isUserCompleted: Boolean!
+  userCompletedAt: BigInt!
+  completedAt: BigInt!
+  placedAt: BigInt!
+  acceptedAt: BigInt!
+  paidAt: BigInt!
+  cancelledAt: BigInt!
+
+  acceptedPCId: BigInt!
+  merchantAddress: Bytes!
+
+  # dispute: Disputes @relation(name: "OrderDispute")
+  # merchant: Merchant @relation(name: "MerchantOrders")
+  # additional_order_details: AdditionOrderDetails @relation(name: "OrderAdditionalOrderDetails")
+
+  pubkey: String!
+  encUpi: String!
+  userPubKey: String!
+  encMerchantUpi: String!
+
+  cancelledBy: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}

@@ -60,26 +60,6 @@ dataSources:
           handler: handleUsdcUndelegatedFromMerchantInCircle
       file: ./src/stake-delegation.ts
   - kind: ethereum
-    name: CircleMerchantFacet
-    network: base-sepolia
-    source:
-      address: "0xD1DA5F07D3Fd5DC69e1DB9E5a83fbcF697EB172e"
-      abi: CircleMerchantFacet
-      startBlock: 36347766
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - CircleMerchantFacet
-      abis:
-        - name: CircleMerchantFacet
-          file: ./abis/CircleMerchantFacet.json
-      eventHandlers:
-        - event: MerchantRegistered(indexed address,indexed uint256,string,uint256)
-          handler: handleMerchantRegistered
-      file: ./src/circle-merchants.ts
-  - kind: ethereum
     name: OrderFlowHelper
     network: base-sepolia
     source:
@@ -98,6 +78,10 @@ dataSources:
       eventHandlers:
         - event: OrderCompleted(indexed uint256,indexed address,uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
           handler: handleOrderCompleted
+        - event: BuyOrderPaid(indexed uint256,indexed address,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
+          handler: handleBuyOrderPaid
+        - event: OrderAccepted(indexed uint256,indexed address,string,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
+          handler: handleOrderAccepted
       file: ./src/order.ts
   - kind: ethereum
     name: OrderProcessorFacet
@@ -136,10 +120,16 @@ dataSources:
         - name: OrderFlowFacet
           file: ./abis/OrderFlowFacet.json
       eventHandlers:
-        - event: CancelledOrders(indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
-          handler: handleCancelledOrders
         - event: OrderPlaced(indexed uint256,indexed address,indexed address,uint256,uint8,uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
           handler: handleOrderPlaced
+        - event: CancelledOrders(indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
+          handler: handleCancelledOrders
+        - event: MerchantAssignedNewOrder(indexed uint256,indexed address,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256),uint256)
+          handler: handleMerchantAssignedNewOrder
+        - event: MerchantReAssignedNewOrder(indexed uint256,indexed address,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256),uint256)
+          handler: handleMerchantReAssignedNewOrder
+        - event: SellOrderUpiSet(indexed uint256,indexed address,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
+          handler: handleSellOrderUpiSet
       file: ./src/order.ts
   - kind: ethereum
     name: MerchantOnboardFacet
