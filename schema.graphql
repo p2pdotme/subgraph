@@ -149,14 +149,18 @@ type Orders @entity(immutable: false) {
   assignedMerchants: [AssignedMerchants!]
 
   # dispute: Disputes @relation(name: "OrderDispute")
-  # merchant: Merchant @relation(name: "MerchantOrders")
-  # additional_order_details: AdditionOrderDetails @relation(name: "OrderAdditionalOrderDetails")
 
   pubkey: String!
   encUpi: String!
   userPubKey: String!
   encMerchantUpi: String!
   cancelledBy: Bytes!
+
+  # ADDITIONAL ORDER DETAILS
+  fixedFeePaid: BigInt!
+  tipsPaid: BigInt!
+  actualUsdcAmount: BigInt!
+  actualFiatAmount: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

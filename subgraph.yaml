@@ -82,6 +82,8 @@ dataSources:
           handler: handleBuyOrderPaid
         - event: OrderAccepted(indexed uint256,indexed address,string,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
           handler: handleOrderAccepted
+        - event: AdditionalOrderDetails(indexed uint256,(uint64,uint64,uint128,uint128,uint128,uint256,uint256))
+          handler: handleAdditionalOrderDetails
       file: ./src/order.ts
   - kind: ethereum
     name: OrderProcessorFacet
@@ -132,6 +134,8 @@ dataSources:
           handler: handleSellOrderUpiSet
         - event: OrderCancelledBy(indexed uint256,address)
           handler: handleOrderCancelledBy
+        - event: AdditionalOrderDetails(indexed uint256,(uint64,uint64,uint128,uint128,uint128,uint256,uint256))
+          handler: handleAdditionalOrderDetails
       file: ./src/order.ts
   - kind: ethereum
     name: MerchantOnboardFacet

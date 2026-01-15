@@ -31,6 +31,10 @@ export function loadOrders(key: Bytes, event: ethereum.Event): Orders {
     order.userPubKey = "";
     order.encMerchantUpi = "";
     order.cancelledBy = Bytes.empty();
+    order.fixedFeePaid = BigInt.fromI32(0);
+    order.tipsPaid = BigInt.fromI32(0);
+    order.actualUsdcAmount = BigInt.fromI32(0);
+    order.actualFiatAmount = BigInt.fromI32(0);
   }
 
   order.blockNumber = event.block.number;

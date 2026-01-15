@@ -3,6 +3,7 @@ import {
   OrderCompleted as OrderCompletedEvent,
   BuyOrderPaid as BuyOrderPaidEvent,
   OrderAccepted as OrderAcceptedEvent,
+  AdditionalOrderDetails as AdditionalOrderDetailsEvent,
 } from "../generated/OrderFlowHelper/OrderFlowHelper";
 import { OrderDispute as OrderDisputeEvent } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
 import {
@@ -417,5 +418,17 @@ export function handleOrderCancelledBy(event: OrderCancelledByEvent): void {
     event
   );
   order.cancelledBy = event.params.cancelledBy;
+  order.save();
+}
+
+export function handleAdditionalOrderDetails(event: AdditionalOrderDetailsEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event
+  );
+  order.fixedFeePaid = event.params.details.fixedFeePaid;
+  order.tipsPaid = event.params.details.tipsPaid;
+  order.actualUsdcAmount = event.params.details.actualUsdtAmount;
+  order.actualFiatAmount = event.params.details.actualFiatAmount;
   order.save();
 }
