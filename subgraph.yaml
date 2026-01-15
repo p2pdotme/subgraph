@@ -43,12 +43,21 @@ dataSources:
         - name: USDCStakeDelegationFacet
           file: ./abis/USDCStakeDelegationFacet.json
       eventHandlers:
+        # This event emit when community member / admin stake usdc in circle
         - event: UsdcStakedForDelegationInCircle(indexed address,indexed uint256,uint256)
           handler: handleUsdcStakedForDelegationInCircle
+        # This event emit when community member / admin raise unstake request
         - event: ExitRequested(indexed address,indexed uint256,uint256,uint256)
           handler: handleExitRequested
+        # This event emit when community member / admin withdraw unstake request
         - event: ExitProceedsWithdrawn(indexed address,indexed uint256,uint256)
           handler: handleExitProceedsWithdrawn
+        # This event emit when admin delegate stake to merchant
+        - event: UsdcDelegatedToMerchantInCircle(indexed uint256,indexed address,uint256)
+          handler: handleUsdcDelegatedToMerchantInCircle
+        # This event emit when admin undelegate stake from merchant
+        - event: UsdcUndelegatedFromMerchantInCircle(indexed uint256,indexed address,uint256)
+          handler: handleUsdcUndelegatedFromMerchantInCircle
       file: ./src/stake-delegation.ts
   - kind: ethereum
     name: CircleMerchantFacet

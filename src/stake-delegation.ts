@@ -3,9 +3,11 @@ import {
   ExitRequested as ExitRequestedEvent,
   ExitProceedsWithdrawn as ExitProceedsWithdrawnEvent,
   UsdcStakedForDelegationInCircle as UsdcStakedForDelegationInCircleEvent,
+  UsdcDelegatedToMerchantInCircle as UsdcDelegatedToMerchantInCircleEvent,
+  UsdcUndelegatedFromMerchantInCircle as UsdcUndelegatedFromMerchantInCircleEvent,
 } from "../generated/USDCStakeDelegationFacet/USDCStakeDelegationFacet";
 import { loadCircleStakeRecords, loadCircleUnstakeRecords, loadStaker } from "./utils/staker.utils";
-import { loadCircle, loadCircleMetrics } from "./utils/circle.utils";
+import { loadCircle, loadCircleMerchant, loadCircleMetrics } from "./utils/circle.utils";
 import { UNSTAKE_REQUEST_RAISED, UNSTAKE_REQUEST_WITHDRAWN } from "./constants";
 
 export function handleExitRequested(event: ExitRequestedEvent): void {
@@ -93,5 +95,31 @@ export function handleUsdcStakedForDelegationInCircle(event: UsdcStakedForDelega
   if(event.params.user.toHexString() == circle.admin) {
     circleMetrics.adminStaked = circleMetrics.adminStaked.plus(event.params.amount);
   }
+  circleMetrics.save();
+}
+
+export function handleUsdcDelegatedToMerchantInCircle(event: UsdcDelegatedToMerchantInCircleEvent): void {
+  // UPDATE CIRCLE MERCHANT
+  const merchant = loadCircleMerchant(Bytes.fromHexString(event.params.merchant.toHexString()), event);
+  merchant.delegatedStakedAmount = merchant.delegatedStakedAmount.plus(event.params.amount);
+  merchant.save();
+
+  // UPDATE CIRCLE METRICS
+  const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
+  const circleMetrics = loadCircleMetrics(circleKey, event);
+  circleMetrics.totalDelegatedStake = circleMetrics.totalDelegatedStake.plus(event.params.amount);
+  circleMetrics.save();
+}
+
+export function handleUsdcUndelegatedFromMerchantInCircle(event: UsdcUndelegatedFromMerchantInCircleEvent): void { 
+  // UPDATE CIRCLE MERCHANT
+  const merchant = loadCircleMerchant(Bytes.fromHexString(event.params.merchant.toHexString()), event);
+  merchant.delegatedStakedAmount = merchant.delegatedStakedAmount.minus(event.params.amount);
+  merchant.save();
+
+  // UPDATE CIRCLE METRICS
+  const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
+  const circleMetrics = loadCircleMetrics(circleKey, event);
+  circleMetrics.totalDelegatedStake = circleMetrics.totalDelegatedStake.minus(event.params.amount);
   circleMetrics.save();
 }
