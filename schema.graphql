@@ -124,6 +124,7 @@ type Orders @entity(immutable: false) {
   orderId: BigInt!
   type: Int!
   status: Int!
+  circleId: BigInt!
 
   userAddress: Bytes!
   usdcRecipientAddress: Bytes!
@@ -133,7 +134,7 @@ type Orders @entity(immutable: false) {
 
   currency: String!
 
-  assignedMerchants: [String!]
+  assignedMerchants: [AssignedMerchants!]
 
   isUserCompleted: Boolean!
   userCompletedAt: BigInt!
@@ -156,6 +157,19 @@ type Orders @entity(immutable: false) {
   encMerchantUpi: String!
 
   cancelledBy: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# Assigned Merchants
+type AssignedMerchants @entity {
+  id: Bytes!
+
+  merchant: String!
+  assignedPCId: BigInt!
+  orderId: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

@@ -25,6 +25,7 @@ export function loadOrders(key: Bytes, event: ethereum.Event): Orders {
     order.cancelledAt = BigInt.fromI32(0);
     order.acceptedPCId = BigInt.fromI32(0);
     order.merchantAddress = Bytes.empty();
+    order.circleId = BigInt.fromI32(0);
     order.pubkey = "";
     order.encUpi = "";
     order.userPubKey = "";
@@ -56,6 +57,7 @@ export const syncOrder = (
   encUpi: string,
   userPubKey: string,
   encMerchantUpi: string,
+  circleId: BigInt,
   event: ethereum.Event
 ): void => {
   let _order = loadOrders(Bytes.fromByteArray(Bytes.fromBigInt(orderId)), event);
@@ -65,7 +67,7 @@ export const syncOrder = (
   _order.status = status;
   _order.userAddress = user;
   _order.usdcRecipientAddress = recipientAddr;
-
+  _order.circleId = circleId;
   _order.usdcAmount = amount;
   _order.fiatAmount = fiatAmount;
   _order.currency = currency;

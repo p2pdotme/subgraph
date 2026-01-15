@@ -6,9 +6,11 @@ import {
 } from "../generated/OrderFlowHelper/OrderFlowHelper";
 import { OrderDispute as OrderDisputeEvent } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
 import {
+  loadAssignedMerchants,
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
+  loadOrders,
   syncOrder,
 } from "./utils";
 import { CircleMetrics } from "../generated/schema";
@@ -23,51 +25,6 @@ import {
   MerchantAssignedNewOrder as MerchantAssignedNewOrderEvent,
   MerchantReAssignedNewOrder as MerchantReAssignedNewOrderEvent,
 } from "../generated/OrderFlowFacet/OrderFlowFacet";
-
-export function handleOrderCompleted(event: OrderCompletedEvent): void {
-  // Synchronize order data with the latest contract state
-  syncOrder(
-    event.params._order.id,
-    event.params._order.orderType,
-    event.params._order.status,
-    event.params._order.user,
-    event.params._order.recipientAddr,
-    event.params._order.amount,
-    event.params._order.fiatAmount,
-    event.params._order.currency.toString(),
-    event.params._order.userCompleted,
-    event.params._order.userCompletedTimestamp,
-    event.params._order.placedTimestamp,
-    event.params._order.completedTimestamp,
-    event.params._order.pubkey,
-    event.params._order.encUpi,
-    event.params._order.userPubKey,
-    event.params._order.encMerchantUpi,
-    event
-  );
-
-  const merchant = loadCircleMerchant(
-    Bytes.fromHexString(event.params._order.acceptedMerchant.toString()),
-    event
-  );
-
-  const circle =
-    merchant && merchant.circle
-      ? Bytes.fromHexString(merchant.circle.toString())
-      : null;
-
-  if (!circle) return;
-
-  let circleMetrics = loadCircleMetrics(circle, event);
-
-  if (!circleMetrics) return;
-
-  circleMetrics.totalVolume = circleMetrics.totalVolume.plus(
-    event.params._order.amount
-  );
-
-  circleMetrics.save();
-}
 
 /**
  * Updates the dispute metrics for a given circle metrics and event
@@ -134,6 +91,7 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     event.params._order.encUpi,
     event.params._order.userPubKey,
     event.params._order.encMerchantUpi,
+    event.params._order.circleId,
     event
   );
 
@@ -175,6 +133,7 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
     event.params._order.encUpi,
     event.params._order.userPubKey,
     event.params._order.encMerchantUpi,
+    event.params._order.circleId,
     event
   );
 
@@ -218,8 +177,31 @@ export function handleMerchantAssignedNewOrder(
     event.params._order.encUpi,
     event.params._order.userPubKey,
     event.params._order.encMerchantUpi,
+    event.params._order.circleId,
     event
   );
+
+  const assignedMerchantKey = Bytes.fromHexString(
+    `${event.params.orderId}-${event.params.accountNo}-${event.params.merchant}`
+  );
+  let assignedMerchant = loadAssignedMerchants(assignedMerchantKey, event);
+  assignedMerchant.merchant = event.params.merchant.toHexString();
+  assignedMerchant.orderId = event.params.orderId;
+  assignedMerchant.assignedPCId = event.params.accountNo;
+  assignedMerchant.save();
+
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event
+  );
+
+  let assignedMerchants = order.assignedMerchants;
+  if (assignedMerchants == null) {
+    assignedMerchants = [];
+  }
+  assignedMerchants.push(assignedMerchant.id);
+  order.assignedMerchants = assignedMerchants;
+  order.save();
 }
 
 export function handleMerchantReAssignedNewOrder(
@@ -243,8 +225,31 @@ export function handleMerchantReAssignedNewOrder(
     event.params._order.encUpi,
     event.params._order.userPubKey,
     event.params._order.encMerchantUpi,
+    event.params._order.circleId,
     event
   );
+
+  const assignedMerchantKey = Bytes.fromHexString(
+    `${event.params.orderId}-${event.params.accountNo}-${event.params.merchant}`
+  );
+  let assignedMerchant = loadAssignedMerchants(assignedMerchantKey, event);
+  assignedMerchant.merchant = event.params.merchant.toHexString();
+  assignedMerchant.orderId = event.params.orderId;
+  assignedMerchant.assignedPCId = event.params.accountNo;
+  assignedMerchant.save();
+
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event
+  );
+
+  let assignedMerchants = order.assignedMerchants;
+  if (assignedMerchants == null) {
+    assignedMerchants = [];
+  }
+  assignedMerchants.push(assignedMerchant.id);
+  order.assignedMerchants = assignedMerchants;
+  order.save();
 }
 
 export function handleSellOrderUpiSet(event: SellOrderUpiSetEvent): void {
@@ -266,6 +271,7 @@ export function handleSellOrderUpiSet(event: SellOrderUpiSetEvent): void {
     event.params._order.encUpi,
     event.params._order.userPubKey,
     event.params._order.encMerchantUpi,
+    event.params._order.circleId,
     event
   );
 }
@@ -289,8 +295,16 @@ export function handleBuyOrderPaid(event: BuyOrderPaidEvent): void {
     event.params._order.encUpi,
     event.params._order.userPubKey,
     event.params._order.encMerchantUpi,
+    event.params._order.circleId,
     event
   );
+
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+    event
+  );
+  order.paidAt = event.block.timestamp;
+  order.save();
 }
 
 export function handleOrderAccepted(event: OrderAcceptedEvent): void {
@@ -312,6 +326,62 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
     event.params._order.encUpi,
     event.params._order.userPubKey,
     event.params._order.encMerchantUpi,
+    event.params._order.circleId,
     event
   );
+
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+    event
+  );
+  order.acceptedPCId = event.params._order.acceptedAccountNo;
+  order.merchantAddress = event.params._order.acceptedMerchant;
+  order.acceptedAt = event.block.timestamp;
+  order.save();
+}
+
+export function handleOrderCompleted(event: OrderCompletedEvent): void {
+  // Synchronize order data with the latest contract state
+  syncOrder(
+    event.params._order.id,
+    event.params._order.orderType,
+    event.params._order.status,
+    event.params._order.user,
+    event.params._order.recipientAddr,
+    event.params._order.amount,
+    event.params._order.fiatAmount,
+    event.params._order.currency.toString(),
+    event.params._order.userCompleted,
+    event.params._order.userCompletedTimestamp,
+    event.params._order.placedTimestamp,
+    event.params._order.completedTimestamp,
+    event.params._order.pubkey,
+    event.params._order.encUpi,
+    event.params._order.userPubKey,
+    event.params._order.encMerchantUpi,
+    event.params._order.circleId,
+    event
+  );
+
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params._order.acceptedMerchant.toString()),
+    event
+  );
+
+  const circle =
+    merchant && merchant.circle
+      ? Bytes.fromHexString(merchant.circle.toString())
+      : null;
+
+  if (!circle) return;
+
+  let circleMetrics = loadCircleMetrics(circle, event);
+
+  if (!circleMetrics) return;
+
+  circleMetrics.totalVolume = circleMetrics.totalVolume.plus(
+    event.params._order.amount
+  );
+
+  circleMetrics.save();
 }
