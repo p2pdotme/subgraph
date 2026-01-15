@@ -14,7 +14,10 @@ export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
   return circle;
 };
 
-export function loadCircleMetrics(key: Bytes, event: ethereum.Event): CircleMetrics {
+export function loadCircleMetrics(
+  key: Bytes,
+  event: ethereum.Event
+): CircleMetrics {
   let circleMetrics = CircleMetrics.load(key);
   if (!circleMetrics) {
     circleMetrics = new CircleMetrics(key);
@@ -33,21 +36,4 @@ export function loadCircleMetrics(key: Bytes, event: ethereum.Event): CircleMetr
   circleMetrics.transactionHash = event.transaction.hash;
 
   return circleMetrics;
-}
-
-export function loadCircleMerchant(key: Bytes, event: ethereum.Event): CircleMerchant {
-  let circleMerchant = CircleMerchant.load(key);
-  if (!circleMerchant) {
-    circleMerchant = new CircleMerchant(key);
-    circleMerchant.merchant = key.toHexString();
-    circleMerchant.stakedAmount = BigInt.zero();
-    circleMerchant.delegatedStakedAmount = BigInt.zero();
-    circleMerchant.circle = Bytes.fromI32(0);
-  }
-
-  circleMerchant.blockNumber = event.block.number;
-  circleMerchant.blockTimestamp = event.block.timestamp;
-  circleMerchant.transactionHash = event.transaction.hash;
-
-  return circleMerchant;
 }

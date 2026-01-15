@@ -1,4 +1,12 @@
-export { loadStaker, loadCircleStakeRecords } from "./staker.utils";
-export { loadCircle, loadCircleMetrics, loadCircleMerchant } from "./circle.utils";
+export {
+  loadStaker,
+  loadCircleStakeRecords,
+  loadCircleUnstakeRecords,
+} from "./staker.utils";
+export { loadCircle, loadCircleMetrics } from "./circle.utils";
 export { loadOrders, syncOrder } from "./order.utils";
-export { loadAssignedMerchants } from "./merchants.utils";
+export {
+  loadAssignedMerchants,
+  loadCircleMerchant,
+  loadMerchantPaymentChannels,
+} from "./merchants.utils";

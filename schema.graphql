@@ -106,12 +106,42 @@ type CircleMetrics @entity {
 # A merchant who is registered in a circle
 type CircleMerchant @entity {
   id: Bytes!
-
   merchant: String!
+
   circle: Circle!
+  orders: [Orders!]
+
   stakedAmount: BigInt!
   delegatedStakedAmount: BigInt!
-  orders: [Orders!]
+  
+  isOnline: Boolean!
+  isBlacklisted: Boolean!
+
+  onlineAt: BigInt!
+  offlineAt: BigInt!
+  startedAt: BigInt!
+
+  currency: Bytes!
+
+  paymentChannels: [MerchantPaymentChannels!]
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT PAYMENT CHANNELS
+# A payment channel of a merchant
+type MerchantPaymentChannels @entity {
+  id: Bytes!
+  merchant: CircleMerchant!
+
+  pcConfigId: BigInt!
+  accountNo: BigInt!
+  label: String!
+  isActive: Boolean!
+  status: Int!
+  isMonthlyVolumeUnlimited: Boolean!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -133,7 +163,7 @@ type Orders @entity(immutable: false) {
   usdcAmount: BigInt!
   fiatAmount: BigInt!
 
-  currency: String!
+  currency: Bytes!
 
   isUserCompleted: Boolean!
   userCompletedAt: BigInt!
@@ -172,7 +202,8 @@ type Orders @entity(immutable: false) {
   transactionHash: Bytes!
 }
 
-# Assigned Merchants
+# ASSIGNED MERCHANTS
+# A merchant who is assigned to an order
 type AssignedMerchants @entity {
   id: Bytes!
 

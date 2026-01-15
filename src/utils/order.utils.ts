@@ -14,7 +14,7 @@ export function loadOrders(key: Bytes, event: ethereum.Event): Orders {
     order.usdcRecipientAddress = Bytes.empty();
     order.usdcAmount = BigInt.fromI32(0);
     order.fiatAmount = BigInt.fromI32(0);
-    order.currency = "";
+    order.currency = Bytes.empty();
     order.assignedMerchants = [];
     order.isUserCompleted = false;
     order.userCompletedAt = BigInt.fromI32(0);
@@ -57,7 +57,7 @@ export const syncOrder = (
   recipientAddr: Bytes,
   amount: BigInt,
   fiatAmount: BigInt,
-  currency: string,
+  currency: Bytes,
   userCompleted: boolean,
   userCompletedTimestamp: BigInt,
   placedTimestamp: BigInt,
@@ -72,7 +72,10 @@ export const syncOrder = (
   disputeAccountNumber: BigInt,
   event: ethereum.Event
 ): void => {
-  let _order = loadOrders(Bytes.fromByteArray(Bytes.fromBigInt(orderId)), event);
+  let _order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(orderId)),
+    event
+  );
 
   _order.orderId = orderId;
   _order.type = orderType;
@@ -104,4 +107,3 @@ export const syncOrder = (
 
   _order.save();
 };
-
