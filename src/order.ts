@@ -4,9 +4,7 @@ import {
   BuyOrderPaid as BuyOrderPaidEvent,
   OrderAccepted as OrderAcceptedEvent,
 } from "../generated/OrderFlowHelper/OrderFlowHelper";
-import {
-  OrderDispute as OrderDisputeEvent,
-} from "../generated/OrderProcessorFacet/OrderProcessorFacet";
+import { OrderDispute as OrderDisputeEvent } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
 import {
   loadAssignedMerchants,
   loadCircle,
@@ -184,11 +182,18 @@ export function handleMerchantAssignedNewOrder(
     event
   );
 
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toString()),
+    event
+  );
+
   const assignedMerchantKey = Bytes.fromHexString(
     `${event.params.orderId}-${event.params.accountNo}-${event.params.merchant}`
   );
+
   let assignedMerchant = loadAssignedMerchants(assignedMerchantKey, event);
-  assignedMerchant.merchant = event.params.merchant.toHexString();
+  assignedMerchant.assignedMerchant = event.params.merchant.toHexString();
+  assignedMerchant.merchant = merchant.id;
   assignedMerchant.orderId = event.params.orderId;
   assignedMerchant.assignedPCId = event.params.accountNo;
   assignedMerchant.save();
@@ -232,11 +237,16 @@ export function handleMerchantReAssignedNewOrder(
     event
   );
 
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toString()),
+    event
+  );
+
   const assignedMerchantKey = Bytes.fromHexString(
     `${event.params.orderId}-${event.params.accountNo}-${event.params.merchant}`
   );
   let assignedMerchant = loadAssignedMerchants(assignedMerchantKey, event);
-  assignedMerchant.merchant = event.params.merchant.toHexString();
+  assignedMerchant.merchant = merchant.id;
   assignedMerchant.orderId = event.params.orderId;
   assignedMerchant.assignedPCId = event.params.accountNo;
   assignedMerchant.save();
@@ -333,14 +343,29 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
     event
   );
 
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params._order.acceptedMerchant.toString()),
+    event
+  );
+
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
     event
   );
   order.acceptedPCId = event.params._order.acceptedAccountNo;
-  order.merchantAddress = event.params._order.acceptedMerchant;
+  order.acceptedMerchantAddress = event.params._order.acceptedMerchant;
+  order.merchant = merchant.id;
   order.acceptedAt = event.block.timestamp;
   order.save();
+
+  // SET ORDERS IN MERCHANT ENTITY
+  let merchantOrders = merchant.orders;
+  if (merchantOrders == null) {
+    merchantOrders = [];
+  }
+  merchantOrders.push(order.id);
+  merchant.orders = merchantOrders;
+  merchant.save();
 }
 
 export function handleOrderCompleted(event: OrderCompletedEvent): void {

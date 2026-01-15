@@ -111,6 +111,7 @@ type CircleMerchant @entity {
   circle: Circle!
   stakedAmount: BigInt!
   delegatedStakedAmount: BigInt!
+  orders: [Orders!]
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -134,8 +135,6 @@ type Orders @entity(immutable: false) {
 
   currency: String!
 
-  assignedMerchants: [AssignedMerchants!]
-
   isUserCompleted: Boolean!
   userCompletedAt: BigInt!
   completedAt: BigInt!
@@ -145,7 +144,9 @@ type Orders @entity(immutable: false) {
   cancelledAt: BigInt!
 
   acceptedPCId: BigInt!
-  merchantAddress: Bytes!
+  acceptedMerchantAddress: Bytes!
+  merchant: CircleMerchant
+  assignedMerchants: [AssignedMerchants!]
 
   # dispute: Disputes @relation(name: "OrderDispute")
   # merchant: Merchant @relation(name: "MerchantOrders")
@@ -155,7 +156,6 @@ type Orders @entity(immutable: false) {
   encUpi: String!
   userPubKey: String!
   encMerchantUpi: String!
-
   cancelledBy: Bytes!
 
   blockNumber: BigInt!
@@ -167,9 +167,10 @@ type Orders @entity(immutable: false) {
 type AssignedMerchants @entity {
   id: Bytes!
 
-  merchant: String!
+  assignedMerchant: String!
   assignedPCId: BigInt!
   orderId: BigInt!
+  merchant: CircleMerchant
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

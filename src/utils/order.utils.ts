@@ -24,7 +24,7 @@ export function loadOrders(key: Bytes, event: ethereum.Event): Orders {
     order.paidAt = BigInt.fromI32(0);
     order.cancelledAt = BigInt.fromI32(0);
     order.acceptedPCId = BigInt.fromI32(0);
-    order.merchantAddress = Bytes.empty();
+    order.acceptedMerchantAddress = Bytes.empty();
     order.circleId = BigInt.fromI32(0);
     order.pubkey = "";
     order.encUpi = "";
