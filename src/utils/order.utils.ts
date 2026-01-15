@@ -35,6 +35,11 @@ export function loadOrders(key: Bytes, event: ethereum.Event): Orders {
     order.tipsPaid = BigInt.fromI32(0);
     order.actualUsdcAmount = BigInt.fromI32(0);
     order.actualFiatAmount = BigInt.fromI32(0);
+    order.disputeStatus = -1;
+    order.disputeRedactTransId = BigInt.fromI32(0);
+    order.disputeAccountNumber = BigInt.fromI32(0);
+    order.disputeSettledByAddr = Bytes.empty();
+    order.disputeFaultType = -1;
   }
 
   order.blockNumber = event.block.number;
@@ -62,6 +67,9 @@ export const syncOrder = (
   userPubKey: string,
   encMerchantUpi: string,
   circleId: BigInt,
+  disputeStatus: i32,
+  disputeRedactTransId: BigInt,
+  disputeAccountNumber: BigInt,
   event: ethereum.Event
 ): void => {
   let _order = loadOrders(Bytes.fromByteArray(Bytes.fromBigInt(orderId)), event);
@@ -85,6 +93,10 @@ export const syncOrder = (
   _order.encUpi = encUpi;
   _order.userPubKey = userPubKey;
   _order.encMerchantUpi = encMerchantUpi;
+
+  _order.disputeStatus = disputeStatus;
+  _order.disputeRedactTransId = disputeRedactTransId;
+  _order.disputeAccountNumber = disputeAccountNumber;
 
   _order.blockNumber = event.block.number;
   _order.blockTimestamp = event.block.timestamp;

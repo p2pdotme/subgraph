@@ -104,6 +104,8 @@ dataSources:
       eventHandlers:
         - event: OrderDispute(indexed address,indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
           handler: handleOrderDispute
+        - event: DisputeTransIdSet(indexed address,indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
+          handler: handleDisputeTransIdSet
       file: ./src/order.ts
   - kind: ethereum
     name: OrderFlowFacet

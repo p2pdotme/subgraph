@@ -148,8 +148,6 @@ type Orders @entity(immutable: false) {
   merchant: CircleMerchant
   assignedMerchants: [AssignedMerchants!]
 
-  # dispute: Disputes @relation(name: "OrderDispute")
-
   pubkey: String!
   encUpi: String!
   userPubKey: String!
@@ -161,6 +159,13 @@ type Orders @entity(immutable: false) {
   tipsPaid: BigInt!
   actualUsdcAmount: BigInt!
   actualFiatAmount: BigInt!
+
+  # DISPUTE DETAILS
+  disputeStatus: Int!
+  disputeRedactTransId: BigInt!
+  disputeAccountNumber: BigInt!
+  disputeSettledByAddr: Bytes!
+  disputeFaultType: Int!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
