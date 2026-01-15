@@ -410,6 +410,9 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
   }
   merchantOrders.push(order.id);
   merchant.orders = merchantOrders;
+  if (merchant.startedAt.equals(BigInt.zero())) {
+    merchant.startedAt = event.block.timestamp;
+  }
   merchant.save();
 }
 

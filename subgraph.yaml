@@ -159,3 +159,27 @@ dataSources:
         - event: MerchantRegisteredToCircle(indexed address,uint256,uint256,string,bytes32)
           handler: handleMerchantRegisteredToCircle
       file: ./src/circle-merchants.ts
+  - kind: ethereum
+    name: MerchantRegistryFacet
+    network: base-sepolia
+    source:
+      address: "0xD1DA5F07D3Fd5DC69e1DB9E5a83fbcF697EB172e"
+      abi: MerchantRegistryFacet
+      startBlock: 36347766
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - MerchantRegistryFacet
+      abis:
+        - name: MerchantRegistryFacet
+          file: ./abis/MerchantRegistryFacet.json
+      eventHandlers:
+        - event: OnlineOfflineToggled(indexed address,(string,uint8,(uint256,uint256,string,uint8,bool,uint256,uint256)[]),(uint256,uint256,uint256,bool,uint256,uint256,uint256,bool,bytes32,uint256,(uint256,uint256,uint256)))
+          handler: handleOnlineOfflineToggled
+        - event: BlacklistMerchant(indexed address,bool)
+          handler: handleBlacklistMerchant
+        - event: MerchantOngoingOrder(indexed address,bool,bytes32)
+          handler: handleMerchantOngoingOrder
+      file: ./src/circle-merchants.ts

@@ -1,5 +1,9 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { AssignedMerchants, CircleMerchant, MerchantPaymentChannels } from "../../generated/schema";
+import {
+  AssignedMerchants,
+  CircleMerchant,
+  MerchantPaymentChannels,
+} from "../../generated/schema";
 
 export function loadAssignedMerchants(
   key: Bytes,
@@ -18,8 +22,10 @@ export function loadAssignedMerchants(
   return assignedMerchant;
 }
 
-
-export function loadCircleMerchant(key: Bytes, event: ethereum.Event): CircleMerchant {
+export function loadCircleMerchant(
+  key: Bytes,
+  event: ethereum.Event
+): CircleMerchant {
   let circleMerchant = CircleMerchant.load(key);
   if (!circleMerchant) {
     circleMerchant = new CircleMerchant(key);
@@ -30,6 +36,7 @@ export function loadCircleMerchant(key: Bytes, event: ethereum.Event): CircleMer
     circleMerchant.delegatedStakedAmount = BigInt.zero();
     circleMerchant.isOnline = false;
     circleMerchant.isBlacklisted = false;
+    circleMerchant.isOngoingOrder = false;
     circleMerchant.onlineAt = BigInt.zero();
     circleMerchant.offlineAt = BigInt.zero();
     circleMerchant.startedAt = BigInt.zero();
@@ -44,7 +51,10 @@ export function loadCircleMerchant(key: Bytes, event: ethereum.Event): CircleMer
   return circleMerchant;
 }
 
-export function loadMerchantPaymentChannels(key: Bytes, event: ethereum.Event): MerchantPaymentChannels {
+export function loadMerchantPaymentChannels(
+  key: Bytes,
+  event: ethereum.Event
+): MerchantPaymentChannels {
   let merchantPaymentChannel = MerchantPaymentChannels.load(key);
   if (!merchantPaymentChannel) {
     merchantPaymentChannel = new MerchantPaymentChannels(key);

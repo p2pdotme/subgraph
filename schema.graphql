@@ -116,6 +116,7 @@ type CircleMerchant @entity {
   
   isOnline: Boolean!
   isBlacklisted: Boolean!
+  isOngoingOrder: Boolean!
 
   onlineAt: BigInt!
   offlineAt: BigInt!
