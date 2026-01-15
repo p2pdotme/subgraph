@@ -107,6 +107,7 @@ type CircleMetrics @entity {
 type CircleMerchant @entity {
   id: Bytes!
   merchant: String!
+  telegramId: String!
 
   circle: Circle!
   orders: [Orders!]

@@ -29,6 +29,7 @@ export function handleMerchantRegisteredToCircle(
   merchant.onlineAt = event.block.timestamp;
   merchant.isOnline = true;
   merchant.currency = event.params.currency;
+  merchant.telegramId = event.params.telegramId;
 
   merchant.save();
 

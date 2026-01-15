@@ -30,6 +30,7 @@ export function loadCircleMerchant(
   if (!circleMerchant) {
     circleMerchant = new CircleMerchant(key);
     circleMerchant.merchant = key.toHexString();
+    circleMerchant.telegramId = "";
     circleMerchant.circle = Bytes.fromI32(0);
     circleMerchant.orders = [];
     circleMerchant.stakedAmount = BigInt.zero();
