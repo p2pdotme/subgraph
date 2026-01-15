@@ -45,6 +45,8 @@ type CircleStakeRecords @entity {
 
   unstakeRequest: CircleUnstakeRecords
 
+  stakedAt: BigInt!
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!

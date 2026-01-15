@@ -33,6 +33,7 @@ export function loadCircleStakeRecords(
   if (!circleStakeRecord) {
     circleStakeRecord = new CircleStakeRecords(key);
     circleStakeRecord.amount = BigInt.fromI32(0);
+    circleStakeRecord.stakedAt = BigInt.fromI32(0);
   }
 
   circleStakeRecord.blockNumber = event.block.number;

@@ -83,8 +83,9 @@ export function handleUsdcStakedForDelegationInCircle(event: UsdcStakedForDelega
   stakeRecord.circle = circle.id;
   stakeRecord.staker = staker.id;
   stakeRecord.amount = stakeRecord.amount.plus(event.params.amount);
-  // CLEAR THE UNSTAKE REQUEST
+  // CLEAR THE UNSTAKE REQUEST WHEN THE STAKE IS MADE
   stakeRecord.unstakeRequest = null;
+  stakeRecord.stakedAt = event.block.timestamp;
   stakeRecord.save();
 
   staker.circleStakeRecords.push(stakeRecord.id);
