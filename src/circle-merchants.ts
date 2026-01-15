@@ -1,6 +1,6 @@
 import { BigInt, Bytes } from "@graphprotocol/graph-ts";
 import { MerchantRegistered as MerchantRegisteredEvent } from "../generated/CircleMerchantFacet/CircleMerchantFacet";
-import { MerchantWithoutFundsTracker as MerchantWithoutFundsTrackerEvent } from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
+import { MerchantRegisteredToCircle as MerchantRegisteredToCircleEvent } from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
 import { loadCircle, loadCircleMerchant, loadCircleMetrics } from "./utils";
 
 export function handleMerchantRegistered(event: MerchantRegisteredEvent): void {
@@ -15,9 +15,8 @@ export function handleMerchantRegistered(event: MerchantRegisteredEvent): void {
   merchant.save();
 }
 
-export function handleMerchantWithoutFundsTracker(event: MerchantWithoutFundsTrackerEvent): void {
-  const merchantDetails = event.params.merchantDetails;
-  const circleId = merchantDetails.circleId;
+export function handleMerchantRegisteredToCircle(event: MerchantRegisteredToCircleEvent): void {
+  const circleId = event.params.circleId;
   
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(circleId));
   const circle = loadCircle(circleKey, event);
@@ -25,7 +24,7 @@ export function handleMerchantWithoutFundsTracker(event: MerchantWithoutFundsTra
 
   merchant.circle = circle.id;
   merchant.merchant = event.params.merchant.toHexString();
-  merchant.stakedAmount = event.params.stake;
+  merchant.stakedAmount = event.params.stakeAmount;
 
   merchant.save();
 
