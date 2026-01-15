@@ -108,6 +108,7 @@ type CircleMerchant @entity {
   id: Bytes!
   merchant: String!
   telegramId: String!
+  circleId: BigInt!
 
   circle: Circle!
   orders: [Orders!]

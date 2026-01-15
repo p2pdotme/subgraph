@@ -24,6 +24,7 @@ export function handleMerchantRegisteredToCircle(
   );
 
   merchant.circle = circle.id;
+  merchant.circleId = event.params.circleId;
   merchant.merchant = event.params.merchant.toHexString();
   merchant.stakedAmount = event.params.stakeAmount;
   merchant.onlineAt = event.block.timestamp;
