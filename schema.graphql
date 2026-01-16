@@ -1,64 +1,221 @@
+# CIRCLE
 type Circle @entity {
-  id: ID!
-  name: String! # Circle Name
-  circleId: String! # Circle ID
-  owner: String! # Owner Address
-  token: String! # Token Address
+  id: Bytes!
 
-  stake: [CircleStake!]! @derivedFrom(field: "circle")
+  circleId: BigInt!
+  admin: String!
+  currency: Bytes!
+  name: String!
+  communityLink: String!
+  isAutoApprovedPCEnabled: Boolean! 
+
+  metrics: CircleMetrics @relation(name: "circle")
+
+  blockNumber: BigInt! 
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
 }
 
-type CircleStake @entity {
-  id: ID!
-  circleId: String! # Circle ID
-  amount: BigInt! # Staked Amount
-  stakedBy: String! # Staked By Address
-
-  Circle: Circle! @derivedFrom(field: "stake")
-}
-
-
+# STAKER
+# An individual who stakes in any circle
 type Staker @entity {
-  id: ID!
+  id: Bytes!
+
+  staker: String!
+
+  totalStaked: BigInt!
+
+  circleStakeRecords: [CircleStakeRecords!]!
+  circleUnstakeRecords: [CircleUnstakeRecords!]!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CIRCLE STAKE RECORDS 
+# A record of a staker's stake in a circle
+type CircleStakeRecords @entity {
+  id: Bytes!
+
+  circle: Circle!
+  staker: Staker!
   
-  totalStaked: BigInt! # Total Staked Amount
+  amount: BigInt!
 
-  claimableRewards: [StakerClaimableRewards!]! @derivedFrom(field: "staker")
-  earnedRewards: [StakerEarnedRewards!]! @derivedFrom(field: "staker")
+  unstakeRequest: CircleUnstakeRecords
 
-  stakedCircles: [String!]! # Staked Circles ids
+  stakedAt: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
 }
 
-type StakerEarnedRewards @entity {
-  id: ID!
-  staker: String! # Staker Address
-  circleId: String! # Circle ID
-  earnedRewards: BigInt! # Earned Rewards Amount
-  earnedAt: BigInt! # Earned At
+# CIRCLE UNSTAKE RECORDS
+# A record of a staker's unstake in a circle
+type CircleUnstakeRecords @entity {
+  id: Bytes!
+  
+  circle: Circle!
+  staker: Staker!
+  
+  amount: BigInt!
+  availableAt: BigInt!
+
+  status: BigInt!
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
 }
 
-type StakerClaimableRewards @entity {
-  id: ID!
-  staker: String! # Staker Address
-  circleId: String! # Circle ID
-  claimableRewards: BigInt! # Claimable Rewards Amount
-  claimableAt: BigInt! # Claimable At
-}
-
+# CIRCLE METRICS
+# Metrics for a circle
 type CircleMetrics @entity {
-  id: ID!
-  circleId: String! # Circle ID
+  id: Bytes!
 
-  circleTotalVolume: BigInt! # Total Volume
+  circle: Circle @relation(name: "metrics")
 
-  totalStaked: BigInt! # Total Staked Amount
-  adminStaked: BigInt! # Admin Staked Amount
+  # STAKING METRICS
+  totalStaked: BigInt!
+  adminStaked: BigInt!
 
-  totalMerchantsCount: BigInt! # Total Merchants Count
-  activeMerchantsCount: BigInt! # Active Merchants Count
+  # DELEGATION METRICS
+  totalDelegatedStake: BigInt!
 
-  totalDisputesCount: BigInt! # Total Disputes Count
-  pendingDisputesCount: BigInt! # Pending Disputes Count
-  resolvedDisputesCount: BigInt! # Resolved Disputes Count
-  challengedDisputesCount: BigInt! # Challenged Disputes Count
+  # VOLUME METRICS
+  totalVolume: BigInt!
+
+  # ORDER METRICS
+  totalPlacedOrdersCount: BigInt!
+
+  # DISPUTE METRICS
+  raisedDisputesCount: BigInt!
+  resolvedDisputesCount: BigInt!
+
+  #merchant metrics
+  totalMerchantsCount: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CIRCLE MERCHANT
+# A merchant who is registered in a circle
+type CircleMerchant @entity {
+  id: Bytes!
+  merchant: String!
+  telegramId: String!
+  circleId: BigInt!
+
+  circle: Circle!
+  orders: [Orders!]
+
+  stakedAmount: BigInt!
+  delegatedStakedAmount: BigInt!
+  
+  isOnline: Boolean!
+  isBlacklisted: Boolean!
+  isOngoingOrder: Boolean!
+
+  onlineAt: BigInt!
+  offlineAt: BigInt!
+  startedAt: BigInt!
+
+  currency: Bytes!
+
+  paymentChannels: [MerchantPaymentChannels!]
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT PAYMENT CHANNELS
+# A payment channel of a merchant
+type MerchantPaymentChannels @entity {
+  id: Bytes!
+  merchant: CircleMerchant!
+
+  pcConfigId: BigInt!
+  accountNo: BigInt!
+  label: String!
+  isActive: Boolean!
+  status: Int!
+  isMonthlyVolumeUnlimited: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# ORDERS
+# A order in a circle
+type Orders @entity(immutable: false) {
+  id: Bytes!
+  orderId: BigInt!
+  type: Int!
+  status: Int!
+  circleId: BigInt!
+
+  userAddress: Bytes!
+  usdcRecipientAddress: Bytes!
+
+  usdcAmount: BigInt!
+  fiatAmount: BigInt!
+
+  currency: Bytes!
+
+  isUserCompleted: Boolean!
+  userCompletedAt: BigInt!
+  completedAt: BigInt!
+  placedAt: BigInt!
+  acceptedAt: BigInt!
+  paidAt: BigInt!
+  cancelledAt: BigInt!
+
+  acceptedPCId: BigInt!
+  acceptedMerchantAddress: Bytes!
+  merchant: CircleMerchant
+  assignedMerchants: [AssignedMerchants!]
+
+  pubkey: String!
+  encUpi: String!
+  userPubKey: String!
+  encMerchantUpi: String!
+  cancelledBy: Bytes!
+
+  # ADDITIONAL ORDER DETAILS
+  fixedFeePaid: BigInt!
+  tipsPaid: BigInt!
+  actualUsdcAmount: BigInt!
+  actualFiatAmount: BigInt!
+
+  # DISPUTE DETAILS
+  disputeStatus: Int!
+  disputeRedactTransId: BigInt!
+  disputeAccountNumber: BigInt!
+  disputeSettledByAddr: Bytes!
+  disputeFaultType: Int!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# ASSIGNED MERCHANTS
+# A merchant who is assigned to an order
+type AssignedMerchants @entity {
+  id: Bytes!
+
+  assignedMerchant: String!
+  assignedPCId: BigInt!
+  orderId: BigInt!
+  merchant: CircleMerchant
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
 }
