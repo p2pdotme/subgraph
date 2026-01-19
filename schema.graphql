@@ -219,3 +219,35 @@ type AssignedMerchants @entity {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
+
+# CIRCLE ADMIN REWARDS
+# A rewards for a circle admin
+type CircleAdminRewards @entity {
+  id: Bytes!
+  admin: String!
+
+  lockedRewards: BigInt!
+  earnedRewards: BigInt!
+  withdrawnRewards: BigInt!
+  claimableRewards: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT REWARDS
+# A rewards for a merchant
+type MerchantRewards @entity {
+  id: Bytes!
+  merchant: String!
+
+  lockedRewards: BigInt!
+  earnedRewards: BigInt!
+  withdrawnRewards: BigInt!
+  claimableRewards: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
