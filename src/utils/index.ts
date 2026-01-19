@@ -10,3 +10,7 @@ export {
   loadCircleMerchant,
   loadMerchantPaymentChannels,
 } from "./merchants.utils";
+export {
+  loadCircleAdminRewards,
+  loadMerchantRewards,
+} from "./rewards.utils";

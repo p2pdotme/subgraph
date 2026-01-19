@@ -8,9 +8,9 @@ dataSources:
     name: CircleFacet
     network: base-sepolia
     source:
-      address: "0xD1DA5F07D3Fd5DC69e1DB9E5a83fbcF697EB172e"
+      address: "0x1bBb412132Ab48FEDa08b95C7B9E950fA12c6948"
       abi: CircleFacet
-      startBlock: 36347766
+      startBlock: 36391816
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -30,9 +30,9 @@ dataSources:
     name: USDCStakeDelegationFacet
     network: base-sepolia
     source:
-      address: "0xD1DA5F07D3Fd5DC69e1DB9E5a83fbcF697EB172e"
+      address: "0x1bBb412132Ab48FEDa08b95C7B9E950fA12c6948"
       abi: USDCStakeDelegationFacet
-      startBlock: 36347766
+      startBlock: 36391816
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -63,9 +63,9 @@ dataSources:
     name: OrderFlowHelper
     network: base-sepolia
     source:
-      address: "0xD1DA5F07D3Fd5DC69e1DB9E5a83fbcF697EB172e"
+      address: "0x1bBb412132Ab48FEDa08b95C7B9E950fA12c6948"
       abi: OrderFlowHelper
-      startBlock: 36347766
+      startBlock: 36391816
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -89,9 +89,9 @@ dataSources:
     name: OrderProcessorFacet
     network: base-sepolia
     source:
-      address: "0xD1DA5F07D3Fd5DC69e1DB9E5a83fbcF697EB172e"
+      address: "0x1bBb412132Ab48FEDa08b95C7B9E950fA12c6948"
       abi: OrderProcessorFacet
-      startBlock: 36347766
+      startBlock: 36391816
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -111,9 +111,9 @@ dataSources:
     name: OrderFlowFacet
     network: base-sepolia
     source:
-      address: "0xD1DA5F07D3Fd5DC69e1DB9E5a83fbcF697EB172e"
+      address: "0x1bBb412132Ab48FEDa08b95C7B9E950fA12c6948"
       abi: OrderFlowFacet
-      startBlock: 36347766
+      startBlock: 36391816
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -143,9 +143,9 @@ dataSources:
     name: MerchantOnboardFacet
     network: base-sepolia
     source:
-      address: "0xD1DA5F07D3Fd5DC69e1DB9E5a83fbcF697EB172e"
+      address: "0x1bBb412132Ab48FEDa08b95C7B9E950fA12c6948"
       abi: MerchantOnboardFacet
-      startBlock: 36347766
+      startBlock: 36391816
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -163,9 +163,9 @@ dataSources:
     name: MerchantRegistryFacet
     network: base-sepolia
     source:
-      address: "0xD1DA5F07D3Fd5DC69e1DB9E5a83fbcF697EB172e"
+      address: "0x1bBb412132Ab48FEDa08b95C7B9E950fA12c6948"
       abi: MerchantRegistryFacet
-      startBlock: 36347766
+      startBlock: 36391816
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -185,3 +185,35 @@ dataSources:
         - event: Merchant(indexed address,(string,uint8,(uint256,uint256,string,uint8,bool,uint256,uint256)[]),(uint256,uint256,uint256,bool,uint256,uint256,uint256,bool,bytes32,uint256,(uint256,uint256,uint256)),uint256,uint256,uint256,uint256)
           handler: handleMerchant
       file: ./src/circle-merchants.ts
+  - kind: ethereum
+    name: RewardsFacet
+    network: base-sepolia
+    source:
+      address: "0x1bBb412132Ab48FEDa08b95C7B9E950fA12c6948"
+      abi: RewardsFacet
+      startBlock: 36391816
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - RewardsFacet
+      abis:
+        - name: RewardsFacet
+          file: ./abis/RewardsFacet.json
+      eventHandlers:
+        # Circle admin rewards (by admin address)
+        - event: CircleAdminRewardAllocated(indexed address,uint256,(uint256,uint256,uint256))
+          handler: handleCircleAdminRewardAllocated
+        - event: CircleAdminRewardClaimed(indexed address,uint256,(uint256,uint256,uint256))
+          handler: handleCircleAdminRewardClaimed
+        - event: CircleAdminRewardAdjusted(indexed address,uint256,(uint256,uint256,uint256))
+          handler: handleCircleAdminRewardAdjusted
+        # Merchant rewards (by merchant address)
+        - event: MerchantRewardAllocated(indexed address,uint256,(uint256,uint256,uint256))
+          handler: handleMerchantRewardAllocated
+        - event: MerchantRewardClaimed(indexed address,uint256,(uint256,uint256,uint256))
+          handler: handleMerchantRewardClaimed
+        - event: MerchantRewardAdjusted(indexed address,uint256,(uint256,uint256,uint256))
+          handler: handleMerchantRewardAdjusted
+      file: ./src/rewards.ts
