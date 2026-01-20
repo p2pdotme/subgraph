@@ -3,6 +3,7 @@ import {
   AssignedMerchants,
   CircleMerchant,
   MerchantPaymentChannels,
+  MerchantVolumeByMonth,
 } from "../../generated/schema";
 
 export function loadAssignedMerchants(
@@ -73,4 +74,22 @@ export function loadMerchantPaymentChannels(
   merchantPaymentChannel.transactionHash = event.transaction.hash;
 
   return merchantPaymentChannel;
+}
+
+export function loadMerchantVolumeByMonth(
+  key: Bytes,
+  event: ethereum.Event
+): MerchantVolumeByMonth {
+  let merchantVolumeByMonth = MerchantVolumeByMonth.load(key);
+  if (!merchantVolumeByMonth) {
+    merchantVolumeByMonth = new MerchantVolumeByMonth(key);
+    merchantVolumeByMonth.month = "";
+    merchantVolumeByMonth.volume = BigInt.zero();
+  }
+
+  merchantVolumeByMonth.blockNumber = event.block.number;
+  merchantVolumeByMonth.blockTimestamp = event.block.timestamp;
+  merchantVolumeByMonth.transactionHash = event.transaction.hash;
+
+  return merchantVolumeByMonth;
 }
