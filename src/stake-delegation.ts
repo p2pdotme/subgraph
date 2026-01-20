@@ -13,7 +13,7 @@ import {
   loadCircleStakeRecords,
   loadCircleUnstakeRecords,
   loadStaker,
-} from "./utils";
+} from "./lib";
 import { UNSTAKE_REQUEST_RAISED, UNSTAKE_REQUEST_WITHDRAWN } from "./constants";
 
 export function handleExitRequested(event: ExitRequestedEvent): void {

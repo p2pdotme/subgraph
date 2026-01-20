@@ -4,12 +4,9 @@ import {
   // CircleProtocolTokenStaked as CircleProtocolTokenStakedEvent,
 } from "../generated/CircleFacet/CircleFacet";
 import {
-  loadStaker,
   loadCircle,
   loadCircleMetrics,
-  loadCircleStakeRecords,
-} from "./utils";
-import { Circle } from "../generated/schema";
+} from "./lib";
 
 export function handleCircleCreated(event: CircleCreatedEvent): void {
   const key = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));

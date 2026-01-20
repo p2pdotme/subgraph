@@ -10,7 +10,7 @@ import {
 import {
   loadCircleAdminRewards,
   loadMerchantRewards,
-} from "./utils/rewards.utils";
+} from "./lib";
 
 export function handleCircleAdminRewardAllocated(
   event: CircleAdminRewardAllocatedEvent

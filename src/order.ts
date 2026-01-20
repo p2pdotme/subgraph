@@ -13,7 +13,7 @@ import {
   loadCircleMetrics,
   loadOrders,
   syncOrder,
-} from "./utils";
+} from "./lib";
 import { CircleMetrics } from "../generated/schema";
 import {
   DISPUTE_STATUS_RAISED,

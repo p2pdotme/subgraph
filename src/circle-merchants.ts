@@ -5,13 +5,16 @@ import {
   loadCircleMerchant,
   loadCircleMetrics,
   loadMerchantPaymentChannels,
-} from "./utils";
+  loadMerchantVolumeByMonth,
+} from "./lib";
 import {
   OnlineOfflineToggled as OnlineOfflineToggledEvent,
   BlacklistMerchant as BlacklistMerchantEvent,
   MerchantOngoingOrder as MerchantOngoingOrderEvent,
   Merchant as MerchantEvent,
+  MerchantVolume as MerchantVolumeEvent,
 } from "../generated/MerchantRegistryFacet/MerchantRegistryFacet";
+import { getYearMonthFromTimestamp } from "./utils/date.utils";
 
 export function handleMerchantRegisteredToCircle(
   event: MerchantRegisteredToCircleEvent
@@ -110,5 +113,51 @@ export function handleMerchant(event: MerchantEvent): void {
   }
 
   merchant.paymentChannels = paymentChannels;
-  merchant.save()
+  merchant.save();
+}
+
+export function handleMerchantVolume(event: MerchantVolumeEvent): void {
+  // LOAD MERCHANT
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event
+  );
+
+  // LOAD PAYMENT CHANNEL
+  const pcKey = Bytes.fromHexString(
+    `${event.params.merchant.toHexString()}-${event.params.accountNo}`
+  );
+  const paymentChannel = loadMerchantPaymentChannels(pcKey, event);
+
+  // LOAD MERCHANT VOLUME
+  const merchantVolumeKey = Bytes.fromHexString(
+    `${event.params.merchant.toHexString()}-${paymentChannel.id}-${
+      merchant.circleId
+    }`
+  );
+
+  // LOAD MERCHANT VOLUME BY MONTH
+  const month = getYearMonthFromTimestamp(event.block.timestamp);
+  const merchantVolumeByMonth = loadMerchantVolumeByMonth(
+    Bytes.fromHexString(`${merchantVolumeKey}-${month}`),
+    event
+  );
+
+  merchantVolumeByMonth.merchant = merchant.id;
+  merchantVolumeByMonth.circle = merchant.circle;
+  merchantVolumeByMonth.paymentChannel = paymentChannel.id;
+  merchantVolumeByMonth.month = month;
+  merchantVolumeByMonth.volume = event.params.monthlyVolume.plus(
+    event.params.monthlyVolume
+  );
+
+  let volumeByMonth = merchant.volumeByMonth;
+  if (volumeByMonth == null) {
+    volumeByMonth = [];
+  }
+  volumeByMonth.push(merchantVolumeByMonth.id);
+  merchant.volumeByMonth = volumeByMonth;
+
+  merchantVolumeByMonth.save();
+  merchant.save();
 }
