@@ -94,7 +94,7 @@ type CircleMetrics @entity {
   raisedDisputesCount: BigInt!
   resolvedDisputesCount: BigInt!
 
-  #merchant metrics
+  # MERCHANT METRICS
   totalMerchantsCount: BigInt!
 
   blockNumber: BigInt!
@@ -127,6 +127,7 @@ type CircleMerchant @entity {
   currency: Bytes!
 
   paymentChannels: [MerchantPaymentChannels!]
+  volumeByMonth: [MerchantVolumeByMonth!]
   
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -246,6 +247,23 @@ type MerchantRewards @entity {
   earnedRewards: BigInt!
   withdrawnRewards: BigInt!
   claimableRewards: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT VOLUME BY MONTH
+# A volume for a merchant by month
+type MerchantVolumeByMonth @entity {
+  id: Bytes!
+
+  merchant: CircleMerchant!
+  circle: Circle!
+  paymentChannel: MerchantPaymentChannels!
+
+  month: String!
+  volume: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

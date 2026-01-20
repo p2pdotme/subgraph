@@ -184,6 +184,8 @@ dataSources:
           handler: handleMerchantOngoingOrder
         - event: Merchant(indexed address,(string,uint8,(uint256,uint256,string,uint8,bool,uint256,uint256)[]),(uint256,uint256,uint256,bool,uint256,uint256,uint256,bool,bytes32,uint256,(uint256,uint256,uint256)),uint256,uint256,uint256,uint256)
           handler: handleMerchant
+        - event: MerchantVolume(indexed address,uint256,uint256,uint256)
+          handler: handleMerchantVolume
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: RewardsFacet
