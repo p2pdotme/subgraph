@@ -78,6 +78,23 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
     event
   );
 
+  // Set disputePlacedAt when dispute is raised, disputeSettledAt when settled
+  if (event.params._order.disputeInfo.status === DISPUTE_STATUS_RAISED) {
+    let _order = loadOrders(
+      Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+      event
+    );
+    _order.disputePlacedAt = event.block.timestamp;
+    _order.save();
+  } else if (event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED) {
+    let _order = loadOrders(
+      Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+      event
+    );
+    _order.disputeSettledAt = event.block.timestamp;
+    _order.save();
+  }
+
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
     event
