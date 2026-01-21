@@ -146,6 +146,7 @@ type MerchantPaymentChannels @entity {
   isActive: Boolean!
   status: Int!
   isMonthlyVolumeUnlimited: Boolean!
+  fiatBalance: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
