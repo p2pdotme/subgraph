@@ -201,6 +201,8 @@ type Orders @entity(immutable: false) {
   disputeAccountNumber: BigInt!
   disputeSettledByAddr: Bytes!
   disputeFaultType: Int!
+  disputePlacedAt: BigInt!
+  disputeSettledAt: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

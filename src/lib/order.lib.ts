@@ -40,6 +40,8 @@ export function loadOrders(key: Bytes, event: ethereum.Event): Orders {
     order.disputeAccountNumber = BigInt.fromI32(0);
     order.disputeSettledByAddr = Bytes.empty();
     order.disputeFaultType = -1;
+    order.disputePlacedAt = BigInt.fromI32(0);
+    order.disputeSettledAt = BigInt.fromI32(0);
   }
 
   order.blockNumber = event.block.number;
