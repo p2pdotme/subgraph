@@ -67,6 +67,7 @@ export function loadMerchantPaymentChannels(
     merchantPaymentChannel.isActive = false;
     merchantPaymentChannel.status = 0;
     merchantPaymentChannel.isMonthlyVolumeUnlimited = false;
+    merchantPaymentChannel.fiatBalance = BigInt.zero();
   }
 
   merchantPaymentChannel.blockNumber = event.block.number;
