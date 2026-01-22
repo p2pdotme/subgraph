@@ -108,6 +108,12 @@ export function handleMerchant(event: MerchantEvent): void {
     paymentChannel.label = paymentChannelDetails.label;
     paymentChannel.isActive = paymentChannelDetails.isActive;
     paymentChannel.status = paymentChannelDetails.status;
+
+    // Set fiat balance for the payment channel that matches the accountNo in the event
+    if (paymentChannelDetails.accountNo.equals(event.params.accountNo)) {
+      paymentChannel.fiatBalance = event.params.freeAmountFiat;
+    }
+
     paymentChannel.save();
     paymentChannels.push(paymentChannel.id);
   }
