@@ -24,9 +24,6 @@ export function loadCircleMetrics(
     circleMetrics.totalStaked = BigInt.zero();
     circleMetrics.adminStaked = BigInt.zero();
     circleMetrics.totalVolume = BigInt.zero();
-    circleMetrics.totalPlacedOrdersCount = BigInt.zero();
-    circleMetrics.totalCompletedOrdersCount = BigInt.zero();
-    circleMetrics.totalCancelledOrdersCount = BigInt.zero();
     circleMetrics.resolvedDisputesCount = BigInt.zero();
     circleMetrics.raisedDisputesCount = BigInt.zero();
     circleMetrics.totalDelegatedStake = BigInt.zero();
@@ -38,4 +35,23 @@ export function loadCircleMetrics(
   circleMetrics.transactionHash = event.transaction.hash;
 
   return circleMetrics;
+}
+
+export function loadCircleOrderMetricsByMonth(
+  key: Bytes,
+  event: ethereum.Event
+): CircleOrderMetricsByMonth {
+  let metrics = CircleOrderMetricsByMonth.load(key);
+  if (!metrics) {
+    metrics = new CircleOrderMetricsByMonth(key);
+    metrics.month = "";
+    metrics.totalCompletedOrdersCount = BigInt.zero();
+    metrics.totalCancelledOrdersCount = BigInt.zero();
+  }
+
+  metrics.blockNumber = event.block.number;
+  metrics.blockTimestamp = event.block.timestamp;
+  metrics.transactionHash = event.transaction.hash;
+
+  return metrics;
 }

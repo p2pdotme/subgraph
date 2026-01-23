@@ -7,11 +7,12 @@ type Circle @entity {
   currency: Bytes!
   name: String!
   communityLink: String!
-  isAutoApprovedPCEnabled: Boolean! 
+  isAutoApprovedPCEnabled: Boolean!
 
   metrics: CircleMetrics @relation(name: "circle")
+  orderMetricsByMonth: [CircleOrderMetricsByMonth!] @derivedFrom(field: "circle")
 
-  blockNumber: BigInt! 
+  blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
@@ -87,11 +88,6 @@ type CircleMetrics @entity {
   # VOLUME METRICS
   totalVolume: BigInt!
 
-  # ORDER METRICS
-  totalPlacedOrdersCount: BigInt!
-  totalCompletedOrdersCount: BigInt!
-  totalCancelledOrdersCount: BigInt!
-
   # DISPUTE METRICS
   raisedDisputesCount: BigInt!
   resolvedDisputesCount: BigInt!
@@ -128,14 +124,10 @@ type CircleMerchant @entity {
 
   currency: Bytes!
 
-  # Order metrics for completion rate calculation
-  totalOrdersCount: BigInt!
-  completedOrdersCount: BigInt!
-  cancelledOrdersCount: BigInt!
-
-  paymentChannels: [MerchantPaymentChannels!]
-  volumeByMonth: [MerchantVolumeByMonth!]
-  paymentChannelMigrations: [PaymentChannelMigration!]!
+  paymentChannels: [MerchantPaymentChannels!] @derivedFrom(field: "merchant")
+  volumeByMonth: [MerchantVolumeByMonth!] @derivedFrom(field: "merchant")
+  orderMetricsByMonth: [MerchantOrderMetricsByMonth!] @derivedFrom(field: "merchant")
+  paymentChannelMigrations: [PaymentChannelMigration!] @derivedFrom(field: "merchant")
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -275,6 +267,44 @@ type MerchantVolumeByMonth @entity {
 
   month: String!
   volume: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT ORDER METRICS BY MONTH
+# Order metrics for a merchant by year-month
+type MerchantOrderMetricsByMonth @entity {
+  id: Bytes!
+
+  merchant: CircleMerchant!
+
+  # Year-month format: "YYYY-MM" (e.g., "2024-01")
+  month: String!
+
+  # Order counts for this month (totalOrders = completed + cancelled)
+  completedOrdersCount: BigInt!
+  cancelledOrdersCount: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CIRCLE ORDER METRICS BY MONTH
+# Order metrics for a circle by year-month
+type CircleOrderMetricsByMonth @entity {
+  id: Bytes!
+
+  circle: Circle!
+
+  # Year-month format: "YYYY-MM" (e.g., "2024-01")
+  month: String!
+
+  # Order counts for this month
+  totalCompletedOrdersCount: BigInt!
+  totalCancelledOrdersCount: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

@@ -4,6 +4,7 @@ import {
   CircleMerchant,
   MerchantPaymentChannels,
   MerchantVolumeByMonth,
+  MerchantOrderMetricsByMonth,
   PaymentChannelMigration,
 } from "../../generated/schema";
 
@@ -46,10 +47,6 @@ export function loadCircleMerchant(
     circleMerchant.startedAt = BigInt.zero();
     circleMerchant.currency = Bytes.empty();
     circleMerchant.paymentChannels = [];
-    // Order metrics
-    circleMerchant.totalOrdersCount = BigInt.zero();
-    circleMerchant.completedOrdersCount = BigInt.zero();
-    circleMerchant.cancelledOrdersCount = BigInt.zero();
   }
 
   circleMerchant.blockNumber = event.block.number;
@@ -123,4 +120,23 @@ export function loadPaymentChannelMigration(
   migration.transactionHash = event.transaction.hash;
 
   return migration;
+}
+
+export function loadMerchantOrderMetricsByMonth(
+  key: Bytes,
+  event: ethereum.Event
+): MerchantOrderMetricsByMonth {
+  let metrics = MerchantOrderMetricsByMonth.load(key);
+  if (!metrics) {
+    metrics = new MerchantOrderMetricsByMonth(key);
+    metrics.month = "";
+    metrics.completedOrdersCount = BigInt.zero();
+    metrics.cancelledOrdersCount = BigInt.zero();
+  }
+
+  metrics.blockNumber = event.block.number;
+  metrics.blockTimestamp = event.block.timestamp;
+  metrics.transactionHash = event.transaction.hash;
+
+  return metrics;
 }

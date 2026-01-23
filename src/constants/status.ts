@@ -5,7 +5,12 @@ export const STATUS_FAILED: i32 = 2;
 export const DISPUTE_STATUS_RAISED: i32 = 1;
 export const DISPUTE_STATUS_SETTLED: i32 = 2;
 
+// Order Status enum values
+export const ORDER_STATUS_PLACED: i32 = 0;
+export const ORDER_STATUS_ACCEPTED: i32 = 1;
+export const ORDER_STATUS_PAID: i32 = 2;
 export const ORDER_STATUS_COMPLETED: i32 = 3;
+export const ORDER_STATUS_CANCELLED: i32 = 4;
 
 export const UNSTAKE_REQUEST_RAISED: i32 = 0;
 export const UNSTAKE_REQUEST_WITHDRAWN: i32 = 1;
