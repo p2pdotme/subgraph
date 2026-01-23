@@ -94,8 +94,6 @@ export function handleMerchant(event: MerchantEvent): void {
     event
   );
 
-  let paymentChannels: Bytes[] = [];
-
   // ADD/UPDATE MERCHANT PAYMENT CHANNELS
   for (let i = 0; i < event.params.merchantConfig.paymentChannels.length; i++) {
     let paymentChannelDetails = event.params.merchantConfig.paymentChannels[i];
@@ -117,10 +115,8 @@ export function handleMerchant(event: MerchantEvent): void {
     }
 
     paymentChannel.save();
-    paymentChannels.push(paymentChannel.id);
   }
 
-  merchant.paymentChannels = paymentChannels;
   merchant.save();
 }
 
@@ -152,13 +148,6 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   merchantVolumeByMonth.volume = merchantVolumeByMonth.volume.plus(
     event.params.monthlyVolume
   );
-
-  let volumeByMonth = merchant.volumeByMonth;
-  if (volumeByMonth == null) {
-    volumeByMonth = [];
-  }
-  volumeByMonth.push(merchantVolumeByMonth.id);
-  merchant.volumeByMonth = volumeByMonth;
 
   merchantVolumeByMonth.save();
   merchant.save();
@@ -205,17 +194,4 @@ export function handlePaymentChannelMigrationRequest(
   }
 
   migration.save();
-
-  // ADD MIGRATION TO MERCHANT'S LIST
-  let migrations = merchant.paymentChannelMigrations;
-  if (migrations == null) {
-    migrations = [];
-  }
-
-  // Only add if not already present
-  if (!migrations.includes(migrationId)) {
-    migrations.push(migrationId);
-    merchant.paymentChannelMigrations = migrations;
-    merchant.save();
-  }
 }

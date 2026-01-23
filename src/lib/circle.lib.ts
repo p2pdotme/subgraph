@@ -1,5 +1,5 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Circle, CircleMetrics } from "../../generated/schema";
+import { Circle, CircleMetrics, CircleOrderMetricsByMonth } from "../../generated/schema";
 
 export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
   let circle = Circle.load(key);
