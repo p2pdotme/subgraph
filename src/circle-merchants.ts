@@ -1,11 +1,13 @@
 import { BigInt, Bytes } from "@graphprotocol/graph-ts";
 import { MerchantRegisteredToCircle as MerchantRegisteredToCircleEvent } from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
+import { PaymentChannelMigrationRequest as PaymentChannelMigrationRequestEvent } from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
 import {
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
   loadMerchantPaymentChannels,
   loadMerchantVolumeByMonth,
+  loadPaymentChannelMigration,
 } from "./lib";
 import {
   OnlineOfflineToggled as OnlineOfflineToggledEvent,
@@ -147,7 +149,7 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   merchantVolumeByMonth.circle = merchant.circle;
   merchantVolumeByMonth.paymentChannel = paymentChannel.id;
   merchantVolumeByMonth.month = month;
-  merchantVolumeByMonth.volume = event.params.monthlyVolume.plus(
+  merchantVolumeByMonth.volume = merchantVolumeByMonth.volume.plus(
     event.params.monthlyVolume
   );
 
@@ -160,4 +162,60 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
 
   merchantVolumeByMonth.save();
   merchant.save();
+}
+
+export function handlePaymentChannelMigrationRequest(
+  event: PaymentChannelMigrationRequestEvent
+): void {
+  // LOAD MERCHANT
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event
+  );
+
+  // CREATE CONSISTENT MIGRATION ID (without timestamp)
+  // Using merchant address + fromAccountNo + toAccountNo as unique identifier
+  // This allows us to track the same migration across status changes
+  const migrationId = Bytes.fromHexString(
+    `${event.params.merchant.toHexString()}-${event.params.fromAccountNo.toString()}-${event.params.toAccountNo.toString()}`
+  );
+
+  // LOAD OR CREATE MIGRATION RECORD
+  const migration = loadPaymentChannelMigration(migrationId, event);
+
+  // Update migration record
+  migration.merchant = merchant.id;
+  migration.fromAccountNo = event.params.fromAccountNo;
+  migration.toAccountNo = event.params.toAccountNo;
+  migration.fromPaymentChannelIndex = event.params.fromPaymentChannelIndex;
+  migration.toPaymentChannelIndex = event.params.toPaymentChannelIndex;
+  migration.status = BigInt.fromI32(event.params.status);
+
+  // Store fiat balances for both accounts
+  migration.fromFiatBalance = event.params.fromFiatAmount;
+  migration.toFiatBalance = event.params.toFiatAmount;
+
+  // SET TIMESTAMPS
+  // If status is PENDING, this is a new request - set requestedAt
+  // If status is APPROVED or REJECTED, this is a settlement - set settledAt
+  if (event.params.status === 1) { // PENDING
+    migration.requestedAt = event.block.timestamp;
+  } else if (event.params.status === 2 || event.params.status === 3) { // APPROVED or REJECTED
+    migration.settledAt = event.block.timestamp;
+  }
+
+  migration.save();
+
+  // ADD MIGRATION TO MERCHANT'S LIST
+  let migrations = merchant.paymentChannelMigrations;
+  if (migrations == null) {
+    migrations = [];
+  }
+
+  // Only add if not already present
+  if (!migrations.includes(migrationId)) {
+    migrations.push(migrationId);
+    merchant.paymentChannelMigrations = migrations;
+    merchant.save();
+  }
 }

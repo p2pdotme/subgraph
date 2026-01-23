@@ -141,22 +141,35 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     event
   );
 
-  const merchant = loadCircleMerchant(
-    Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
-    event
-  );
+  // Only update merchant stats if an order was accepted by a merchant
+  const acceptedMerchantAddress = event.params._order.acceptedMerchant;
+  if (!acceptedMerchantAddress.equals(Bytes.empty())) {
+    const merchant = loadCircleMerchant(
+      Bytes.fromHexString(acceptedMerchantAddress.toHexString()),
+      event
+    );
 
-  // merchant.circle is already Bytes - no conversion needed
-  const circle = merchant.circle;
+    // Increment cancelled orders count for merchant
+    merchant.cancelledOrdersCount = merchant.cancelledOrdersCount.plus(BigInt.fromI32(1));
+    merchant.save();
 
-  // Check if circle is the default placeholder value (Bytes.fromI32(0))
-  if (!circle || circle.equals(Bytes.fromI32(0))) return;
+    // merchant.circle is already Bytes - no conversion needed
+    const circle = merchant.circle;
 
-  let circleMetrics = loadCircleMetrics(circle, event);
+    // Check if circle is the default placeholder value (Bytes.fromI32(0))
+    if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
-  if (!circleMetrics) return;
+    let circleMetrics = loadCircleMetrics(circle, event);
 
-  circleMetrics.save();
+    if (!circleMetrics) return;
+
+    // Increment cancelled orders count for circle
+    circleMetrics.totalCancelledOrdersCount = circleMetrics.totalCancelledOrdersCount.plus(
+      BigInt.fromI32(1)
+    );
+
+    circleMetrics.save();
+  }
 }
 
 export function handleOrderPlaced(event: OrderPlacedEvent): void {
@@ -430,6 +443,10 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
   if (merchant.startedAt.equals(BigInt.zero())) {
     merchant.startedAt = event.block.timestamp;
   }
+
+  // Increment total orders count for merchant
+  merchant.totalOrdersCount = merchant.totalOrdersCount.plus(BigInt.fromI32(1));
+
   merchant.save();
 }
 
@@ -464,6 +481,10 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
     event
   );
 
+  // Increment completed orders count for merchant
+  merchant.completedOrdersCount = merchant.completedOrdersCount.plus(BigInt.fromI32(1));
+  merchant.save();
+
   // merchant.circle is already Bytes - no conversion needed
   const circle = merchant.circle;
 
@@ -476,6 +497,11 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
 
   circleMetrics.totalVolume = circleMetrics.totalVolume.plus(
     event.params._order.amount
+  );
+
+  // Increment completed orders count for circle
+  circleMetrics.totalCompletedOrdersCount = circleMetrics.totalCompletedOrdersCount.plus(
+    BigInt.fromI32(1)
   );
 
   circleMetrics.save();

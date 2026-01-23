@@ -4,6 +4,7 @@ import {
   CircleMerchant,
   MerchantPaymentChannels,
   MerchantVolumeByMonth,
+  PaymentChannelMigration,
 } from "../../generated/schema";
 
 export function loadAssignedMerchants(
@@ -45,6 +46,10 @@ export function loadCircleMerchant(
     circleMerchant.startedAt = BigInt.zero();
     circleMerchant.currency = Bytes.empty();
     circleMerchant.paymentChannels = [];
+    // Order metrics
+    circleMerchant.totalOrdersCount = BigInt.zero();
+    circleMerchant.completedOrdersCount = BigInt.zero();
+    circleMerchant.cancelledOrdersCount = BigInt.zero();
   }
 
   circleMerchant.blockNumber = event.block.number;
@@ -93,4 +98,29 @@ export function loadMerchantVolumeByMonth(
   merchantVolumeByMonth.transactionHash = event.transaction.hash;
 
   return merchantVolumeByMonth;
+}
+
+export function loadPaymentChannelMigration(
+  key: Bytes,
+  event: ethereum.Event
+): PaymentChannelMigration {
+  let migration = PaymentChannelMigration.load(key);
+  if (!migration) {
+    migration = new PaymentChannelMigration(key);
+    migration.fromAccountNo = BigInt.zero();
+    migration.toAccountNo = BigInt.zero();
+    migration.fromPaymentChannelIndex = BigInt.zero();
+    migration.toPaymentChannelIndex = BigInt.zero();
+    migration.status = BigInt.zero(); // DEFAULT
+    migration.fromFiatBalance = BigInt.zero();
+    migration.toFiatBalance = BigInt.zero();
+    migration.requestedAt = BigInt.zero();
+    migration.settledAt = BigInt.zero();
+  }
+
+  migration.blockNumber = event.block.number;
+  migration.blockTimestamp = event.block.timestamp;
+  migration.transactionHash = event.transaction.hash;
+
+  return migration;
 }

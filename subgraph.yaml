@@ -152,12 +152,15 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - MerchantOnboardFacet
+        - PaymentChannelMigration
       abis:
         - name: MerchantOnboardFacet
           file: ./abis/MerchantOnboardFacet.json
       eventHandlers:
         - event: MerchantRegisteredToCircle(indexed address,uint256,uint256,string,bytes32)
           handler: handleMerchantRegisteredToCircle
+        - event: PaymentChannelMigrationRequest(indexed address,indexed uint256,indexed uint256,uint256,uint256,uint8,uint256,uint256)
+          handler: handlePaymentChannelMigrationRequest
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: MerchantRegistryFacet

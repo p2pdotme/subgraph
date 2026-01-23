@@ -25,6 +25,8 @@ export function loadCircleMetrics(
     circleMetrics.adminStaked = BigInt.zero();
     circleMetrics.totalVolume = BigInt.zero();
     circleMetrics.totalPlacedOrdersCount = BigInt.zero();
+    circleMetrics.totalCompletedOrdersCount = BigInt.zero();
+    circleMetrics.totalCancelledOrdersCount = BigInt.zero();
     circleMetrics.resolvedDisputesCount = BigInt.zero();
     circleMetrics.raisedDisputesCount = BigInt.zero();
     circleMetrics.totalDelegatedStake = BigInt.zero();

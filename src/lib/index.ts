@@ -9,7 +9,8 @@ export {
   loadAssignedMerchants,
   loadCircleMerchant,
   loadMerchantPaymentChannels,
-  loadMerchantVolumeByMonth
+  loadMerchantVolumeByMonth,
+  loadPaymentChannelMigration,
 } from "./merchants.lib";
 export {
   loadCircleAdminRewards,

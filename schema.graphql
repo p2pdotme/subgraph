@@ -89,6 +89,8 @@ type CircleMetrics @entity {
 
   # ORDER METRICS
   totalPlacedOrdersCount: BigInt!
+  totalCompletedOrdersCount: BigInt!
+  totalCancelledOrdersCount: BigInt!
 
   # DISPUTE METRICS
   raisedDisputesCount: BigInt!
@@ -115,7 +117,7 @@ type CircleMerchant @entity {
 
   stakedAmount: BigInt!
   delegatedStakedAmount: BigInt!
-  
+
   isOnline: Boolean!
   isBlacklisted: Boolean!
   isOngoingOrder: Boolean!
@@ -126,9 +128,15 @@ type CircleMerchant @entity {
 
   currency: Bytes!
 
+  # Order metrics for completion rate calculation
+  totalOrdersCount: BigInt!
+  completedOrdersCount: BigInt!
+  cancelledOrdersCount: BigInt!
+
   paymentChannels: [MerchantPaymentChannels!]
   volumeByMonth: [MerchantVolumeByMonth!]
-  
+  paymentChannelMigrations: [PaymentChannelMigration!]!
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -267,6 +275,33 @@ type MerchantVolumeByMonth @entity {
 
   month: String!
   volume: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# PAYMENT CHANNEL MIGRATION
+# A record of payment channel migration requests
+type PaymentChannelMigration @entity {
+  id: Bytes!
+
+  merchant: CircleMerchant!
+
+  fromAccountNo: BigInt!
+  toAccountNo: BigInt!
+  fromPaymentChannelIndex: BigInt!
+  toPaymentChannelIndex: BigInt!
+
+  # Migration status: 0=DEFAULT, 1=PENDING, 2=APPROVED, 3=REJECTED
+  status: BigInt!
+
+  # Fiat balance transferred during migration
+  fromFiatBalance: BigInt!
+  toFiatBalance: BigInt!
+
+  requestedAt: BigInt!
+  settledAt: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
