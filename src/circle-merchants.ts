@@ -98,7 +98,7 @@ export function handleMerchant(event: MerchantEvent): void {
   for (let i = 0; i < event.params.merchantConfig.paymentChannels.length; i++) {
     let paymentChannelDetails = event.params.merchantConfig.paymentChannels[i];
 
-    const pcKey = Bytes.fromHexString(
+    const pcKey = Bytes.fromUTF8(
       `${event.params.merchant.toHexString()}-${paymentChannelDetails.accountNo.toString()}`
     );
     let paymentChannel = loadMerchantPaymentChannels(pcKey, event);
@@ -130,22 +130,16 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   );
 
   // LOAD PAYMENT CHANNEL
-  const pcKey = Bytes.fromHexString(
-    `${event.params.merchant.toHexString()}-${event.params.accountNo}`
+  const pcKey = Bytes.fromUTF8(
+    `${event.params.merchant.toHexString()}-${event.params.accountNo.toString()}`
   );
   const paymentChannel = loadMerchantPaymentChannels(pcKey, event);
 
-  // LOAD MERCHANT VOLUME
-  const merchantVolumeKey = Bytes.fromHexString(
-    `${event.params.merchant.toHexString()}-${paymentChannel.id}-${
-      merchant.circleId
-    }`
-  );
-
   // LOAD MERCHANT VOLUME BY MONTH
   const month = getYearMonthFromTimestamp(event.block.timestamp);
+  const merchantVolumeByMonthKey = `${event.params.merchant.toHexString()}-${paymentChannel.id.toHexString()}-${merchant.circleId.toString()}-${month}`;
   const merchantVolumeByMonth = loadMerchantVolumeByMonth(
-    Bytes.fromHexString(`${merchantVolumeKey}-${month}`),
+    Bytes.fromUTF8(merchantVolumeByMonthKey),
     event
   );
 
