@@ -46,7 +46,6 @@ export function loadCircleMerchant(
     circleMerchant.offlineAt = BigInt.zero();
     circleMerchant.startedAt = BigInt.zero();
     circleMerchant.currency = Bytes.empty();
-    circleMerchant.paymentChannels = [];
   }
 
   circleMerchant.blockNumber = event.block.number;
