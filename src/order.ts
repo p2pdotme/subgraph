@@ -311,8 +311,8 @@ export function handleMerchantAssignedNewOrder(
     event
   );
 
-  const assignedMerchantKey = Bytes.fromHexString(
-    `${event.params.orderId}-${event.params.accountNo}-${event.params.merchant}`
+  const assignedMerchantKey = Bytes.fromUTF8(
+    `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`
   );
 
   let assignedMerchant = loadAssignedMerchants(assignedMerchantKey, event);
@@ -369,8 +369,8 @@ export function handleMerchantReAssignedNewOrder(
     event
   );
 
-  const assignedMerchantKey = Bytes.fromHexString(
-    `${event.params.orderId}-${event.params.accountNo}-${event.params.merchant}`
+  const assignedMerchantKey = Bytes.fromUTF8(
+    `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`
   );
   let assignedMerchant = loadAssignedMerchants(assignedMerchantKey, event);
   assignedMerchant.merchant = merchant.id;
