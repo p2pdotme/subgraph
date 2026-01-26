@@ -1,6 +1,11 @@
 import { BigInt, Bytes } from "@graphprotocol/graph-ts";
-import { MerchantRegisteredToCircle as MerchantRegisteredToCircleEvent } from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
-import { PaymentChannelMigrationRequest as PaymentChannelMigrationRequestEvent } from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
+import {
+  MerchantRegisteredToCircle as MerchantRegisteredToCircleEvent,
+  PaymentChannelMigrationRequest as PaymentChannelMigrationRequestEvent,
+  UnstakeRequested as UnstakeRequestedEvent,
+  UnstakeRequestCancelled as UnstakeRequestCancelledEvent,
+  UnstakeApproved as UnstakeApprovedEvent,
+} from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
 import {
   loadCircle,
   loadCircleMerchant,
@@ -133,6 +138,11 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   );
   const paymentChannel = loadMerchantPaymentChannels(pcKey, event);
 
+  // UPDATE DAILY AND MONTHLY VOLUME ON PAYMENT CHANNEL
+  paymentChannel.dailyVolume = event.params.dailyVolume;
+  paymentChannel.monthlyVolume = event.params.monthlyVolume;
+  paymentChannel.save();
+
   // LOAD MERCHANT VOLUME BY MONTH
   const month = getYearMonthFromTimestamp(event.block.timestamp);
   const merchantVolumeByMonthKey = `${event.params.merchant.toHexString()}-${paymentChannel.id.toHexString()}-${merchant.circleId.toString()}-${month}`;
@@ -215,4 +225,51 @@ export function handlePaymentChannelMigrationRequest(
   }
 
   migration.save();
+}
+
+// UNSTAKE REQUEST HANDLERS
+
+export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event
+  );
+
+  merchant.isUnstakeRequested = true;
+  merchant.unstakeRequestedAt = event.block.timestamp;
+  merchant.unstakeAmount = event.params.unstakeAmount;
+
+  merchant.save();
+}
+
+export function handleUnstakeRequestCancelled(
+  event: UnstakeRequestCancelledEvent
+): void {
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event
+  );
+
+  merchant.isUnstakeRequested = false;
+  merchant.unstakeRequestedAt = BigInt.zero();
+  merchant.unstakeAmount = BigInt.zero();
+
+  merchant.save();
+}
+
+export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event
+  );
+
+  // Reset unstake request state
+  merchant.isUnstakeRequested = false;
+  merchant.unstakeRequestedAt = BigInt.zero();
+  merchant.unstakeAmount = BigInt.zero();
+
+  // Update staked amount
+  merchant.stakedAmount = event.params.stake;
+
+  merchant.save();
 }

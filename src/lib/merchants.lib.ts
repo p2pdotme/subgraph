@@ -43,6 +43,9 @@ export function loadCircleMerchant(
     circleMerchant.isOnline = false;
     circleMerchant.isBlacklisted = false;
     circleMerchant.isOngoingOrder = false;
+    circleMerchant.isUnstakeRequested = false;
+    circleMerchant.unstakeRequestedAt = BigInt.zero();
+    circleMerchant.unstakeAmount = BigInt.zero();
     circleMerchant.onlineAt = BigInt.zero();
     circleMerchant.offlineAt = BigInt.zero();
     circleMerchant.startedAt = BigInt.zero();
@@ -70,6 +73,8 @@ export function loadMerchantPaymentChannels(
     merchantPaymentChannel.status = 0;
     merchantPaymentChannel.isMonthlyVolumeUnlimited = false;
     merchantPaymentChannel.fiatBalance = BigInt.zero();
+    merchantPaymentChannel.dailyVolume = BigInt.zero();
+    merchantPaymentChannel.monthlyVolume = BigInt.zero();
   }
 
   merchantPaymentChannel.blockNumber = event.block.number;

@@ -121,6 +121,11 @@ type CircleMerchant @entity {
   isBlacklisted: Boolean!
   isOngoingOrder: Boolean!
 
+  # Unstake request tracking for availability
+  isUnstakeRequested: Boolean!
+  unstakeRequestedAt: BigInt!
+  unstakeAmount: BigInt!
+
   onlineAt: BigInt!
   offlineAt: BigInt!
   startedAt: BigInt!
@@ -151,6 +156,10 @@ type MerchantPaymentChannels @entity {
   status: Int!
   isMonthlyVolumeUnlimited: Boolean!
   fiatBalance: BigInt!
+
+  # Current volume tracking for availability calculations
+  dailyVolume: BigInt!
+  monthlyVolume: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -347,6 +356,19 @@ type PaymentChannelConfig @entity {
   dailyVolumeLimit: BigInt!
   currency: Bytes!
   isActive: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CURRENCY CONFIG
+# Monthly volume limit configuration per currency
+type CurrencyConfig @entity {
+  id: Bytes!
+
+  currency: Bytes!
+  monthlyVolumeLimit: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
