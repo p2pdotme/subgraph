@@ -165,7 +165,7 @@ export function handlePaymentChannelMigrationRequest(
   // CREATE CONSISTENT MIGRATION ID (without timestamp)
   // Using merchant address + fromAccountNo + toAccountNo as unique identifier
   // This allows us to track the same migration across status changes
-  const migrationId = Bytes.fromHexString(
+  const migrationId = Bytes.fromUTF8(
     `${event.params.merchant.toHexString()}-${event.params.fromAccountNo.toString()}-${event.params.toAccountNo.toString()}`
   );
 
@@ -191,6 +191,27 @@ export function handlePaymentChannelMigrationRequest(
     migration.requestedAt = event.block.timestamp;
   } else if (event.params.status === 2 || event.params.status === 3) { // APPROVED or REJECTED
     migration.settledAt = event.block.timestamp;
+
+    // UPDATE PAYMENT CHANNEL FIAT BALANCES AND STATUS WHEN MIGRATION IS APPROVED
+    if (event.params.status === 2) { // APPROVED
+      // Update "from" payment channel - set to TERMINATED with fiat balance 0
+      const fromPcKey = Bytes.fromUTF8(
+        `${event.params.merchant.toHexString()}-${event.params.fromAccountNo.toString()}`
+      );
+      const fromPaymentChannel = loadMerchantPaymentChannels(fromPcKey, event);
+      fromPaymentChannel.fiatBalance = event.params.fromFiatAmount;
+      fromPaymentChannel.status = 5; // TERMINATED
+      fromPaymentChannel.isActive = false;
+      fromPaymentChannel.save();
+
+      // Update "to" payment channel fiat balance
+      const toPcKey = Bytes.fromUTF8(
+        `${event.params.merchant.toHexString()}-${event.params.toAccountNo.toString()}`
+      );
+      const toPaymentChannel = loadMerchantPaymentChannels(toPcKey, event);
+      toPaymentChannel.fiatBalance = event.params.toFiatAmount;
+      toPaymentChannel.save();
+    }
   }
 
   migration.save();
