@@ -1,11 +1,18 @@
 import { BigInt, Bytes } from "@graphprotocol/graph-ts";
-import { MerchantRegisteredToCircle as MerchantRegisteredToCircleEvent } from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
+import {
+  MerchantRegisteredToCircle as MerchantRegisteredToCircleEvent,
+  PaymentChannelMigrationRequest as PaymentChannelMigrationRequestEvent,
+  UnstakeRequested as UnstakeRequestedEvent,
+  UnstakeRequestCancelled as UnstakeRequestCancelledEvent,
+  UnstakeApproved as UnstakeApprovedEvent,
+} from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
 import {
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
   loadMerchantPaymentChannels,
   loadMerchantVolumeByMonth,
+  loadPaymentChannelMigration,
 } from "./lib";
 import {
   OnlineOfflineToggled as OnlineOfflineToggledEvent,
@@ -92,8 +99,6 @@ export function handleMerchant(event: MerchantEvent): void {
     event
   );
 
-  let paymentChannels: Bytes[] = [];
-
   // ADD/UPDATE MERCHANT PAYMENT CHANNELS
   for (let i = 0; i < event.params.merchantConfig.paymentChannels.length; i++) {
     let paymentChannelDetails = event.params.merchantConfig.paymentChannels[i];
@@ -115,10 +120,8 @@ export function handleMerchant(event: MerchantEvent): void {
     }
 
     paymentChannel.save();
-    paymentChannels.push(paymentChannel.id);
   }
 
-  merchant.paymentChannels = paymentChannels;
   merchant.save();
 }
 
@@ -135,6 +138,11 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   );
   const paymentChannel = loadMerchantPaymentChannels(pcKey, event);
 
+  // UPDATE DAILY AND MONTHLY VOLUME ON PAYMENT CHANNEL
+  paymentChannel.dailyVolume = event.params.dailyVolume;
+  paymentChannel.monthlyVolume = event.params.monthlyVolume;
+  paymentChannel.save();
+
   // LOAD MERCHANT VOLUME BY MONTH
   const month = getYearMonthFromTimestamp(event.block.timestamp);
   const merchantVolumeByMonthKey = `${event.params.merchant.toHexString()}-${paymentChannel.id.toHexString()}-${merchant.circleId.toString()}-${month}`;
@@ -147,17 +155,121 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   merchantVolumeByMonth.circle = merchant.circle;
   merchantVolumeByMonth.paymentChannel = paymentChannel.id;
   merchantVolumeByMonth.month = month;
-  merchantVolumeByMonth.volume = event.params.monthlyVolume.plus(
+  merchantVolumeByMonth.volume = merchantVolumeByMonth.volume.plus(
     event.params.monthlyVolume
   );
 
-  let volumeByMonth = merchant.volumeByMonth;
-  if (volumeByMonth == null) {
-    volumeByMonth = [];
-  }
-  volumeByMonth.push(merchantVolumeByMonth.id);
-  merchant.volumeByMonth = volumeByMonth;
-
   merchantVolumeByMonth.save();
+  merchant.save();
+}
+
+export function handlePaymentChannelMigrationRequest(
+  event: PaymentChannelMigrationRequestEvent
+): void {
+  // LOAD MERCHANT
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event
+  );
+
+  // CREATE CONSISTENT MIGRATION ID (without timestamp)
+  // Using merchant address + fromAccountNo + toAccountNo as unique identifier
+  // This allows us to track the same migration across status changes
+  const migrationId = Bytes.fromUTF8(
+    `${event.params.merchant.toHexString()}-${event.params.fromAccountNo.toString()}-${event.params.toAccountNo.toString()}`
+  );
+
+  // LOAD OR CREATE MIGRATION RECORD
+  const migration = loadPaymentChannelMigration(migrationId, event);
+
+  // Update migration record
+  migration.merchant = merchant.id;
+  migration.fromAccountNo = event.params.fromAccountNo;
+  migration.toAccountNo = event.params.toAccountNo;
+  migration.fromPaymentChannelIndex = event.params.fromPaymentChannelIndex;
+  migration.toPaymentChannelIndex = event.params.toPaymentChannelIndex;
+  migration.status = BigInt.fromI32(event.params.status);
+
+  // Store fiat balances for both accounts
+  migration.fromFiatBalance = event.params.fromFiatAmount;
+  migration.toFiatBalance = event.params.toFiatAmount;
+
+  // SET TIMESTAMPS
+  // If status is PENDING, this is a new request - set requestedAt
+  // If status is APPROVED or REJECTED, this is a settlement - set settledAt
+  if (event.params.status === 1) { // PENDING
+    migration.requestedAt = event.block.timestamp;
+  } else if (event.params.status === 2 || event.params.status === 3) { // APPROVED or REJECTED
+    migration.settledAt = event.block.timestamp;
+
+    // UPDATE PAYMENT CHANNEL FIAT BALANCES AND STATUS WHEN MIGRATION IS APPROVED
+    if (event.params.status === 2) { // APPROVED
+      // Update "from" payment channel - set to TERMINATED with fiat balance 0
+      const fromPcKey = Bytes.fromUTF8(
+        `${event.params.merchant.toHexString()}-${event.params.fromAccountNo.toString()}`
+      );
+      const fromPaymentChannel = loadMerchantPaymentChannels(fromPcKey, event);
+      fromPaymentChannel.fiatBalance = event.params.fromFiatAmount;
+      fromPaymentChannel.status = 5; // TERMINATED
+      fromPaymentChannel.isActive = false;
+      fromPaymentChannel.save();
+
+      // Update "to" payment channel fiat balance
+      const toPcKey = Bytes.fromUTF8(
+        `${event.params.merchant.toHexString()}-${event.params.toAccountNo.toString()}`
+      );
+      const toPaymentChannel = loadMerchantPaymentChannels(toPcKey, event);
+      toPaymentChannel.fiatBalance = event.params.toFiatAmount;
+      toPaymentChannel.save();
+    }
+  }
+
+  migration.save();
+}
+
+// UNSTAKE REQUEST HANDLERS
+
+export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event
+  );
+
+  merchant.isUnstakeRequested = true;
+  merchant.unstakeRequestedAt = event.block.timestamp;
+  merchant.unstakeAmount = event.params.unstakeAmount;
+
+  merchant.save();
+}
+
+export function handleUnstakeRequestCancelled(
+  event: UnstakeRequestCancelledEvent
+): void {
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event
+  );
+
+  merchant.isUnstakeRequested = false;
+  merchant.unstakeRequestedAt = BigInt.zero();
+  merchant.unstakeAmount = BigInt.zero();
+
+  merchant.save();
+}
+
+export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event
+  );
+
+  // Reset unstake request state
+  merchant.isUnstakeRequested = false;
+  merchant.unstakeRequestedAt = BigInt.zero();
+  merchant.unstakeAmount = BigInt.zero();
+
+  // Update staked amount
+  merchant.stakedAmount = event.params.stake;
+
   merchant.save();
 }

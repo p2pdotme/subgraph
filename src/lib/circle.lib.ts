@@ -1,5 +1,5 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Circle, CircleMetrics } from "../../generated/schema";
+import { Circle, CircleMetrics, CircleOrderMetricsByMonth } from "../../generated/schema";
 
 export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
   let circle = Circle.load(key);
@@ -24,11 +24,11 @@ export function loadCircleMetrics(
     circleMetrics.totalStaked = BigInt.zero();
     circleMetrics.adminStaked = BigInt.zero();
     circleMetrics.totalVolume = BigInt.zero();
-    circleMetrics.totalPlacedOrdersCount = BigInt.zero();
     circleMetrics.resolvedDisputesCount = BigInt.zero();
     circleMetrics.raisedDisputesCount = BigInt.zero();
     circleMetrics.totalDelegatedStake = BigInt.zero();
     circleMetrics.totalMerchantsCount = BigInt.zero();
+    circleMetrics.totalPlacedOrdersCount = BigInt.zero();
   }
 
   circleMetrics.blockNumber = event.block.number;
@@ -36,4 +36,23 @@ export function loadCircleMetrics(
   circleMetrics.transactionHash = event.transaction.hash;
 
   return circleMetrics;
+}
+
+export function loadCircleOrderMetricsByMonth(
+  key: Bytes,
+  event: ethereum.Event
+): CircleOrderMetricsByMonth {
+  let metrics = CircleOrderMetricsByMonth.load(key);
+  if (!metrics) {
+    metrics = new CircleOrderMetricsByMonth(key);
+    metrics.month = "";
+    metrics.totalCompletedOrdersCount = BigInt.zero();
+    metrics.totalCancelledOrdersCount = BigInt.zero();
+  }
+
+  metrics.blockNumber = event.block.number;
+  metrics.blockTimestamp = event.block.timestamp;
+  metrics.transactionHash = event.transaction.hash;
+
+  return metrics;
 }

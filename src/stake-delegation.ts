@@ -13,6 +13,7 @@ import {
   loadCircleStakeRecords,
   loadCircleUnstakeRecords,
   loadStaker,
+  loadMerchantDelegationRecord,
 } from "./lib";
 import { UNSTAKE_REQUEST_RAISED, UNSTAKE_REQUEST_WITHDRAWN } from "./constants";
 
@@ -130,8 +131,22 @@ export function handleUsdcDelegatedToMerchantInCircle(
   );
   merchant.save();
 
-  // UPDATE CIRCLE METRICS
+  // CREATE DELEGATION RECORD
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
+  const circle = loadCircle(circleKey, event);
+
+  const delegationRecordKey = Bytes.fromUTF8(
+    `${event.params.merchant.toHexString()}-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`
+  );
+  const delegationRecord = loadMerchantDelegationRecord(delegationRecordKey, event);
+  delegationRecord.merchant = merchant.id;
+  delegationRecord.circle = circle.id;
+  delegationRecord.type = "DELEGATED";
+  delegationRecord.amount = event.params.amount;
+  delegationRecord.balanceAfter = merchant.delegatedStakedAmount;
+  delegationRecord.save();
+
+  // UPDATE CIRCLE METRICS
   const circleMetrics = loadCircleMetrics(circleKey, event);
   circleMetrics.totalDelegatedStake = circleMetrics.totalDelegatedStake.plus(
     event.params.amount
@@ -152,8 +167,22 @@ export function handleUsdcUndelegatedFromMerchantInCircle(
   );
   merchant.save();
 
-  // UPDATE CIRCLE METRICS
+  // CREATE DELEGATION RECORD (UNDELEGATED/DECREASED)
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
+  const circle = loadCircle(circleKey, event);
+
+  const delegationRecordKey = Bytes.fromUTF8(
+    `${event.params.merchant.toHexString()}-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`
+  );
+  const delegationRecord = loadMerchantDelegationRecord(delegationRecordKey, event);
+  delegationRecord.merchant = merchant.id;
+  delegationRecord.circle = circle.id;
+  delegationRecord.type = "UNDELEGATED";
+  delegationRecord.amount = event.params.amount;
+  delegationRecord.balanceAfter = merchant.delegatedStakedAmount;
+  delegationRecord.save();
+
+  // UPDATE CIRCLE METRICS
   const circleMetrics = loadCircleMetrics(circleKey, event);
   circleMetrics.totalDelegatedStake = circleMetrics.totalDelegatedStake.minus(
     event.params.amount
