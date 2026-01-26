@@ -11,13 +11,17 @@ import {
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
+  loadCircleOrderMetricsByMonth,
   loadOrders,
+  loadMerchantOrderMetricsByMonth,
   syncOrder,
 } from "./lib";
 import { CircleMetrics } from "../generated/schema";
 import {
   DISPUTE_STATUS_RAISED,
   DISPUTE_STATUS_SETTLED,
+  ORDER_STATUS_COMPLETED,
+  ORDER_STATUS_CANCELLED,
 } from "./constants/status";
 import {
   CancelledOrders as CancelledOrdersEvent,
@@ -27,6 +31,7 @@ import {
   MerchantReAssignedNewOrder as MerchantReAssignedNewOrderEvent,
   OrderCancelledBy as OrderCancelledByEvent,
 } from "../generated/OrderFlowFacet/OrderFlowFacet";
+import { getYearMonthFromTimestamp } from "./utils/date.utils";
 
 /**
  * Updates the dispute metrics for a given circle metrics and event
@@ -53,6 +58,13 @@ const updateDisputeMetrics = (
 };
 
 export function handleOrderDispute(event: OrderDisputeEvent): void {
+  // Load order BEFORE syncOrder to capture previous status
+  let orderBeforeSync = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+    event
+  );
+  const previousStatus = orderBeforeSync.status;
+
   // Synchronize order data with the latest contract state
   syncOrder(
     event.params._order.id,
@@ -106,6 +118,52 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
   // Check if circle is the default placeholder value (Bytes.fromI32(0))
   if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
+  const newStatus = event.params._order.status;
+
+  // Update metrics when dispute is settled
+  if (event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED) {
+    const month = getYearMonthFromTimestamp(event.block.timestamp);
+
+    // Update merchant monthly order metrics
+    const merchantMetricsKey = Bytes.fromUTF8(`${merchant.id.toHexString()}-${month}`);
+    const orderMetrics = loadMerchantOrderMetricsByMonth(merchantMetricsKey, event);
+    orderMetrics.merchant = merchant.id;
+    orderMetrics.month = month;
+
+    // Update circle monthly order metrics
+    const circleMetricsKey = Bytes.fromUTF8(`${circle.toHexString()}-${month}`);
+    const circleOrderMetrics = loadCircleOrderMetricsByMonth(circleMetricsKey, event);
+    circleOrderMetrics.circle = circle;
+    circleOrderMetrics.month = month;
+
+    // Adjust counts based on status change
+    // If previous status was COMPLETED and new status is CANCELLED: -1 completed, +1 cancelled
+    // If previous status was CANCELLED and new status is COMPLETED: -1 cancelled, +1 completed
+    if (previousStatus === ORDER_STATUS_COMPLETED && newStatus === ORDER_STATUS_CANCELLED) {
+      orderMetrics.completedOrdersCount = orderMetrics.completedOrdersCount.minus(BigInt.fromI32(1));
+      orderMetrics.cancelledOrdersCount = orderMetrics.cancelledOrdersCount.plus(BigInt.fromI32(1));
+      circleOrderMetrics.totalCompletedOrdersCount = circleOrderMetrics.totalCompletedOrdersCount.minus(BigInt.fromI32(1));
+      circleOrderMetrics.totalCancelledOrdersCount = circleOrderMetrics.totalCancelledOrdersCount.plus(BigInt.fromI32(1));
+    } else if (previousStatus === ORDER_STATUS_CANCELLED && newStatus === ORDER_STATUS_COMPLETED) {
+      orderMetrics.cancelledOrdersCount = orderMetrics.cancelledOrdersCount.minus(BigInt.fromI32(1));
+      orderMetrics.completedOrdersCount = orderMetrics.completedOrdersCount.plus(BigInt.fromI32(1));
+      circleOrderMetrics.totalCancelledOrdersCount = circleOrderMetrics.totalCancelledOrdersCount.minus(BigInt.fromI32(1));
+      circleOrderMetrics.totalCompletedOrdersCount = circleOrderMetrics.totalCompletedOrdersCount.plus(BigInt.fromI32(1));
+    } else if (previousStatus !== ORDER_STATUS_COMPLETED && previousStatus !== ORDER_STATUS_CANCELLED) {
+      // Order wasn't counted before (was in dispute state), count it now based on final status
+      if (newStatus === ORDER_STATUS_COMPLETED) {
+        orderMetrics.completedOrdersCount = orderMetrics.completedOrdersCount.plus(BigInt.fromI32(1));
+        circleOrderMetrics.totalCompletedOrdersCount = circleOrderMetrics.totalCompletedOrdersCount.plus(BigInt.fromI32(1));
+      } else if (newStatus === ORDER_STATUS_CANCELLED) {
+        orderMetrics.cancelledOrdersCount = orderMetrics.cancelledOrdersCount.plus(BigInt.fromI32(1));
+        circleOrderMetrics.totalCancelledOrdersCount = circleOrderMetrics.totalCancelledOrdersCount.plus(BigInt.fromI32(1));
+      }
+    }
+    orderMetrics.save();
+    circleOrderMetrics.save();
+  }
+
+  // Update dispute metrics (raised/resolved counts)
   let circleMetrics = loadCircleMetrics(circle, event);
 
   if (!circleMetrics) return;
@@ -141,22 +199,39 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     event
   );
 
-  const merchant = loadCircleMerchant(
-    Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
-    event
-  );
+  // Only update merchant stats if an order was accepted by a merchant
+  const acceptedMerchantAddress = event.params._order.acceptedMerchant;
+  if (!acceptedMerchantAddress.equals(Bytes.empty())) {
+    const merchant = loadCircleMerchant(
+      Bytes.fromHexString(acceptedMerchantAddress.toHexString()),
+      event
+    );
 
-  // merchant.circle is already Bytes - no conversion needed
-  const circle = merchant.circle;
+    // merchant.circle is already Bytes - no conversion needed
+    const circle = merchant.circle;
 
-  // Check if circle is the default placeholder value (Bytes.fromI32(0))
-  if (!circle || circle.equals(Bytes.fromI32(0))) return;
+    // Check if circle is the default placeholder value (Bytes.fromI32(0))
+    if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
-  let circleMetrics = loadCircleMetrics(circle, event);
+    // Update monthly order metrics
+    const month = getYearMonthFromTimestamp(event.block.timestamp);
 
-  if (!circleMetrics) return;
+    // Update merchant monthly order metrics
+    const merchantMetricsKey = Bytes.fromUTF8(`${merchant.id.toHexString()}-${month}`);
+    const orderMetrics = loadMerchantOrderMetricsByMonth(merchantMetricsKey, event);
+    orderMetrics.merchant = merchant.id;
+    orderMetrics.month = month;
+    orderMetrics.cancelledOrdersCount = orderMetrics.cancelledOrdersCount.plus(BigInt.fromI32(1));
+    orderMetrics.save();
 
-  circleMetrics.save();
+    // Update circle monthly order metrics
+    const circleMetricsKey = Bytes.fromUTF8(`${circle.toHexString()}-${month}`);
+    const circleOrderMetrics = loadCircleOrderMetricsByMonth(circleMetricsKey, event);
+    circleOrderMetrics.circle = circle;
+    circleOrderMetrics.month = month;
+    circleOrderMetrics.totalCancelledOrdersCount = circleOrderMetrics.totalCancelledOrdersCount.plus(BigInt.fromI32(1));
+    circleOrderMetrics.save();
+  }
 }
 
 export function handleOrderPlaced(event: OrderPlacedEvent): void {
@@ -196,10 +271,9 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
 
   if (!circleMetrics) return;
 
+  circleMetrics.circle = circle.id;
   circleMetrics.totalPlacedOrdersCount =
     circleMetrics.totalPlacedOrdersCount.plus(BigInt.fromI32(1));
-
-  circleMetrics.circle = circle.id;
 
   circleMetrics.save();
 }
@@ -237,8 +311,8 @@ export function handleMerchantAssignedNewOrder(
     event
   );
 
-  const assignedMerchantKey = Bytes.fromHexString(
-    `${event.params.orderId}-${event.params.accountNo}-${event.params.merchant}`
+  const assignedMerchantKey = Bytes.fromUTF8(
+    `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`
   );
 
   let assignedMerchant = loadAssignedMerchants(assignedMerchantKey, event);
@@ -295,8 +369,8 @@ export function handleMerchantReAssignedNewOrder(
     event
   );
 
-  const assignedMerchantKey = Bytes.fromHexString(
-    `${event.params.orderId}-${event.params.accountNo}-${event.params.merchant}`
+  const assignedMerchantKey = Bytes.fromUTF8(
+    `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`
   );
   let assignedMerchant = loadAssignedMerchants(assignedMerchantKey, event);
   assignedMerchant.merchant = merchant.id;
@@ -430,6 +504,7 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
   if (merchant.startedAt.equals(BigInt.zero())) {
     merchant.startedAt = event.block.timestamp;
   }
+
   merchant.save();
 }
 
@@ -470,6 +545,26 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
   // Check if circle is the default placeholder value (Bytes.fromI32(0))
   if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
+  // Update monthly order metrics
+  const month = getYearMonthFromTimestamp(event.block.timestamp);
+
+  // Update merchant monthly order metrics
+  const merchantMetricsKey = Bytes.fromUTF8(`${merchant.id.toHexString()}-${month}`);
+  const orderMetrics = loadMerchantOrderMetricsByMonth(merchantMetricsKey, event);
+  orderMetrics.merchant = merchant.id;
+  orderMetrics.month = month;
+  orderMetrics.completedOrdersCount = orderMetrics.completedOrdersCount.plus(BigInt.fromI32(1));
+  orderMetrics.save();
+
+  // Update circle monthly order metrics
+  const circleMetricsKey = Bytes.fromUTF8(`${circle.toHexString()}-${month}`);
+  const circleOrderMetrics = loadCircleOrderMetricsByMonth(circleMetricsKey, event);
+  circleOrderMetrics.circle = circle;
+  circleOrderMetrics.month = month;
+  circleOrderMetrics.totalCompletedOrdersCount = circleOrderMetrics.totalCompletedOrdersCount.plus(BigInt.fromI32(1));
+  circleOrderMetrics.save();
+
+  // Update circle volume metrics
   let circleMetrics = loadCircleMetrics(circle, event);
 
   if (!circleMetrics) return;

@@ -4,6 +4,9 @@ import {
   CircleMerchant,
   MerchantPaymentChannels,
   MerchantVolumeByMonth,
+  MerchantOrderMetricsByMonth,
+  PaymentChannelMigration,
+  MerchantDelegationRecord,
 } from "../../generated/schema";
 
 export function loadAssignedMerchants(
@@ -40,11 +43,13 @@ export function loadCircleMerchant(
     circleMerchant.isOnline = false;
     circleMerchant.isBlacklisted = false;
     circleMerchant.isOngoingOrder = false;
+    circleMerchant.isUnstakeRequested = false;
+    circleMerchant.unstakeRequestedAt = BigInt.zero();
+    circleMerchant.unstakeAmount = BigInt.zero();
     circleMerchant.onlineAt = BigInt.zero();
     circleMerchant.offlineAt = BigInt.zero();
     circleMerchant.startedAt = BigInt.zero();
     circleMerchant.currency = Bytes.empty();
-    circleMerchant.paymentChannels = [];
   }
 
   circleMerchant.blockNumber = event.block.number;
@@ -68,6 +73,8 @@ export function loadMerchantPaymentChannels(
     merchantPaymentChannel.status = 0;
     merchantPaymentChannel.isMonthlyVolumeUnlimited = false;
     merchantPaymentChannel.fiatBalance = BigInt.zero();
+    merchantPaymentChannel.dailyVolume = BigInt.zero();
+    merchantPaymentChannel.monthlyVolume = BigInt.zero();
   }
 
   merchantPaymentChannel.blockNumber = event.block.number;
@@ -93,4 +100,67 @@ export function loadMerchantVolumeByMonth(
   merchantVolumeByMonth.transactionHash = event.transaction.hash;
 
   return merchantVolumeByMonth;
+}
+
+export function loadPaymentChannelMigration(
+  key: Bytes,
+  event: ethereum.Event
+): PaymentChannelMigration {
+  let migration = PaymentChannelMigration.load(key);
+  if (!migration) {
+    migration = new PaymentChannelMigration(key);
+    migration.fromAccountNo = BigInt.zero();
+    migration.toAccountNo = BigInt.zero();
+    migration.fromPaymentChannelIndex = BigInt.zero();
+    migration.toPaymentChannelIndex = BigInt.zero();
+    migration.status = BigInt.zero(); // DEFAULT
+    migration.fromFiatBalance = BigInt.zero();
+    migration.toFiatBalance = BigInt.zero();
+    migration.requestedAt = BigInt.zero();
+    migration.settledAt = BigInt.zero();
+  }
+
+  migration.blockNumber = event.block.number;
+  migration.blockTimestamp = event.block.timestamp;
+  migration.transactionHash = event.transaction.hash;
+
+  return migration;
+}
+
+export function loadMerchantOrderMetricsByMonth(
+  key: Bytes,
+  event: ethereum.Event
+): MerchantOrderMetricsByMonth {
+  let metrics = MerchantOrderMetricsByMonth.load(key);
+  if (!metrics) {
+    metrics = new MerchantOrderMetricsByMonth(key);
+    metrics.month = "";
+    metrics.completedOrdersCount = BigInt.zero();
+    metrics.cancelledOrdersCount = BigInt.zero();
+  }
+
+  metrics.blockNumber = event.block.number;
+  metrics.blockTimestamp = event.block.timestamp;
+  metrics.transactionHash = event.transaction.hash;
+
+  return metrics;
+}
+
+export function loadMerchantDelegationRecord(
+  key: Bytes,
+  event: ethereum.Event
+): MerchantDelegationRecord {
+  let record = MerchantDelegationRecord.load(key);
+  if (!record) {
+    record = new MerchantDelegationRecord(key);
+    record.type = "";
+    record.amount = BigInt.zero();
+    record.balanceAfter = BigInt.zero();
+  }
+
+  record.blockNumber = event.block.number;
+  record.blockTimestamp = event.block.timestamp;
+  record.transactionHash = event.transaction.hash;
+
+  return record;
 }

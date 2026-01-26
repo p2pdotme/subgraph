@@ -7,11 +7,12 @@ type Circle @entity {
   currency: Bytes!
   name: String!
   communityLink: String!
-  isAutoApprovedPCEnabled: Boolean! 
+  isAutoApprovedPCEnabled: Boolean!
 
   metrics: CircleMetrics @relation(name: "circle")
+  orderMetricsByMonth: [CircleOrderMetricsByMonth!] @derivedFrom(field: "circle")
 
-  blockNumber: BigInt! 
+  blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
@@ -115,10 +116,15 @@ type CircleMerchant @entity {
 
   stakedAmount: BigInt!
   delegatedStakedAmount: BigInt!
-  
+
   isOnline: Boolean!
   isBlacklisted: Boolean!
   isOngoingOrder: Boolean!
+
+  # Unstake request tracking for availability
+  isUnstakeRequested: Boolean!
+  unstakeRequestedAt: BigInt!
+  unstakeAmount: BigInt!
 
   onlineAt: BigInt!
   offlineAt: BigInt!
@@ -126,9 +132,12 @@ type CircleMerchant @entity {
 
   currency: Bytes!
 
-  paymentChannels: [MerchantPaymentChannels!]
-  volumeByMonth: [MerchantVolumeByMonth!]
-  
+  paymentChannels: [MerchantPaymentChannels!] @derivedFrom(field: "merchant")
+  volumeByMonth: [MerchantVolumeByMonth!] @derivedFrom(field: "merchant")
+  orderMetricsByMonth: [MerchantOrderMetricsByMonth!] @derivedFrom(field: "merchant")
+  paymentChannelMigrations: [PaymentChannelMigration!] @derivedFrom(field: "merchant")
+  delegationRecords: [MerchantDelegationRecord!] @derivedFrom(field: "merchant")
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -147,6 +156,10 @@ type MerchantPaymentChannels @entity {
   status: Int!
   isMonthlyVolumeUnlimited: Boolean!
   fiatBalance: BigInt!
+
+  # Current volume tracking for availability calculations
+  dailyVolume: BigInt!
+  monthlyVolume: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -267,6 +280,122 @@ type MerchantVolumeByMonth @entity {
 
   month: String!
   volume: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT ORDER METRICS BY MONTH
+# Order metrics for a merchant by year-month
+type MerchantOrderMetricsByMonth @entity {
+  id: Bytes!
+
+  merchant: CircleMerchant!
+
+  # Year-month format: "YYYY-MM" (e.g., "2024-01")
+  month: String!
+
+  # Order counts for this month (totalOrders = completed + cancelled)
+  completedOrdersCount: BigInt!
+  cancelledOrdersCount: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CIRCLE ORDER METRICS BY MONTH
+# Order metrics for a circle by year-month
+type CircleOrderMetricsByMonth @entity {
+  id: Bytes!
+
+  circle: Circle!
+
+  # Year-month format: "YYYY-MM" (e.g., "2024-01")
+  month: String!
+
+  # Order counts for this month
+  totalCompletedOrdersCount: BigInt!
+  totalCancelledOrdersCount: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT DELEGATION RECORD
+# A record of delegation activity for a merchant
+type MerchantDelegationRecord @entity {
+  id: Bytes!
+
+  merchant: CircleMerchant!
+  circle: Circle!
+
+  # Type of delegation: DELEGATED, UNDELEGATED
+  type: String!
+
+  # Amount delegated/undelegated
+  amount: BigInt!
+
+  # Running balance after this record
+  balanceAfter: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# PAYMENT CHANNEL CONFIG
+# Configuration for a payment channel (e.g., UPI, IMPS, Pix, etc.)
+type PaymentChannelConfig @entity {
+  id: Bytes!
+
+  paymentChannelId: BigInt!
+  name: String!
+  dailyVolumeLimit: BigInt!
+  currency: Bytes!
+  isActive: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CURRENCY CONFIG
+# Monthly volume limit configuration per currency
+type CurrencyConfig @entity {
+  id: Bytes!
+
+  currency: Bytes!
+  monthlyVolumeLimit: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# PAYMENT CHANNEL MIGRATION
+# A record of payment channel migration requests
+type PaymentChannelMigration @entity {
+  id: Bytes!
+
+  merchant: CircleMerchant!
+
+  fromAccountNo: BigInt!
+  toAccountNo: BigInt!
+  fromPaymentChannelIndex: BigInt!
+  toPaymentChannelIndex: BigInt!
+
+  # Migration status: 0=DEFAULT, 1=PENDING, 2=APPROVED, 3=REJECTED
+  status: BigInt!
+
+  # Fiat balance transferred during migration
+  fromFiatBalance: BigInt!
+  toFiatBalance: BigInt!
+
+  requestedAt: BigInt!
+  settledAt: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
