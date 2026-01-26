@@ -1,6 +1,10 @@
 import { Bytes } from "@graphprotocol/graph-ts";
-import { PaymentChannelConfigChanged } from "../generated/CountryFacet/CountryFacet";
+import {
+  PaymentChannelConfigChanged,
+  CurrencyToggled,
+} from "../generated/CountryFacet/CountryFacet";
 import { PaymentChannelConfig } from "../generated/schema";
+import { loadCurrency } from "./lib";
 
 export function handlePaymentChannelConfigChanged(
   event: PaymentChannelConfigChanged
@@ -24,4 +28,12 @@ export function handlePaymentChannelConfigChanged(
   config.transactionHash = event.transaction.hash;
 
   config.save();
+}
+
+export function handleCurrencyToggled(event: CurrencyToggled): void {
+  let currency = loadCurrency(event.params.currency, event);
+
+  currency.isActive = event.params.isActive;
+
+  currency.save();
 }

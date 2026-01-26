@@ -5,6 +5,12 @@ export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
   let circle = Circle.load(key);
   if (!circle) {
     circle = new Circle(key);
+    circle.circleId = BigInt.zero();
+    circle.admin = "";
+    circle.currency = Bytes.empty();
+    circle.name = "";
+    circle.communityLink = "";
+    circle.isAutoApprovedPCEnabled = false;
   }
 
   circle.blockNumber = event.block.number;

@@ -401,3 +401,59 @@ type PaymentChannelMigration @entity {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
+
+# USER
+# A user who is registered in a circle
+type User @entity {
+  id: Bytes!
+
+  address: Bytes!
+  reputationPoint: BigInt!
+  isBlacklisted: Boolean!
+
+  orders: [Orders!] @relation(name: "UserOrders")
+  socialVerified: [SocialVerified!] @relation(name: "UserSocialVerified")
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# SOCIAL VERIFIED
+# A social verified record for a user
+type SocialVerified @entity {
+  id: Bytes!
+  socialName: String!
+  verified: Boolean!
+  timestamp: BigInt!
+  user: User! @relation(name: "UserSocialVerified")
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# REPUTATION CHANGE
+# A record of admin-initiated reputation point changes
+type ReputationChange @entity {
+  id: Bytes!
+  admin: Bytes!
+  user: Bytes!
+  rpChange: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CURRENCY
+# A record of currencies
+type Currency @entity {
+  id: Bytes!
+  currency: Bytes!
+  isActive: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
