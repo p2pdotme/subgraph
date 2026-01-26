@@ -39,6 +39,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - USDCStakeDelegationFacet
+        - MerchantDelegationRecord
       abis:
         - name: USDCStakeDelegationFacet
           file: ./abis/USDCStakeDelegationFacet.json
