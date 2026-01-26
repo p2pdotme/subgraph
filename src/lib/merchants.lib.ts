@@ -6,6 +6,7 @@ import {
   MerchantVolumeByMonth,
   MerchantOrderMetricsByMonth,
   PaymentChannelMigration,
+  MerchantDelegationRecord,
 } from "../../generated/schema";
 
 export function loadAssignedMerchants(
@@ -138,4 +139,23 @@ export function loadMerchantOrderMetricsByMonth(
   metrics.transactionHash = event.transaction.hash;
 
   return metrics;
+}
+
+export function loadMerchantDelegationRecord(
+  key: Bytes,
+  event: ethereum.Event
+): MerchantDelegationRecord {
+  let record = MerchantDelegationRecord.load(key);
+  if (!record) {
+    record = new MerchantDelegationRecord(key);
+    record.type = "";
+    record.amount = BigInt.zero();
+    record.balanceAfter = BigInt.zero();
+  }
+
+  record.blockNumber = event.block.number;
+  record.blockTimestamp = event.block.timestamp;
+  record.transactionHash = event.transaction.hash;
+
+  return record;
 }

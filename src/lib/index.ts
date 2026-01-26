@@ -12,6 +12,7 @@ export {
   loadMerchantVolumeByMonth,
   loadMerchantOrderMetricsByMonth,
   loadPaymentChannelMigration,
+  loadMerchantDelegationRecord,
 } from "./merchants.lib";
 export {
   loadCircleAdminRewards,
