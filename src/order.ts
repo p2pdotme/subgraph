@@ -272,6 +272,8 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
   if (!circleMetrics) return;
 
   circleMetrics.circle = circle.id;
+  circleMetrics.totalPlacedOrdersCount =
+    circleMetrics.totalPlacedOrdersCount.plus(BigInt.fromI32(1));
 
   circleMetrics.save();
 }

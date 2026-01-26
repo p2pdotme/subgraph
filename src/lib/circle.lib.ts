@@ -28,6 +28,7 @@ export function loadCircleMetrics(
     circleMetrics.raisedDisputesCount = BigInt.zero();
     circleMetrics.totalDelegatedStake = BigInt.zero();
     circleMetrics.totalMerchantsCount = BigInt.zero();
+    circleMetrics.totalPlacedOrdersCount = BigInt.zero();
   }
 
   circleMetrics.blockNumber = event.block.number;
