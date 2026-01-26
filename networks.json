@@ -2,11 +2,11 @@
   "base-sepolia": {
     "OrderFlow": {
       "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36657263
+      "startBlock": 36739239
     },
     "CircleFacet": {
       "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36657263
+      "startBlock": 36739239
     }
   }
 }
