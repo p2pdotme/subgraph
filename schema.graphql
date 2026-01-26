@@ -337,6 +337,22 @@ type MerchantDelegationRecord @entity {
   transactionHash: Bytes!
 }
 
+# PAYMENT CHANNEL CONFIG
+# Configuration for a payment channel (e.g., UPI, IMPS, Pix, etc.)
+type PaymentChannelConfig @entity {
+  id: Bytes!
+
+  paymentChannelId: BigInt!
+  name: String!
+  dailyVolumeLimit: BigInt!
+  currency: Bytes!
+  isActive: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # PAYMENT CHANNEL MIGRATION
 # A record of payment channel migration requests
 type PaymentChannelMigration @entity {
