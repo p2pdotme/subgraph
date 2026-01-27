@@ -1,12 +1,44 @@
 {
   "base-sepolia": {
-    "OrderFlow": {
-      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36739239
-    },
     "CircleFacet": {
       "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36739239
+      "startBlock": 36657179
+    },
+    "USDCStakeDelegationFacet": {
+      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
+      "startBlock": 36657179
+    },
+    "OrderFlowHelper": {
+      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
+      "startBlock": 36657179
+    },
+    "OrderProcessorFacet": {
+      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
+      "startBlock": 36657179
+    },
+    "OrderFlowFacet": {
+      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
+      "startBlock": 36657179
+    },
+    "MerchantOnboardFacet": {
+      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
+      "startBlock": 36657179
+    },
+    "MerchantRegistryFacet": {
+      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
+      "startBlock": 36657179
+    },
+    "RewardsFacet": {
+      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
+      "startBlock": 36657179
+    },
+    "CountryFacet": {
+      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
+      "startBlock": 36657179
+    },
+    "ReputationManager": {
+      "address": "0x3b0770eAB350B5E7B4869fB39910300E3a2b7d86",
+      "startBlock": 36657179
     }
   }
 }
