@@ -10,7 +10,7 @@ dataSources:
     source:
       address: "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D"
       abi: CircleFacet
-      startBlock: 36739239
+      startBlock: 36657179
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -32,7 +32,7 @@ dataSources:
     source:
       address: "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D"
       abi: USDCStakeDelegationFacet
-      startBlock: 36739239
+      startBlock: 36657179
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -66,7 +66,7 @@ dataSources:
     source:
       address: "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D"
       abi: OrderFlowHelper
-      startBlock: 36739239
+      startBlock: 36657179
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -92,7 +92,7 @@ dataSources:
     source:
       address: "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D"
       abi: OrderProcessorFacet
-      startBlock: 36739239
+      startBlock: 36657179
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -114,7 +114,7 @@ dataSources:
     source:
       address: "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D"
       abi: OrderFlowFacet
-      startBlock: 36739239
+      startBlock: 36657179
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -146,7 +146,7 @@ dataSources:
     source:
       address: "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D"
       abi: MerchantOnboardFacet
-      startBlock: 36739239
+      startBlock: 36657179
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -175,7 +175,7 @@ dataSources:
     source:
       address: "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D"
       abi: MerchantRegistryFacet
-      startBlock: 36739239
+      startBlock: 36657179
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -203,7 +203,7 @@ dataSources:
     source:
       address: "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D"
       abi: RewardsFacet
-      startBlock: 36739239
+      startBlock: 36657179
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -235,7 +235,7 @@ dataSources:
     source:
       address: "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D"
       abi: CountryFacet
-      startBlock: 36739239
+      startBlock: 36657179
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -258,7 +258,7 @@ dataSources:
     source:
       address: "0x3b0770eAB350B5E7B4869fB39910300E3a2b7d86"
       abi: ReputationManager
-      startBlock: 36739239
+      startBlock: 36657179
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
