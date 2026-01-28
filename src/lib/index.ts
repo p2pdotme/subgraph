@@ -13,6 +13,8 @@ export {
   loadMerchantOrderMetricsByMonth,
   loadPaymentChannelMigration,
   loadMerchantDelegationRecord,
+  loadMerchantReferralClaimed,
+  loadMerchantReferralRevenueClaimed,
 } from "./merchants.lib";
 export {
   loadCircleAdminRewards,

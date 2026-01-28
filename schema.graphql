@@ -457,3 +457,28 @@ type Currency @entity {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
+
+# MERCHANT REFERRAL CLAIMED
+# A record of a merchant referral claim
+type MerchantReferralClaimed @entity {
+  id: Bytes!
+  recommender: Bytes!
+  recipient: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT REFERRAL REVENUE CLAIMED
+# A record of a merchant referral revenue claim
+type MerchantReferralRevenueClaimed @entity {
+  id: Bytes!
+  merchant: CircleMerchant!
+  yearMonthKey: BigInt!
+  reward: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}

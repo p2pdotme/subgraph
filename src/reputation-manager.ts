@@ -7,11 +7,20 @@ import {
   UserWhitelisted as UserWhitelistedEvent,
   UserRpUpdatedByAdmin as UserRpUpdatedByAdminEvent,
   SocialVerified as SocialVerifiedEvent,
+  MerchantReferralClaimed as MerchantReferralClaimedEvent,
+  MerchantReferralRevenueClaimed as MerchantReferralRevenueClaimedEvent,
 } from "../generated/ReputationManager/ReputationManager";
-import { loadUser, loadSocialVerified, loadReputationChange } from "./lib";
+import {
+  loadUser,
+  loadSocialVerified,
+  loadReputationChange,
+  loadMerchantReferralClaimed,
+  loadMerchantReferralRevenueClaimed,
+  loadCircleMerchant,
+} from "./lib";
 
 export function handleOnchainActivityRPUpdated(
-  event: OnchainActivityRPUpdatedEvent
+  event: OnchainActivityRPUpdatedEvent,
 ): void {
   let user = loadUser(event.params.user, event);
 
@@ -19,7 +28,7 @@ export function handleOnchainActivityRPUpdated(
     user.reputationPoint = user.reputationPoint.plus(event.params.points);
   } else {
     user.reputationPoint = user.reputationPoint.minus(
-      event.params.points.abs()
+      event.params.points.abs(),
     );
   }
 
@@ -27,7 +36,7 @@ export function handleOnchainActivityRPUpdated(
 }
 
 export function handleReputationPointsUpdated(
-  event: ReputationPointsUpdatedEvent
+  event: ReputationPointsUpdatedEvent,
 ): void {
   let user = loadUser(event.params.user, event);
 
@@ -56,11 +65,11 @@ export function handleUserWhitelisted(event: UserWhitelistedEvent): void {
 }
 
 export function handleUserRpUpdatedByAdmin(
-  event: UserRpUpdatedByAdminEvent
+  event: UserRpUpdatedByAdminEvent,
 ): void {
   let reputationChange = loadReputationChange(
     event.transaction.hash.concatI32(event.logIndex.toI32()),
-    event
+    event,
   );
 
   reputationChange.admin = event.params.admin;
@@ -75,14 +84,16 @@ function _onSocialVerified(
   socialName: string,
   verified: boolean,
   timestamp: BigInt,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): void {
   // Load or create user
   let user = loadUser(userAddress, event);
   user.address = userAddress;
 
   // Create social verified entity with unique ID
-  let socialVerifiedId = event.transaction.hash.concatI32(event.logIndex.toI32());
+  let socialVerifiedId = event.transaction.hash.concatI32(
+    event.logIndex.toI32(),
+  );
   let socialVerified = loadSocialVerified(socialVerifiedId, event);
 
   socialVerified.socialName = socialName;
@@ -100,7 +111,7 @@ export function handleSocialVerified(event: SocialVerifiedEvent): void {
     event.params.socialName,
     event.params.verified,
     event.params.timestamp,
-    event
+    event,
   );
 }
 
@@ -110,6 +121,43 @@ export function handleAadhaarVerified(event: AadhaarVerifiedEvent): void {
     "Aadhaar",
     event.params.verified,
     event.params.timestamp,
-    event
+    event,
   );
+}
+
+export function handleMerchantReferralClaimed(
+  event: MerchantReferralClaimedEvent,
+): void {
+  let entity = loadMerchantReferralClaimed(
+    event.transaction.hash.concatI32(event.logIndex.toI32()),
+    event,
+  );
+
+  entity.recommender = event.params.recommender;
+  entity.recipient = event.params.recipient;
+
+  entity.save();
+}
+
+export function handleMerchantReferralRevenueClaimed(
+  event: MerchantReferralRevenueClaimedEvent,
+): void {
+  let merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event,
+  );
+  if (merchant == null) {
+    return;
+  }
+
+  let entity = loadMerchantReferralRevenueClaimed(
+    event.transaction.hash.concatI32(event.logIndex.toI32()),
+    event,
+  );
+
+  entity.merchant = merchant.id;
+  entity.yearMonthKey = event.params.yearMonthKey;
+  entity.reward = event.params.reward;
+
+  entity.save();
 }
