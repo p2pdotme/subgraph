@@ -7,6 +7,8 @@ import {
   MerchantOrderMetricsByMonth,
   PaymentChannelMigration,
   MerchantDelegationRecord,
+  MerchantReferralClaimed,
+  MerchantReferralRevenueClaimed,
 } from "../../generated/schema";
 
 export function loadAssignedMerchants(
@@ -163,4 +165,40 @@ export function loadMerchantDelegationRecord(
   record.transactionHash = event.transaction.hash;
 
   return record;
+}
+
+export function loadMerchantReferralClaimed(
+  key: Bytes,
+  event: ethereum.Event
+): MerchantReferralClaimed {
+  let referralClaimed = MerchantReferralClaimed.load(key);
+  if (!referralClaimed) {
+    referralClaimed = new MerchantReferralClaimed(key);
+    referralClaimed.recommender = Bytes.empty();
+    referralClaimed.recipient = Bytes.empty();
+  }
+
+  referralClaimed.blockNumber = event.block.number;
+  referralClaimed.blockTimestamp = event.block.timestamp;
+  referralClaimed.transactionHash = event.transaction.hash;
+
+  return referralClaimed;
+}
+
+export function loadMerchantReferralRevenueClaimed(
+  key: Bytes,
+  event: ethereum.Event
+): MerchantReferralRevenueClaimed {
+  let revenueClaimed = MerchantReferralRevenueClaimed.load(key);
+  if (!revenueClaimed) {
+    revenueClaimed = new MerchantReferralRevenueClaimed(key);
+    revenueClaimed.yearMonthKey = BigInt.zero();
+    revenueClaimed.reward = BigInt.zero();
+  }
+
+  revenueClaimed.blockNumber = event.block.number;
+  revenueClaimed.blockTimestamp = event.block.timestamp;
+  revenueClaimed.transactionHash = event.transaction.hash;
+
+  return revenueClaimed;
 }

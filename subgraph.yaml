@@ -271,6 +271,8 @@ dataSources:
         - UserWhitelisted
         - UserRpUpdatedByAdmin
         - SocialVerified
+        - MerchantReferralClaimed
+        - MerchantReferralRevenueClaimed
       abis:
         - name: ReputationManager
           file: ./abis/ReputationManager.json
@@ -289,4 +291,8 @@ dataSources:
           handler: handleUserRpUpdatedByAdmin
         - event: SocialVerified(string,indexed address,bool,uint256,uint256)
           handler: handleSocialVerified
+        - event: MerchantReferralClaimed(indexed address,indexed address,uint256)
+          handler: handleMerchantReferralClaimed
+        - event: MerchantReferralRevenueClaimed(indexed address,indexed uint256,uint256)
+          handler: handleMerchantReferralRevenueClaimed
       file: ./src/reputation-manager.ts
