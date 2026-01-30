@@ -417,6 +417,13 @@ export function handleSellOrderUpiSet(event: SellOrderUpiSetEvent): void {
     event.params._order.disputeInfo.accountNumber,
     event
   );
+
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+    event
+  );
+  order.paidAt = event.block.timestamp;
+  order.save();
 }
 
 export function handleBuyOrderPaid(event: BuyOrderPaidEvent): void {
