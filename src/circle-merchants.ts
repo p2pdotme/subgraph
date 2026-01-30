@@ -5,6 +5,7 @@ import {
   UnstakeRequested as UnstakeRequestedEvent,
   UnstakeRequestCancelled as UnstakeRequestCancelledEvent,
   UnstakeApproved as UnstakeApprovedEvent,
+  MerchantWithoutFundsTracker as MerchantWithoutFundsTrackerEvent,
 } from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
 import {
   loadCircle,
@@ -270,6 +271,20 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
 
   // Update staked amount
   merchant.stakedAmount = event.params.stake;
+
+  merchant.save();
+}
+
+export function handleMerchantWithoutFundsTracker(
+  event: MerchantWithoutFundsTrackerEvent
+): void {
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event
+  );
+
+  // Update telegram ID from merchant config
+  merchant.telegramId = event.params.merchantConfig.telegramId;
 
   merchant.save();
 }
