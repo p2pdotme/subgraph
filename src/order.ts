@@ -582,6 +582,7 @@ export function handleOrderCancelledBy(event: OrderCancelledByEvent): void {
     event
   );
   order.cancelledBy = event.params.cancelledBy;
+  order.cancelledAt = event.block.timestamp;
   order.save();
 }
 
