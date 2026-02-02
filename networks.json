@@ -1,44 +1,44 @@
 {
-  "base-sepolia": {
+  "polygon-amoy": {
     "CircleFacet": {
-      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36657179
+      "address": "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d",
+      "startBlock": 33060698
     },
     "USDCStakeDelegationFacet": {
-      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36657179
+      "address": "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d",
+      "startBlock": 33060698
     },
     "OrderFlowHelper": {
-      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36657179
+      "address": "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d",
+      "startBlock": 33060698
     },
     "OrderProcessorFacet": {
-      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36657179
+      "address": "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d",
+      "startBlock": 33060698
     },
     "OrderFlowFacet": {
-      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36657179
+      "address": "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d",
+      "startBlock": 33060698
     },
     "MerchantOnboardFacet": {
-      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36657179
+      "address": "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d",
+      "startBlock": 33060698
     },
     "MerchantRegistryFacet": {
-      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36657179
+      "address": "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d",
+      "startBlock": 33060698
     },
     "RewardsFacet": {
-      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36657179
+      "address": "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d",
+      "startBlock": 33060698
     },
     "CountryFacet": {
-      "address": "0x5D60D98489a5f7117C8161bd3fB44b3A546f654D",
-      "startBlock": 36657179
+      "address": "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d",
+      "startBlock": 33060698
     },
     "ReputationManager": {
-      "address": "0x3b0770eAB350B5E7B4869fB39910300E3a2b7d86",
-      "startBlock": 36657179
+      "address": "0x26D45f93DFC0eedC801e7cf07c0721AbF119cd6c",
+      "startBlock": 33060698
     }
   }
 }
