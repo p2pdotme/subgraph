@@ -1,4 +1,4 @@
-import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { BigInt, ByteArray, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   AadhaarVerified as AadhaarVerifiedEvent,
   OnchainActivityRPUpdated as OnchainActivityRPUpdatedEvent,
@@ -9,6 +9,11 @@ import {
   SocialVerified as SocialVerifiedEvent,
   MerchantReferralClaimed as MerchantReferralClaimedEvent,
   MerchantReferralRevenueClaimed as MerchantReferralRevenueClaimedEvent,
+  CampaignCreated as CampaignCreatedEvent,
+  ManagerAddedOrUpdated as ManagerAddedOrUpdatedEvent,
+  ManagerAddedOrUpdated1 as ManagerAddedOrUpdatedWithHashEvent,
+  ManagerAddedOrUpdated2 as ManagerAddedOrUpdatedWithHashAndClaimLimitEvent,
+  CampaignToggled as CampaignToggledEvent,
 } from "../generated/ReputationManager/ReputationManager";
 import {
   loadUser,
@@ -18,6 +23,7 @@ import {
   loadMerchantReferralRevenueClaimed,
   loadCircleMerchant,
 } from "./lib";
+import { loadCampaign, loadCampaignManagers } from "./lib/campaign.lib";
 
 export function handleOnchainActivityRPUpdated(
   event: OnchainActivityRPUpdatedEvent,
@@ -160,4 +166,109 @@ export function handleMerchantReferralRevenueClaimed(
   entity.reward = event.params.reward;
 
   entity.save();
+}
+
+export function handleCampaignCreated(event: CampaignCreatedEvent): void {
+  let key = changetype<Bytes>(Bytes.fromBigInt(event.params.campaignId));
+  let campaign = loadCampaign(key, event);
+
+  campaign.campaignId = event.params.campaignId;
+  campaign.isActive = true;
+  campaign.createdAt = event.block.timestamp;
+
+  campaign.save();
+}
+
+function _handleManagerAddedOrUpdated(
+  campaignId: BigInt,
+  manager: Bytes,
+  rpReward: BigInt,
+  usdcReward: BigInt,
+  isActive: boolean,
+  event: ethereum.Event,
+  usernameHash: Bytes | null = null,
+  claimLimit: BigInt | null = null,
+  requiresZk: boolean = false,
+): void {
+  let id = Bytes.fromUTF8(campaignId.toString() + "-" + manager.toHex());
+  let campaignManager = loadCampaignManagers(id, event);
+
+  const campaignKey = changetype<Bytes>(Bytes.fromByteArray(ByteArray.fromBigInt(campaignId)));
+  const campaign = loadCampaign(campaignKey, event);
+
+  // If the manager is new, increment the managers count
+  if (campaignManager.campaign!.equals(Bytes.empty())) {
+    campaign.managersCount = campaign.managersCount.plus(BigInt.fromI32(1));
+    campaign.save();
+  }
+
+  campaignManager.campaignId = campaignId;
+  campaignManager.manager = manager;
+  campaignManager.rpReward = rpReward;
+  campaignManager.usdcReward = usdcReward;
+  campaignManager.isActive = isActive;
+  campaignManager.requiresZk = requiresZk;
+
+  if (usernameHash !== null) {
+    campaignManager.usernameHash = changetype<Bytes>(usernameHash);
+  }
+  if (claimLimit !== null) {
+    campaignManager.claimLimit = claimLimit;
+  }
+
+  campaignManager.campaign = campaign.id;
+
+  campaignManager.save();
+}
+
+export function handleManagerAddedOrUpdated(
+  event: ManagerAddedOrUpdatedEvent,
+): void {
+  _handleManagerAddedOrUpdated(
+    event.params.campaignId,
+    event.params.manager,
+    event.params.rpReward,
+    event.params.usdcReward,
+    event.params.active,
+    event,
+    null,
+  );
+}
+
+export function handleManagerAddedOrUpdatedWithHash(
+  event: ManagerAddedOrUpdatedWithHashEvent,
+): void {
+  _handleManagerAddedOrUpdated(
+    event.params.campaignId,
+    event.params.manager,
+    event.params.rpReward,
+    event.params.usdcReward,
+    event.params.active,
+    event,
+    event.params.usernameHash,
+  );
+}
+
+export function handleManagerAddedOrUpdatedWithHashAndClaimLimit(
+  event: ManagerAddedOrUpdatedWithHashAndClaimLimitEvent,
+): void {
+  _handleManagerAddedOrUpdated(
+    event.params.campaignId,
+    event.params.manager,
+    event.params.rpReward,
+    event.params.usdcReward,
+    event.params.active,
+    event,
+    event.params.usernameHash,
+    event.params.claimLimit,
+    event.params.requiresZk,
+  );
+}
+
+export function handleCampaignToggled(event: CampaignToggledEvent): void {
+  let key = changetype<Bytes>(Bytes.fromBigInt(event.params.campaignId));
+  let campaign = loadCampaign(key, event);
+
+  campaign.isActive = event.params.isActive;
+  campaign.save();
 }

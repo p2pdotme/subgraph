@@ -6,11 +6,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: CircleFacet
-    network: polygon-amoy
+    network: base-sepolia
     source:
-      address: "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d"
+      address: "0x8A86A43278E3B836Ee38A0071f7A4cfBc5D914Cd"
       abi: CircleFacet
-      startBlock: 33060698
+      startBlock: 36927473
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -28,11 +28,11 @@ dataSources:
       file: ./src/circle-facet.ts
   - kind: ethereum
     name: USDCStakeDelegationFacet
-    network: polygon-amoy
+    network: base-sepolia
     source:
-      address: "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d"
+      address: "0x8A86A43278E3B836Ee38A0071f7A4cfBc5D914Cd"
       abi: USDCStakeDelegationFacet
-      startBlock: 33060698
+      startBlock: 36927473
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -62,11 +62,11 @@ dataSources:
       file: ./src/stake-delegation.ts
   - kind: ethereum
     name: OrderFlowHelper
-    network: polygon-amoy
+    network: base-sepolia
     source:
-      address: "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d"
+      address: "0x8A86A43278E3B836Ee38A0071f7A4cfBc5D914Cd"
       abi: OrderFlowHelper
-      startBlock: 33060698
+      startBlock: 36927473
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -88,11 +88,11 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: OrderProcessorFacet
-    network: polygon-amoy
+    network: base-sepolia
     source:
-      address: "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d"
+      address: "0x8A86A43278E3B836Ee38A0071f7A4cfBc5D914Cd"
       abi: OrderProcessorFacet
-      startBlock: 33060698
+      startBlock: 36927473
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -110,11 +110,11 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: OrderFlowFacet
-    network: polygon-amoy
+    network: base-sepolia
     source:
-      address: "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d"
+      address: "0x8A86A43278E3B836Ee38A0071f7A4cfBc5D914Cd"
       abi: OrderFlowFacet
-      startBlock: 33060698
+      startBlock: 36927473
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -142,11 +142,11 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: MerchantOnboardFacet
-    network: polygon-amoy
+    network: base-sepolia
     source:
-      address: "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d"
+      address: "0x8A86A43278E3B836Ee38A0071f7A4cfBc5D914Cd"
       abi: MerchantOnboardFacet
-      startBlock: 33060698
+      startBlock: 36927473
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -173,11 +173,11 @@ dataSources:
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: MerchantRegistryFacet
-    network: polygon-amoy
+    network: base-sepolia
     source:
-      address: "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d"
+      address: "0x8A86A43278E3B836Ee38A0071f7A4cfBc5D914Cd"
       abi: MerchantRegistryFacet
-      startBlock: 33060698
+      startBlock: 36927473
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -201,11 +201,11 @@ dataSources:
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: RewardsFacet
-    network: polygon-amoy
+    network: base-sepolia
     source:
-      address: "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d"
+      address: "0x8A86A43278E3B836Ee38A0071f7A4cfBc5D914Cd"
       abi: RewardsFacet
-      startBlock: 33060698
+      startBlock: 36927473
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -233,11 +233,11 @@ dataSources:
       file: ./src/rewards.ts
   - kind: ethereum
     name: CountryFacet
-    network: polygon-amoy
+    network: base-sepolia
     source:
-      address: "0xF3755fD47a0214C9f6744a4b3A9850f680A3341d"
+      address: "0x8A86A43278E3B836Ee38A0071f7A4cfBc5D914Cd"
       abi: CountryFacet
-      startBlock: 33060698
+      startBlock: 36927473
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -256,11 +256,11 @@ dataSources:
       file: ./src/country-facet.ts
   - kind: ethereum
     name: ReputationManager
-    network: polygon-amoy
+    network: base-sepolia
     source:
-      address: "0x26D45f93DFC0eedC801e7cf07c0721AbF119cd6c"
+      address: "0x230831645945128a463f8D196F4880E8F8DDfa17"
       abi: ReputationManager
-      startBlock: 33060698
+      startBlock: 36927473
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -275,6 +275,7 @@ dataSources:
         - SocialVerified
         - MerchantReferralClaimed
         - MerchantReferralRevenueClaimed
+        - CampaignCreated
       abis:
         - name: ReputationManager
           file: ./abis/ReputationManager.json
@@ -297,4 +298,14 @@ dataSources:
           handler: handleMerchantReferralClaimed
         - event: MerchantReferralRevenueClaimed(indexed address,indexed uint256,uint256)
           handler: handleMerchantReferralRevenueClaimed
+        - event: CampaignCreated(indexed uint256)
+          handler: handleCampaignCreated
+        - event: ManagerAddedOrUpdated(indexed uint256,indexed address,uint256,uint256,bool)
+          handler: handleManagerAddedOrUpdated
+        - event: ManagerAddedOrUpdated(indexed uint256,indexed address,uint256,uint256,bool,bytes32)
+          handler: handleManagerAddedOrUpdatedWithHash
+        - event: ManagerAddedOrUpdated(indexed uint256,indexed address,uint256,uint256,bool,bytes32,bool,uint256)
+          handler: handleManagerAddedOrUpdatedWithHashAndClaimLimit
+        - event: CampaignToggled(uint256,bool)
+          handler: handleCampaignToggled
       file: ./src/reputation-manager.ts
