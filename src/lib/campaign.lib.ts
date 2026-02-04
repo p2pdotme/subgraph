@@ -1,5 +1,5 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Campaign, CampaignManagers } from "../../generated/schema";
+import { Campaign, CampaignManagers, CampaignRewardRedeemed } from "../../generated/schema";
 
 export function loadCampaign(key: Bytes, event: ethereum.Event): Campaign {
   let campaign = Campaign.load(key);
@@ -43,4 +43,26 @@ export function loadCampaignManagers(
   campaignManagers.transactionHash = event.transaction.hash;
 
   return campaignManagers;
+}
+
+export function loadCampaignRewardRedeemed(
+  key: Bytes,
+  event: ethereum.Event,
+): CampaignRewardRedeemed {
+  let campaignRewardRedeemed = CampaignRewardRedeemed.load(key);
+  if (!campaignRewardRedeemed) {
+    campaignRewardRedeemed = new CampaignRewardRedeemed(key);
+    campaignRewardRedeemed.user = Bytes.empty();
+    campaignRewardRedeemed.campaignId = BigInt.zero();
+    campaignRewardRedeemed.manager = Bytes.empty();
+    campaignRewardRedeemed.usernameHash = Bytes.empty();
+    campaignRewardRedeemed.rpReward = BigInt.zero();
+    campaignRewardRedeemed.usdcReward = BigInt.zero();
+  }
+
+  campaignRewardRedeemed.blockNumber = event.block.number;
+  campaignRewardRedeemed.blockTimestamp = event.block.timestamp;
+  campaignRewardRedeemed.transactionHash = event.transaction.hash;
+
+  return campaignRewardRedeemed;
 }

@@ -14,7 +14,10 @@ import {
   ManagerAddedOrUpdated1 as ManagerAddedOrUpdatedWithHashEvent,
   ManagerAddedOrUpdated2 as ManagerAddedOrUpdatedWithHashAndClaimLimitEvent,
   CampaignToggled as CampaignToggledEvent,
+  RewardClaimed as RewardClaimedEvent,
+  RewardClaimed1 as RewardClaimedWithHashEvent,
 } from "../generated/ReputationManager/ReputationManager";
+import { CampaignRewardRedeemed } from "../generated/schema";
 import {
   loadUser,
   loadSocialVerified,
@@ -23,7 +26,7 @@ import {
   loadMerchantReferralRevenueClaimed,
   loadCircleMerchant,
 } from "./lib";
-import { loadCampaign, loadCampaignManagers } from "./lib/campaign.lib";
+import { loadCampaign, loadCampaignManagers, loadCampaignRewardRedeemed } from "./lib/campaign.lib";
 
 export function handleOnchainActivityRPUpdated(
   event: OnchainActivityRPUpdatedEvent,
@@ -271,4 +274,68 @@ export function handleCampaignToggled(event: CampaignToggledEvent): void {
 
   campaign.isActive = event.params.isActive;
   campaign.save();
+}
+
+function _handleRewardClaimedCore(
+  campaignId: BigInt,
+  userAddress: Bytes,
+  rpReward: BigInt,
+  usdcReward: BigInt,
+  manager: Bytes,
+  event: ethereum.Event,
+): CampaignRewardRedeemed {
+  let claimId = Bytes.fromUTF8(campaignId.toString() + "-" + userAddress.toHex());
+  let claimEntity = loadCampaignRewardRedeemed(claimId, event);
+
+  claimEntity.campaignId = campaignId;
+  claimEntity.rpReward = rpReward;
+  claimEntity.usdcReward = usdcReward;
+  claimEntity.manager = manager;
+
+  let user = loadUser(userAddress, event);
+  user.address = userAddress;
+  claimEntity.user = user.id;
+
+  let campaignClaims = user.campaignClaims;
+  if (campaignClaims == null) {
+    campaignClaims = [];
+  }
+  campaignClaims.push(claimEntity.id);
+  user.campaignClaims = campaignClaims;
+  user.save();
+
+  let campaignKey = changetype<Bytes>(Bytes.fromByteArray(ByteArray.fromBigInt(campaignId)));
+  let campaign = loadCampaign(campaignKey, event);
+  campaign.claimsCount = campaign.claimsCount.plus(BigInt.fromI32(1));
+  campaign.save();
+
+  return claimEntity;
+}
+
+export function handleRewardClaimed(event: RewardClaimedEvent): void {
+  let entity = _handleRewardClaimedCore(
+    event.params.campaignId,
+    event.params.user,
+    event.params.rp,
+    event.params.usdc,
+    event.params.manager,
+    event,
+  );
+
+  entity.save();
+}
+
+export function handleRewardClaimedWithHash(event: RewardClaimedWithHashEvent): void {
+  let entity = _handleRewardClaimedCore(
+    event.params.campaignId,
+    event.params.user,
+    event.params.rp,
+    event.params.usdc,
+    event.params.manager,
+    event,
+  );
+
+  entity.usernameHash = event.params.usernameHash;
+
+  entity.save();
 }
