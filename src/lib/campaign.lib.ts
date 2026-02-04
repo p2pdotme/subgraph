@@ -36,6 +36,8 @@ export function loadCampaignManagers(
     campaignManagers.usernameHash = Bytes.empty();
     campaignManagers.claimLimit = BigInt.zero();
     campaignManagers.requiresZk = false;
+    campaignManagers.claimsCount = BigInt.zero();
+    campaignManagers.totalVolume = BigInt.zero();
   }
 
   campaignManagers.blockNumber = event.block.number;

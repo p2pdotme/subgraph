@@ -309,6 +309,11 @@ function _handleRewardClaimedCore(
   campaign.claimsCount = campaign.claimsCount.plus(BigInt.fromI32(1));
   campaign.save();
 
+  let campaignManagersKey = Bytes.fromUTF8(campaignId.toString() + "-" + manager.toHex());
+  let campaignManagers = loadCampaignManagers(campaignManagersKey, event);
+  campaignManagers.claimsCount = campaignManagers.claimsCount.plus(BigInt.fromI32(1));
+  campaignManagers.save();
+
   return claimEntity;
 }
 
