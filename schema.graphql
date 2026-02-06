@@ -413,6 +413,7 @@ type User @entity {
 
   orders: [Orders!] @relation(name: "UserOrders")
   socialVerified: [SocialVerified!] @relation(name: "UserSocialVerified")
+  campaignClaims: [CampaignRewardRedeemed!] @relation(name: "UserCampaignClaims")
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -477,6 +478,69 @@ type MerchantReferralRevenueClaimed @entity {
   merchant: CircleMerchant!
   yearMonthKey: BigInt!
   reward: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CAMPAIGN
+# A campaign
+type Campaign @entity {
+  id: Bytes!
+  campaignId: BigInt!
+  isActive: Boolean!
+  createdAt: BigInt!
+
+  managers: [CampaignManagers!] @derivedFrom(field: "campaign")
+
+  # Metrics
+  managersCount: BigInt!
+  claimsCount: BigInt!
+  totalVolume: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CAMPAIGN MANAGERS
+# A manager for a campaign
+type CampaignManagers @entity {
+  id: Bytes!
+
+  campaign: Campaign
+
+  campaignId: BigInt!
+  manager: Bytes!
+  rpReward: BigInt!
+  usdcReward: BigInt!
+  isActive: Boolean!
+  usernameHash: Bytes!
+  claimLimit: BigInt!
+  requiresZk: Boolean!
+
+  # Metrics
+  claimsCount: BigInt!
+  totalVolume: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CAMPAIGN REWARD REDEEMED
+# A record of a reward redeemed for a campaign
+type CampaignRewardRedeemed @entity {
+  id: Bytes!
+
+  user: User!
+
+  campaignId: BigInt!
+  manager: Bytes!
+  usernameHash: Bytes
+  rpReward: BigInt!
+  usdcReward: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
