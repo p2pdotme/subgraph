@@ -16,6 +16,7 @@ import {
   CampaignToggled as CampaignToggledEvent,
   RewardClaimed as RewardClaimedEvent,
   RewardClaimed1 as RewardClaimedWithHashEvent,
+  UserVoted as UserVotedEvent,
 } from "../generated/ReputationManager/ReputationManager";
 import { CampaignRewardRedeemed } from "../generated/schema";
 import {
@@ -27,6 +28,7 @@ import {
   loadCircleMerchant,
 } from "./lib";
 import { loadCampaign, loadCampaignManagers, loadCampaignRewardRedeemed } from "./lib/campaign.lib";
+import { loadUserRecommendation } from "./lib/user.lib";
 
 export function handleOnchainActivityRPUpdated(
   event: OnchainActivityRPUpdatedEvent,
@@ -343,4 +345,20 @@ export function handleRewardClaimedWithHash(event: RewardClaimedWithHashEvent): 
   entity.usernameHash = event.params.usernameHash;
 
   entity.save();
+}
+
+export function handleUserVoted(event: UserVotedEvent): void {
+  const key = Bytes.fromUTF8(event.params.voter.toHex() + "-" + event.params.votedUser.toHex());
+  let userRecommendation = loadUserRecommendation(key, event);
+
+  userRecommendation.recommender = event.params.voter;
+  userRecommendation.recipient = event.params.votedUser;
+  userRecommendation.timestamp = event.block.timestamp;
+  userRecommendation.save();
+
+  let user = loadUser(event.params.votedUser, event);
+  if(user.primaryRecommender.equals(Bytes.empty())) {
+    user.primaryRecommender = event.params.voter;
+  }
+  user.save();
 }

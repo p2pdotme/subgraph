@@ -1,5 +1,5 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { User, SocialVerified, ReputationChange } from "../../generated/schema";
+import { User, SocialVerified, ReputationChange, UserRecommendation } from "../../generated/schema";
 
 export function loadUser(key: Bytes, event: ethereum.Event): User {
   let user = User.load(key);
@@ -8,6 +8,7 @@ export function loadUser(key: Bytes, event: ethereum.Event): User {
     user.address = key;
     user.reputationPoint = BigInt.zero();
     user.isBlacklisted = false;
+    user.primaryRecommender = Bytes.empty();
   }
 
   user.blockNumber = event.block.number;
@@ -53,4 +54,23 @@ export function loadReputationChange(
   reputationChange.transactionHash = event.transaction.hash;
 
   return reputationChange;
+}
+
+export function loadUserRecommendation(
+  key: Bytes,
+  event: ethereum.Event
+): UserRecommendation {
+  let userRecommendation = UserRecommendation.load(key);
+  if (!userRecommendation) {
+    userRecommendation = new UserRecommendation(key);
+    userRecommendation.recommender = Bytes.empty();
+    userRecommendation.recipient = Bytes.empty();
+    userRecommendation.timestamp = BigInt.zero();
+  }
+
+  userRecommendation.blockNumber = event.block.number;
+  userRecommendation.blockTimestamp = event.block.timestamp;
+  userRecommendation.transactionHash = event.transaction.hash;
+
+  return userRecommendation;
 }
