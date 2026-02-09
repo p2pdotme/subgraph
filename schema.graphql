@@ -410,6 +410,7 @@ type User @entity {
   address: Bytes!
   reputationPoint: BigInt!
   isBlacklisted: Boolean!
+  primaryRecommender: Bytes!
 
   orders: [Orders!] @relation(name: "UserOrders")
   socialVerified: [SocialVerified!] @relation(name: "UserSocialVerified")
@@ -541,6 +542,19 @@ type CampaignRewardRedeemed @entity {
   usernameHash: Bytes
   rpReward: BigInt!
   usdcReward: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# USER RECOMMENDATION
+# User recommendations to other users
+type UserRecommendation @entity {
+  id: Bytes!
+  recommender: Bytes!
+  recipient: Bytes!
+  timestamp: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

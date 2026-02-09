@@ -276,6 +276,7 @@ dataSources:
         - MerchantReferralClaimed
         - MerchantReferralRevenueClaimed
         - CampaignCreated
+        - UserVoted
       abis:
         - name: ReputationManager
           file: ./abis/ReputationManager.json
@@ -312,4 +313,6 @@ dataSources:
           handler: handleRewardClaimed
         - event: RewardClaimed(indexed uint256,indexed address,indexed address,uint256,uint256,bytes32)
           handler: handleRewardClaimedWithHash
+        - event: UserVoted(indexed address,indexed address)
+          handler: handleUserVoted
       file: ./src/reputation-manager.ts
