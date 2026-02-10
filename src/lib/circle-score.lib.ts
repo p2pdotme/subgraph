@@ -198,8 +198,15 @@ export function applyTrustFirewall(circleMetrics: CircleMetrics): void {
   ) {
     circleMetrics.circleStatus = STATUS_PAUSED;
   } else if (circleMetrics.circleStatus == STATUS_PAUSED) {
-    // Recovered — settlement back under threshold
-    circleMetrics.circleStatus = STATUS_ACTIVE;
+    // Recovered — check if circle meets graduation criteria
+    if (
+      circleMetrics.lifetimeAcceptedOrders.ge(BigInt.fromI32(BOOTSTRAP_ORDERS)) ||
+      circleMetrics.totalVolume.ge(BigInt.fromI64(BOOTSTRAP_USDC_VOLUME))
+    ) {
+      circleMetrics.circleStatus = STATUS_ACTIVE;
+    } else {
+      circleMetrics.circleStatus = STATUS_BOOTSTRAP;
+    }
   }
 }
 
