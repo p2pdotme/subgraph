@@ -14,11 +14,19 @@ import {
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
+  loadCircleDailyMetrics,
+  getDayNumber,
+  getDailyMetricsKey,
   loadCircleOrderMetricsByMonth,
   loadOrders,
   loadMerchantOrderMetricsByMonth,
   syncOrder,
   loadUser,
+  updateCircleScore,
+  updateSettlementTime,
+  compute30dMetrics,
+  applyTrustFirewall,
+  checkBootstrapGraduation,
 } from "./lib";
 import { CircleMetrics } from "../generated/schema";
 import {
@@ -27,6 +35,10 @@ import {
   ORDER_STATUS_COMPLETED,
   ORDER_STATUS_CANCELLED,
 } from "./constants/status";
+import {
+  ORDER_TYPE_SELL,
+  ORDER_TYPE_PAY,
+} from "./constants/circle-score";
 import {
   CancelledOrders as CancelledOrdersEvent,
   OrderPlaced as OrderPlacedEvent,
@@ -209,6 +221,56 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
   if (!circleMetrics) return;
 
   updateDisputeMetrics(circleMetrics, event);
+
+  // UPDATE CIRCLE SCORE WHEN DISPUTE IS SETTLED
+  if (event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED) {
+    const newStatus = event.params._order.status;
+
+    // Infer fault based on final order status:
+    // - CANCELLED after dispute → merchant fault (order refunded)
+    // - COMPLETED after dispute → user fault (order stayed completed)
+    if (newStatus === ORDER_STATUS_CANCELLED && previousStatus === ORDER_STATUS_COMPLETED) {
+      // Merchant at fault: order was completed but got cancelled
+      circleMetrics.merchantFaultDisputesCount =
+        circleMetrics.merchantFaultDisputesCount.plus(BigInt.fromI32(1));
+
+      // Update today's daily bucket with dispute adjustment
+      const dayNum = getDayNumber(event.block.timestamp);
+      const dailyKey = getDailyMetricsKey(circle, dayNum);
+      let daily = loadCircleDailyMetrics(dailyKey, event);
+      daily.circle = circle;
+      daily.dayNumber = BigInt.fromI32(dayNum);
+      daily.merchantFaultDisputesCount = daily.merchantFaultDisputesCount.plus(BigInt.fromI32(1));
+      daily.save();
+
+      // Decrement totalCompletedOrders (no longer completed)
+      if (circleMetrics.totalCompletedOrders.gt(BigInt.zero())) {
+        circleMetrics.totalCompletedOrders =
+          circleMetrics.totalCompletedOrders.minus(BigInt.fromI32(1));
+
+        // Adjust cumulative settlement time (estimate: remove average)
+        if (circleMetrics.totalCompletedOrders.gt(BigInt.zero())) {
+          circleMetrics.cumulativeSettlementSeconds =
+            circleMetrics.cumulativeSettlementSeconds.minus(circleMetrics.avgSettlementSeconds);
+
+          circleMetrics.avgSettlementSeconds =
+            circleMetrics.cumulativeSettlementSeconds.div(circleMetrics.totalCompletedOrders);
+        } else {
+          circleMetrics.cumulativeSettlementSeconds = BigInt.zero();
+          circleMetrics.avgSettlementSeconds = BigInt.zero();
+        }
+      }
+    }
+
+    // Recompute 30d rolling metrics and score
+    compute30dMetrics(circleMetrics, event.block.timestamp);
+    updateCircleScore(circleMetrics);
+
+    // Apply trust firewall
+    applyTrustFirewall(circleMetrics);
+
+    circleMetrics.lastScoreUpdateTimestamp = event.block.timestamp;
+  }
 
   circleMetrics.save();
 }
@@ -564,6 +626,24 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
   }
 
   merchant.save();
+
+  // Increment lifetime accepted orders and daily bucket for circle score
+  const circle = merchant.circle;
+  if (circle && !circle.equals(Bytes.fromI32(0))) {
+    let circleMetrics = loadCircleMetrics(circle, event);
+    circleMetrics.lifetimeAcceptedOrders =
+      circleMetrics.lifetimeAcceptedOrders.plus(BigInt.fromI32(1));
+    circleMetrics.save();
+
+    // Increment daily bucket accepted orders count (dispute rate denominator)
+    const dayNum = getDayNumber(event.block.timestamp);
+    const dailyKey = getDailyMetricsKey(circle, dayNum);
+    let daily = loadCircleDailyMetrics(dailyKey, event);
+    daily.circle = circle;
+    daily.dayNumber = BigInt.fromI32(dayNum);
+    daily.acceptedOrdersCount = daily.acceptedOrdersCount.plus(BigInt.fromI32(1));
+    daily.save();
+  }
 }
 
 export function handleOrderCompleted(event: OrderCompletedEvent): void {
@@ -641,6 +721,55 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
   circleMetrics.totalVolume = circleMetrics.totalVolume.plus(
     event.params._order.amount,
   );
+
+  // Load the order to check dispute status and timestamps
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+    event,
+  );
+
+  // UPDATE CIRCLE SCORE (only for non-disputed orders)
+  if (order.disputeStatus === 0) { // No dispute
+    const dayNum = getDayNumber(event.block.timestamp);
+    const dailyKey = getDailyMetricsKey(circle, dayNum);
+    let daily = loadCircleDailyMetrics(dailyKey, event);
+    daily.circle = circle;
+    daily.dayNumber = BigInt.fromI32(dayNum);
+
+    // Add volume to daily bucket
+    daily.volume = daily.volume.plus(event.params._order.amount);
+
+    // Only calculate settlement time for SELL and PAY orders
+    if (order.type === ORDER_TYPE_SELL || order.type === ORDER_TYPE_PAY) {
+      // Validate timestamps exist
+      if (order.paidAt.gt(BigInt.zero()) && order.completedAt.gt(BigInt.zero())) {
+        // Calculate: completedAt - paidAt
+        if (order.completedAt.ge(order.paidAt)) {
+          const settlementSeconds = order.completedAt.minus(order.paidAt);
+          updateSettlementTime(circleMetrics, settlementSeconds);
+
+          // Write settlement time to daily bucket
+          daily.settlementSecondsSum = daily.settlementSecondsSum.plus(settlementSeconds);
+          daily.completedOrdersCount = daily.completedOrdersCount.plus(BigInt.fromI32(1));
+        }
+      }
+    }
+
+    daily.save();
+
+    // Recompute 30d rolling metrics
+    compute30dMetrics(circleMetrics, event.block.timestamp);
+
+    // Update circle score
+    updateCircleScore(circleMetrics);
+
+    // Check lifecycle transitions
+    checkBootstrapGraduation(circleMetrics);
+    applyTrustFirewall(circleMetrics);
+
+    // Update timestamp
+    circleMetrics.lastScoreUpdateTimestamp = event.block.timestamp;
+  }
 
   circleMetrics.save();
 
