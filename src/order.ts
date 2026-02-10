@@ -675,6 +675,11 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
       }
     }
   }
+
+  if (user.firstOrderCompletedAt.equals(BigInt.zero())) {
+    user.firstOrderCompletedAt = event.block.timestamp;
+    user.save();
+  }
 }
 
 export function handleOrderCancelledBy(event: OrderCancelledByEvent): void {

@@ -412,6 +412,8 @@ type User @entity {
   isBlacklisted: Boolean!
   primaryRecommender: Bytes!
 
+  firstOrderCompletedAt: BigInt!
+
   orders: [Orders!] @relation(name: "UserOrders")
   socialVerified: [SocialVerified!] @relation(name: "UserSocialVerified")
   campaignClaims: [CampaignRewardRedeemed!] @relation(name: "UserCampaignClaims")
