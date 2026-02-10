@@ -9,6 +9,7 @@ export function loadUser(key: Bytes, event: ethereum.Event): User {
     user.reputationPoint = BigInt.zero();
     user.isBlacklisted = false;
     user.primaryRecommender = Bytes.empty();
+    user.firstOrderCompletedAt = BigInt.zero();
   }
 
   user.blockNumber = event.block.number;
