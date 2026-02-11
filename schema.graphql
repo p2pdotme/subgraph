@@ -10,6 +10,7 @@ type Circle @entity {
   isAutoApprovedPCEnabled: Boolean!
 
   metrics: CircleMetrics @relation(name: "circle")
+  merchants: [CircleMerchant!]! @derivedFrom(field: "circle")
   orderMetricsByMonth: [CircleOrderMetricsByMonth!] @derivedFrom(field: "circle")
 
   blockNumber: BigInt!
@@ -116,6 +117,9 @@ type CircleMetrics @entity {
   hasMinOrdersForScore: Boolean!
   lastScoreUpdateTimestamp: BigInt!
 
+  maxFiatAllowed: BigInt!
+  maxUsdcAllowed: BigInt!
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -138,6 +142,7 @@ type CircleMerchant @entity {
   isOnline: Boolean!
   isBlacklisted: Boolean!
   isOngoingOrder: Boolean!
+  isDisputeOngoing: Boolean!
 
   # Unstake request tracking for availability
   isUnstakeRequested: Boolean!
@@ -594,6 +599,20 @@ type CircleDailyMetrics @entity {
   acceptedOrdersCount: BigInt!      # All orders accepted (BUY+SELL+PAY, for dispute rate denominator)
   merchantFaultDisputesCount: BigInt!
   volume: BigInt!                   # USDC volume
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CURRENCY PRICE
+# P2P buy/sell exchange prices per currency
+type CurrencyPrice @entity {
+  id: Bytes!
+
+  currency: Bytes!
+  buyExchangePrice: BigInt!
+  sellExchangePrice: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

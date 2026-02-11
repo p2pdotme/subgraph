@@ -45,6 +45,7 @@ export function loadCircleMerchant(
     circleMerchant.isOnline = false;
     circleMerchant.isBlacklisted = false;
     circleMerchant.isOngoingOrder = false;
+    circleMerchant.isDisputeOngoing = false;
     circleMerchant.isUnstakeRequested = false;
     circleMerchant.unstakeRequestedAt = BigInt.zero();
     circleMerchant.unstakeAmount = BigInt.zero();

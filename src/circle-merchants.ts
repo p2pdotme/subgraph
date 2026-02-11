@@ -15,6 +15,7 @@ import {
   loadMerchantVolumeByMonth,
   loadPaymentChannelMigration,
   updateActiveMerchantsCount,
+  updateCircleMaxAllowedBalance,
 } from "./lib";
 import {
   OnlineOfflineToggled as OnlineOfflineToggledEvent,
@@ -55,7 +56,11 @@ export function handleMerchantRegisteredToCircle(
   );
 
   // New merchant: previous stake was 0
-  updateActiveMerchantsCount(circleMetrics, BigInt.zero(), event.params.stakeAmount);
+  updateActiveMerchantsCount(
+    circleMetrics,
+    BigInt.zero(),
+    event.params.stakeAmount
+  );
 
   circleMetrics.save();
 }
@@ -76,6 +81,11 @@ export function handleOnlineOfflineToggled(
   }
 
   merchant.save();
+
+  // UPDATE CIRCLE MAX FIAT ALLOWED
+  const circleMetrics = loadCircleMetrics(merchant.circle, event);
+  updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+  circleMetrics.save();
 }
 
 export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
@@ -96,6 +106,11 @@ export function handleMerchantOngoingOrder(
   );
   merchant.isOngoingOrder = event.params.isOngoing;
   merchant.save();
+
+  // UPDATE CIRCLE MAX FIAT ALLOWED
+  const circleMetrics = loadCircleMetrics(merchant.circle, event);
+  updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+  circleMetrics.save();
 }
 
 export function handleMerchant(event: MerchantEvent): void {
@@ -128,6 +143,11 @@ export function handleMerchant(event: MerchantEvent): void {
   }
 
   merchant.save();
+
+  // UPDATE CIRCLE MAX FIAT ALLOWED
+  const circleMetrics = loadCircleMetrics(merchant.circle, event);
+  updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+  circleMetrics.save();
 }
 
 export function handleMerchantVolume(event: MerchantVolumeEvent): void {
@@ -202,13 +222,16 @@ export function handlePaymentChannelMigrationRequest(
   // SET TIMESTAMPS
   // If status is PENDING, this is a new request - set requestedAt
   // If status is APPROVED or REJECTED, this is a settlement - set settledAt
-  if (event.params.status === 1) { // PENDING
+  if (event.params.status === 1) {
+    // PENDING
     migration.requestedAt = event.block.timestamp;
-  } else if (event.params.status === 2 || event.params.status === 3) { // APPROVED or REJECTED
+  } else if (event.params.status === 2 || event.params.status === 3) {
+    // APPROVED or REJECTED
     migration.settledAt = event.block.timestamp;
 
     // UPDATE PAYMENT CHANNEL FIAT BALANCES AND STATUS WHEN MIGRATION IS APPROVED
-    if (event.params.status === 2) { // APPROVED
+    if (event.params.status === 2) {
+      // APPROVED
       // Update "from" payment channel - set to TERMINATED with fiat balance 0
       const fromPcKey = Bytes.fromUTF8(
         `${event.params.merchant.toHexString()}-${event.params.fromAccountNo.toString()}`
@@ -225,7 +248,12 @@ export function handlePaymentChannelMigrationRequest(
       );
       const toPaymentChannel = loadMerchantPaymentChannels(toPcKey, event);
       toPaymentChannel.fiatBalance = event.params.toFiatAmount;
-      toPaymentChannel.save();
+      toPaymentChannel.save()
+
+      // UPDATE CIRCLE MAX FIAT ALLOWED
+      const circleMetrics = loadCircleMetrics(merchant.circle, event);
+      updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+      circleMetrics.save();
     }
   }
 
@@ -283,7 +311,11 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   // Update active merchants count based on stake transition
   let circle = loadCircle(merchant.circle, event);
   let circleMetrics = loadCircleMetrics(circle.id, event);
-  updateActiveMerchantsCount(circleMetrics, previousStakedAmount, event.params.stake);
+  updateActiveMerchantsCount(
+    circleMetrics,
+    previousStakedAmount,
+    event.params.stake
+  );
   circleMetrics.save();
 }
 

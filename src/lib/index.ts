@@ -3,7 +3,15 @@ export {
   loadCircleStakeRecords,
   loadCircleUnstakeRecords,
 } from "./staker.lib";
-export { loadCircle, loadCircleMetrics, loadCircleDailyMetrics, getDayNumber, getDailyMetricsKey, loadCircleOrderMetricsByMonth } from "./circle.lib";
+export {
+  loadCircle,
+  loadCircleMetrics,
+  loadCircleDailyMetrics,
+  getDayNumber,
+  getDailyMetricsKey,
+  loadCircleOrderMetricsByMonth,
+  updateCircleMaxAllowedBalance,
+} from "./circle.lib";
 export { loadOrders, syncOrder } from "./order.lib";
 export {
   loadAssignedMerchants,
@@ -23,3 +31,4 @@ export {
 export { loadUser, loadSocialVerified, loadReputationChange } from "./user.lib";
 export { loadCurrency } from "./currency.lib";
 export * from "./circle-score.lib";
+export { loadOrCreateCurrencyPrice } from "./config.lib";

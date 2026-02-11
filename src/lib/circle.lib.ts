@@ -1,5 +1,13 @@
-import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Circle, CircleDailyMetrics, CircleMetrics, CircleOrderMetricsByMonth } from "../../generated/schema";
+import { BigInt, Bytes, ethereum, store } from "@graphprotocol/graph-ts";
+import {
+  Circle,
+  CircleDailyMetrics,
+  CircleMetrics,
+  CircleOrderMetricsByMonth,
+  CircleMerchant,
+  MerchantPaymentChannels,
+  CurrencyPrice,
+} from "../../generated/schema";
 import { STATUS_BOOTSTRAP, SECONDS_PER_DAY } from "../constants/circle-score";
 
 export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
@@ -49,6 +57,8 @@ export function loadCircleMetrics(
     circleMetrics.merchantFaultDisputesCount = BigInt.zero();
     circleMetrics.hasMinOrdersForScore = false;
     circleMetrics.lastScoreUpdateTimestamp = BigInt.zero();
+    circleMetrics.maxFiatAllowed = BigInt.zero();
+    circleMetrics.maxUsdcAllowed = BigInt.zero();
   }
 
   circleMetrics.blockNumber = event.block.number;
@@ -106,4 +116,87 @@ export function loadCircleOrderMetricsByMonth(
   metrics.transactionHash = event.transaction.hash;
 
   return metrics;
+}
+
+/**
+ * Recompute maxFiatAllowed for a circle by looping through all MerchantPaymentChannels
+ * for that circle (via store.loadRelated) and taking the max fiatBalance.
+ */
+export function updateCircleMaxAllowedBalance(
+  circleMetrics: CircleMetrics,
+  circleId: Bytes
+): void {
+  const merchants = store.loadRelated(
+    "Circle",
+    circleId.toHexString(),
+    "merchants"
+  );
+  let maxFiat = BigInt.zero();
+  let maxUsdc = BigInt.zero();
+
+  // Load Circle to get currency (scalar field - use load, not loadRelated)
+  const circle = Circle.load(circleId);
+  let sellPrice = BigInt.zero();
+  if (circle && !circle.currency.equals(Bytes.empty())) {
+    const currencyPrice = CurrencyPrice.load(circle.currency);
+    if (currencyPrice) {
+      sellPrice = currencyPrice.sellExchangePrice;
+    }
+  }
+
+  for (let i = 0; i < merchants.length; i++) {
+    let totalMerchantFiatBalance = BigInt.zero();
+
+    const merchant = changetype<CircleMerchant>(merchants[i]);
+    const paymentChannels = store.loadRelated(
+      "CircleMerchant",
+      merchant.get("id")!.toBytes().toHexString(),
+      "paymentChannels"
+    );
+
+    const merchantStakedAmount = merchant.stakedAmount.plus(
+      merchant.delegatedStakedAmount
+    );
+
+    const isOnline = merchant.get("isOnline")!.toBoolean();
+    const isBlacklisted = merchant.get("isBlacklisted")!.toBoolean();
+    const isOngoingOrder = merchant.get("isOngoingOrder")!.toBoolean();
+
+    for (let j = 0; j < paymentChannels.length; j++) {
+      const pc = changetype<MerchantPaymentChannels>(paymentChannels[j]);
+      const fiatBalance = pc.get("fiatBalance")!.toBigInt();
+      const isApproved = pc.get("status")!.toI32() === 2;
+      const isActive = pc.get("isActive")!.toBoolean();
+
+      if (
+        fiatBalance.gt(maxFiat) &&
+        isApproved &&
+        isActive &&
+        isOnline &&
+        !isBlacklisted &&
+        !isOngoingOrder
+      ) {
+        maxFiat = fiatBalance;
+      }
+
+      totalMerchantFiatBalance = totalMerchantFiatBalance.plus(fiatBalance);
+    }
+
+    // Only compute usdcBalance when sellPrice > 0 to avoid division by zero
+    if (
+      sellPrice.gt(BigInt.zero()) &&
+      isOnline &&
+      !isBlacklisted &&
+      !isOngoingOrder
+    ) {
+      const fiatInUsdc = totalMerchantFiatBalance.div(sellPrice);
+      const usdcBalance = merchantStakedAmount.minus(fiatInUsdc);
+      if (usdcBalance.gt(maxUsdc)) {
+        maxUsdc = usdcBalance;
+      }
+    }
+  }
+
+  circleMetrics.maxFiatAllowed = maxFiat;
+  circleMetrics.maxUsdcAllowed = maxUsdc;
 }

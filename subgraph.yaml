@@ -255,6 +255,28 @@ dataSources:
           handler: handleCurrencyToggled
       file: ./src/country-facet.ts
   - kind: ethereum
+    name: P2pConfigFacet
+    network: base-sepolia
+    source:
+      address: "0x8A86A43278E3B836Ee38A0071f7A4cfBc5D914Cd"
+      abi: P2pConfigFacet
+      startBlock: 36927473
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - CurrencyPrice
+      abis:
+        - name: P2pConfigFacet
+          file: ./abis/P2pConfigFacet.json
+      eventHandlers:
+        - event: BuyPriceUpdated(address,bytes32,uint256,uint256)
+          handler: handleBuyPriceUpdated
+        - event: SellPriceUpdated(address,bytes32,uint256,uint256)
+          handler: handleSellPriceUpdated
+      file: ./src/config.ts
+  - kind: ethereum
     name: ReputationManager
     network: base-sepolia
     source:

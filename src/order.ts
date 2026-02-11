@@ -27,6 +27,7 @@ import {
   compute30dMetrics,
   applyTrustFirewall,
   checkBootstrapGraduation,
+  updateCircleMaxAllowedBalance,
 } from "./lib";
 import { CircleMetrics } from "../generated/schema";
 import {
@@ -35,10 +36,7 @@ import {
   ORDER_STATUS_COMPLETED,
   ORDER_STATUS_CANCELLED,
 } from "./constants/status";
-import {
-  ORDER_TYPE_SELL,
-  ORDER_TYPE_PAY,
-} from "./constants/circle-score";
+import { ORDER_TYPE_SELL, ORDER_TYPE_PAY } from "./constants/circle-score";
 import {
   CancelledOrders as CancelledOrdersEvent,
   OrderPlaced as OrderPlacedEvent,
@@ -61,17 +59,17 @@ import {
  */
 const updateDisputeMetrics = (
   circleMetrics: CircleMetrics,
-  event: OrderDisputeEvent,
+  event: OrderDisputeEvent
 ): void => {
   if (event.params._order.disputeInfo.status === DISPUTE_STATUS_RAISED) {
     circleMetrics.raisedDisputesCount = circleMetrics.raisedDisputesCount.plus(
-      BigInt.fromI32(1),
+      BigInt.fromI32(1)
     );
   } else if (
     event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED
   ) {
     circleMetrics.raisedDisputesCount = circleMetrics.raisedDisputesCount.minus(
-      BigInt.fromI32(1),
+      BigInt.fromI32(1)
     );
     circleMetrics.resolvedDisputesCount =
       circleMetrics.resolvedDisputesCount.plus(BigInt.fromI32(1));
@@ -82,7 +80,7 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
   // Load order BEFORE syncOrder to capture previous status
   let orderBeforeSync = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
-    event,
+    event
   );
   const previousStatus = orderBeforeSync.status;
 
@@ -108,14 +106,14 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
     event.params._order.disputeInfo.status,
     event.params._order.disputeInfo.redactTransId,
     event.params._order.disputeInfo.accountNumber,
-    event,
+    event
   );
 
   // Set disputePlacedAt when dispute is raised, disputeSettledAt when settled
   if (event.params._order.disputeInfo.status === DISPUTE_STATUS_RAISED) {
     let _order = loadOrders(
       Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
-      event,
+      event
     );
     _order.disputePlacedAt = event.block.timestamp;
     _order.save();
@@ -124,7 +122,7 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
   ) {
     let _order = loadOrders(
       Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
-      event,
+      event
     );
     _order.disputeSettledAt = event.block.timestamp;
     _order.save();
@@ -132,8 +130,18 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
 
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
-    event,
+    event
   );
+
+  if (event.params._order.disputeInfo.status === DISPUTE_STATUS_RAISED) {
+    merchant.isDisputeOngoing = true;
+  } else if (
+    event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED
+  ) {
+    merchant.isDisputeOngoing = false;
+  }
+
+  merchant.save();
 
   // merchant.circle is already Bytes - no conversion needed
   const circle = merchant.circle;
@@ -149,11 +157,11 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
 
     // Update merchant monthly order metrics
     const merchantMetricsKey = Bytes.fromUTF8(
-      `${merchant.id.toHexString()}-${month}`,
+      `${merchant.id.toHexString()}-${month}`
     );
     const orderMetrics = loadMerchantOrderMetricsByMonth(
       merchantMetricsKey,
-      event,
+      event
     );
     orderMetrics.merchant = merchant.id;
     orderMetrics.month = month;
@@ -162,7 +170,7 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
     const circleMetricsKey = Bytes.fromUTF8(`${circle.toHexString()}-${month}`);
     const circleOrderMetrics = loadCircleOrderMetricsByMonth(
       circleMetricsKey,
-      event,
+      event
     );
     circleOrderMetrics.circle = circle;
     circleOrderMetrics.month = month;
@@ -229,7 +237,10 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
     // Infer fault based on final order status:
     // - CANCELLED after dispute → merchant fault (order refunded)
     // - COMPLETED after dispute → user fault (order stayed completed)
-    if (newStatus === ORDER_STATUS_CANCELLED && previousStatus === ORDER_STATUS_COMPLETED) {
+    if (
+      newStatus === ORDER_STATUS_CANCELLED &&
+      previousStatus === ORDER_STATUS_COMPLETED
+    ) {
       // Merchant at fault: order was completed but got cancelled
       circleMetrics.merchantFaultDisputesCount =
         circleMetrics.merchantFaultDisputesCount.plus(BigInt.fromI32(1));
@@ -240,7 +251,9 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
       let daily = loadCircleDailyMetrics(dailyKey, event);
       daily.circle = circle;
       daily.dayNumber = BigInt.fromI32(dayNum);
-      daily.merchantFaultDisputesCount = daily.merchantFaultDisputesCount.plus(BigInt.fromI32(1));
+      daily.merchantFaultDisputesCount = daily.merchantFaultDisputesCount.plus(
+        BigInt.fromI32(1)
+      );
       daily.save();
 
       // Decrement totalCompletedOrders (no longer completed)
@@ -251,10 +264,14 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
         // Adjust cumulative settlement time (estimate: remove average)
         if (circleMetrics.totalCompletedOrders.gt(BigInt.zero())) {
           circleMetrics.cumulativeSettlementSeconds =
-            circleMetrics.cumulativeSettlementSeconds.minus(circleMetrics.avgSettlementSeconds);
+            circleMetrics.cumulativeSettlementSeconds.minus(
+              circleMetrics.avgSettlementSeconds
+            );
 
           circleMetrics.avgSettlementSeconds =
-            circleMetrics.cumulativeSettlementSeconds.div(circleMetrics.totalCompletedOrders);
+            circleMetrics.cumulativeSettlementSeconds.div(
+              circleMetrics.totalCompletedOrders
+            );
         } else {
           circleMetrics.cumulativeSettlementSeconds = BigInt.zero();
           circleMetrics.avgSettlementSeconds = BigInt.zero();
@@ -272,6 +289,10 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
     circleMetrics.lastScoreUpdateTimestamp = event.block.timestamp;
   }
 
+  circleMetrics.save();
+
+  // UPDATE CIRCLE MAX FIAT ALLOWED
+  updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
   circleMetrics.save();
 }
 
@@ -298,7 +319,7 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     event.params._order.disputeInfo.status,
     event.params._order.disputeInfo.redactTransId,
     event.params._order.disputeInfo.accountNumber,
-    event,
+    event
   );
 
   // Only update merchant stats if an order was accepted by a merchant
@@ -306,7 +327,7 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
   if (!acceptedMerchantAddress.equals(Bytes.empty())) {
     const merchant = loadCircleMerchant(
       Bytes.fromHexString(acceptedMerchantAddress.toHexString()),
-      event,
+      event
     );
 
     // merchant.circle is already Bytes - no conversion needed
@@ -320,16 +341,16 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
 
     // Update merchant monthly order metrics
     const merchantMetricsKey = Bytes.fromUTF8(
-      `${merchant.id.toHexString()}-${month}`,
+      `${merchant.id.toHexString()}-${month}`
     );
     const orderMetrics = loadMerchantOrderMetricsByMonth(
       merchantMetricsKey,
-      event,
+      event
     );
     orderMetrics.merchant = merchant.id;
     orderMetrics.month = month;
     orderMetrics.cancelledOrdersCount = orderMetrics.cancelledOrdersCount.plus(
-      BigInt.fromI32(1),
+      BigInt.fromI32(1)
     );
     orderMetrics.save();
 
@@ -337,7 +358,7 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     const circleMetricsKey = Bytes.fromUTF8(`${circle.toHexString()}-${month}`);
     const circleOrderMetrics = loadCircleOrderMetricsByMonth(
       circleMetricsKey,
-      event,
+      event
     );
     circleOrderMetrics.circle = circle;
     circleOrderMetrics.month = month;
@@ -345,6 +366,16 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
       circleOrderMetrics.totalCancelledOrdersCount.plus(BigInt.fromI32(1));
     circleOrderMetrics.save();
   }
+
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(acceptedMerchantAddress.toHexString()),
+    event
+  );
+
+  // UPDATE CIRCLE MAX FIAT ALLOWED
+  const circleMetrics = loadCircleMetrics(merchant.circle, event);
+  updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+  circleMetrics.save();
 }
 
 export function handleOrderPlaced(event: OrderPlacedEvent): void {
@@ -370,12 +401,12 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
     event.params._order.disputeInfo.status,
     event.params._order.disputeInfo.redactTransId,
     event.params._order.disputeInfo.accountNumber,
-    event,
+    event
   );
 
   const circle = loadCircle(
     changetype<Bytes>(Bytes.fromBigInt(event.params._order.circleId)),
-    event,
+    event
   );
 
   if (!circle) return;
@@ -392,7 +423,7 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
 }
 
 export function handleMerchantAssignedNewOrder(
-  event: MerchantAssignedNewOrderEvent,
+  event: MerchantAssignedNewOrderEvent
 ): void {
   // Synchronize order data with the latest contract state
   syncOrder(
@@ -416,16 +447,16 @@ export function handleMerchantAssignedNewOrder(
     event.params._order.disputeInfo.status,
     event.params._order.disputeInfo.redactTransId,
     event.params._order.disputeInfo.accountNumber,
-    event,
+    event
   );
 
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event,
+    event
   );
 
   const assignedMerchantKey = Bytes.fromUTF8(
-    `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`,
+    `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`
   );
 
   let assignedMerchant = loadAssignedMerchants(assignedMerchantKey, event);
@@ -437,7 +468,7 @@ export function handleMerchantAssignedNewOrder(
 
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
-    event,
+    event
   );
 
   let assignedMerchants = order.assignedMerchants;
@@ -450,7 +481,7 @@ export function handleMerchantAssignedNewOrder(
 }
 
 export function handleMerchantReAssignedNewOrder(
-  event: MerchantReAssignedNewOrderEvent,
+  event: MerchantReAssignedNewOrderEvent
 ): void {
   // Synchronize order data with the latest contract state
   syncOrder(
@@ -474,16 +505,16 @@ export function handleMerchantReAssignedNewOrder(
     event.params._order.disputeInfo.status,
     event.params._order.disputeInfo.redactTransId,
     event.params._order.disputeInfo.accountNumber,
-    event,
+    event
   );
 
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event,
+    event
   );
 
   const assignedMerchantKey = Bytes.fromUTF8(
-    `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`,
+    `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`
   );
   let assignedMerchant = loadAssignedMerchants(assignedMerchantKey, event);
   assignedMerchant.merchant = merchant.id;
@@ -493,7 +524,7 @@ export function handleMerchantReAssignedNewOrder(
 
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
-    event,
+    event
   );
 
   let assignedMerchants = order.assignedMerchants;
@@ -528,15 +559,25 @@ export function handleSellOrderUpiSet(event: SellOrderUpiSetEvent): void {
     event.params._order.disputeInfo.status,
     event.params._order.disputeInfo.redactTransId,
     event.params._order.disputeInfo.accountNumber,
-    event,
+    event
   );
 
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
-    event,
+    event
   );
   order.paidAt = event.block.timestamp;
   order.save();
+
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
+    event
+  );
+
+  // UPDATE CIRCLE MAX FIAT ALLOWED
+  const circleMetrics = loadCircleMetrics(merchant.circle, event);
+  updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+  circleMetrics.save();
 }
 
 export function handleBuyOrderPaid(event: BuyOrderPaidEvent): void {
@@ -562,15 +603,25 @@ export function handleBuyOrderPaid(event: BuyOrderPaidEvent): void {
     event.params._order.disputeInfo.status,
     event.params._order.disputeInfo.redactTransId,
     event.params._order.disputeInfo.accountNumber,
-    event,
+    event
   );
 
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
-    event,
+    event
   );
   order.paidAt = event.block.timestamp;
   order.save();
+
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
+    event
+  );
+
+  // UPDATE CIRCLE MAX FIAT ALLOWED
+  const circleMetrics = loadCircleMetrics(merchant.circle, event);
+  updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+  circleMetrics.save();
 }
 
 export function handleOrderAccepted(event: OrderAcceptedEvent): void {
@@ -596,17 +647,17 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
     event.params._order.disputeInfo.status,
     event.params._order.disputeInfo.redactTransId,
     event.params._order.disputeInfo.accountNumber,
-    event,
+    event
   );
 
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
-    event,
+    event
   );
 
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
-    event,
+    event
   );
   order.acceptedPCId = event.params._order.acceptedAccountNo;
   order.acceptedMerchantAddress = event.params._order.acceptedMerchant;
@@ -641,7 +692,9 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
     let daily = loadCircleDailyMetrics(dailyKey, event);
     daily.circle = circle;
     daily.dayNumber = BigInt.fromI32(dayNum);
-    daily.acceptedOrdersCount = daily.acceptedOrdersCount.plus(BigInt.fromI32(1));
+    daily.acceptedOrdersCount = daily.acceptedOrdersCount.plus(
+      BigInt.fromI32(1)
+    );
     daily.save();
   }
 }
@@ -669,12 +722,12 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
     event.params._order.disputeInfo.status,
     event.params._order.disputeInfo.redactTransId,
     event.params._order.disputeInfo.accountNumber,
-    event,
+    event
   );
 
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
-    event,
+    event
   );
 
   // merchant.circle is already Bytes - no conversion needed
@@ -688,16 +741,16 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
 
   // Update merchant monthly order metrics
   const merchantMetricsKey = Bytes.fromUTF8(
-    `${merchant.id.toHexString()}-${month}`,
+    `${merchant.id.toHexString()}-${month}`
   );
   const orderMetrics = loadMerchantOrderMetricsByMonth(
     merchantMetricsKey,
-    event,
+    event
   );
   orderMetrics.merchant = merchant.id;
   orderMetrics.month = month;
   orderMetrics.completedOrdersCount = orderMetrics.completedOrdersCount.plus(
-    BigInt.fromI32(1),
+    BigInt.fromI32(1)
   );
   orderMetrics.save();
 
@@ -705,7 +758,7 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
   const circleMetricsKey = Bytes.fromUTF8(`${circle.toHexString()}-${month}`);
   const circleOrderMetrics = loadCircleOrderMetricsByMonth(
     circleMetricsKey,
-    event,
+    event
   );
   circleOrderMetrics.circle = circle;
   circleOrderMetrics.month = month;
@@ -719,17 +772,18 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
   if (!circleMetrics) return;
 
   circleMetrics.totalVolume = circleMetrics.totalVolume.plus(
-    event.params._order.amount,
+    event.params._order.amount
   );
 
   // Load the order to check dispute status and timestamps
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
-    event,
+    event
   );
 
   // UPDATE CIRCLE SCORE (only for non-disputed orders)
-  if (order.disputeStatus === 0) { // No dispute
+  if (order.disputeStatus === 0) {
+    // No dispute
     const dayNum = getDayNumber(event.block.timestamp);
     const dailyKey = getDailyMetricsKey(circle, dayNum);
     let daily = loadCircleDailyMetrics(dailyKey, event);
@@ -742,15 +796,21 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
     // Only calculate settlement time for SELL and PAY orders
     if (order.type === ORDER_TYPE_SELL || order.type === ORDER_TYPE_PAY) {
       // Validate timestamps exist
-      if (order.paidAt.gt(BigInt.zero()) && order.completedAt.gt(BigInt.zero())) {
+      if (
+        order.paidAt.gt(BigInt.zero()) &&
+        order.completedAt.gt(BigInt.zero())
+      ) {
         // Calculate: completedAt - paidAt
         if (order.completedAt.ge(order.paidAt)) {
           const settlementSeconds = order.completedAt.minus(order.paidAt);
           updateSettlementTime(circleMetrics, settlementSeconds);
 
           // Write settlement time to daily bucket
-          daily.settlementSecondsSum = daily.settlementSecondsSum.plus(settlementSeconds);
-          daily.completedOrdersCount = daily.completedOrdersCount.plus(BigInt.fromI32(1));
+          daily.settlementSecondsSum =
+            daily.settlementSecondsSum.plus(settlementSeconds);
+          daily.completedOrdersCount = daily.completedOrdersCount.plus(
+            BigInt.fromI32(1)
+          );
         }
       }
     }
@@ -783,10 +843,10 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
         // UPDATE CAMPAIGN VOLUME
         let campaign = loadCampaign(
           Bytes.fromByteArray(Bytes.fromBigInt(campaignClaim.campaignId)),
-          event,
+          event
         );
         campaign.totalVolume = campaign.totalVolume.plus(
-          event.params._order.amount,
+          event.params._order.amount
         );
         campaign.save();
 
@@ -794,11 +854,11 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
         let campaignManagersKey = Bytes.fromUTF8(
           campaignClaim.campaignId.toString() +
             "-" +
-            campaignClaim.manager.toHex(),
+            campaignClaim.manager.toHex()
         );
         let campaignManagers = loadCampaignManagers(campaignManagersKey, event);
         campaignManagers.totalVolume = campaignManagers.totalVolume.plus(
-          event.params._order.amount,
+          event.params._order.amount
         );
         campaignManagers.save();
       }
@@ -809,12 +869,17 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
     user.firstOrderCompletedAt = event.block.timestamp;
     user.save();
   }
+  
+  // UPDATE CIRCLE MAX FIAT ALLOWED
+  const _circleMetrics = loadCircleMetrics(merchant.circle, event);
+  updateCircleMaxAllowedBalance(_circleMetrics, merchant.circle);
+  _circleMetrics.save();
 }
 
 export function handleOrderCancelledBy(event: OrderCancelledByEvent): void {
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
-    event,
+    event
   );
   order.cancelledBy = event.params.cancelledBy;
   order.cancelledAt = event.block.timestamp;
@@ -822,11 +887,11 @@ export function handleOrderCancelledBy(event: OrderCancelledByEvent): void {
 }
 
 export function handleAdditionalOrderDetails(
-  event: AdditionalOrderDetailsEvent,
+  event: AdditionalOrderDetailsEvent
 ): void {
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
-    event,
+    event
   );
   order.fixedFeePaid = event.params.details.fixedFeePaid;
   order.tipsPaid = event.params.details.tipsPaid;
@@ -858,12 +923,12 @@ export function handleDisputeTransIdSet(event: DisputeTransIdSetEvent): void {
     event.params._order.disputeInfo.status,
     event.params._order.disputeInfo.redactTransId,
     event.params._order.disputeInfo.accountNumber,
-    event,
+    event
   );
 
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
-    event,
+    event
   );
   order.disputeSettledByAddr = event.params.by;
   order.save();
