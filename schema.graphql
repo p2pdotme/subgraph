@@ -10,7 +10,8 @@ type Circle @entity {
   isAutoApprovedPCEnabled: Boolean!
 
   metrics: CircleMetrics @relation(name: "circle")
-  orderMetricsByMonth: [CircleOrderMetricsByMonth!] @derivedFrom(field: "circle")
+  orderMetricsByMonth: [CircleOrderMetricsByMonth!]
+    @derivedFrom(field: "circle")
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -34,14 +35,14 @@ type Staker @entity {
   transactionHash: Bytes!
 }
 
-# CIRCLE STAKE RECORDS 
+# CIRCLE STAKE RECORDS
 # A record of a staker's stake in a circle
 type CircleStakeRecords @entity {
   id: Bytes!
 
   circle: Circle!
   staker: Staker!
-  
+
   amount: BigInt!
 
   unstakeRequest: CircleUnstakeRecords
@@ -57,15 +58,15 @@ type CircleStakeRecords @entity {
 # A record of a staker's unstake in a circle
 type CircleUnstakeRecords @entity {
   id: Bytes!
-  
+
   circle: Circle!
   staker: Staker!
-  
+
   amount: BigInt!
   availableAt: BigInt!
 
   status: BigInt!
-  
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -134,8 +135,10 @@ type CircleMerchant @entity {
 
   paymentChannels: [MerchantPaymentChannels!] @derivedFrom(field: "merchant")
   volumeByMonth: [MerchantVolumeByMonth!] @derivedFrom(field: "merchant")
-  orderMetricsByMonth: [MerchantOrderMetricsByMonth!] @derivedFrom(field: "merchant")
-  paymentChannelMigrations: [PaymentChannelMigration!] @derivedFrom(field: "merchant")
+  orderMetricsByMonth: [MerchantOrderMetricsByMonth!]
+    @derivedFrom(field: "merchant")
+  paymentChannelMigrations: [PaymentChannelMigration!]
+    @derivedFrom(field: "merchant")
   delegationRecords: [MerchantDelegationRecord!] @derivedFrom(field: "merchant")
 
   blockNumber: BigInt!
@@ -423,7 +426,8 @@ type User @entity {
 
   orders: [Orders!] @relation(name: "UserOrders")
   socialVerified: [SocialVerified!] @relation(name: "UserSocialVerified")
-  campaignClaims: [CampaignRewardRedeemed!] @relation(name: "UserCampaignClaims")
+  campaignClaims: [CampaignRewardRedeemed!]
+    @relation(name: "UserCampaignClaims")
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

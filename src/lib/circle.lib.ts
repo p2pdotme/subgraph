@@ -1,5 +1,9 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Circle, CircleMetrics, CircleOrderMetricsByMonth } from "../../generated/schema";
+import {
+  Circle,
+  CircleMetrics,
+  CircleOrderMetricsByMonth,
+} from "../../generated/schema";
 
 export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
   let circle = Circle.load(key);
@@ -22,7 +26,7 @@ export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
 
 export function loadCircleMetrics(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CircleMetrics {
   let circleMetrics = CircleMetrics.load(key);
   if (!circleMetrics) {
@@ -46,7 +50,7 @@ export function loadCircleMetrics(
 
 export function loadCircleOrderMetricsByMonth(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CircleOrderMetricsByMonth {
   let metrics = CircleOrderMetricsByMonth.load(key);
   if (!metrics) {
