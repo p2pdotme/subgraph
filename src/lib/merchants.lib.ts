@@ -137,8 +137,12 @@ export function loadMerchantOrderMetricsByMonth(
   if (!metrics) {
     metrics = new MerchantOrderMetricsByMonth(key);
     metrics.month = "";
-    metrics.completedOrdersCount = BigInt.zero();
-    metrics.cancelledOrdersCount = BigInt.zero();
+    metrics.cancelledBuyOrdersCount = BigInt.zero();
+    metrics.cancelledSellOrdersCount = BigInt.zero();
+    metrics.cancelledPayOrdersCount = BigInt.zero();
+    metrics.completedBuyOrdersCount = BigInt.zero();
+    metrics.completedSellOrdersCount = BigInt.zero();
+    metrics.completedPayOrdersCount = BigInt.zero();
   }
 
   metrics.blockNumber = event.block.number;
