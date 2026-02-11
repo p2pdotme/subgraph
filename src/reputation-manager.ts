@@ -27,7 +27,11 @@ import {
   loadMerchantReferralRevenueClaimed,
   loadCircleMerchant,
 } from "./lib";
-import { loadCampaign, loadCampaignManagers, loadCampaignRewardRedeemed } from "./lib/campaign.lib";
+import {
+  loadCampaign,
+  loadCampaignManagers,
+  loadCampaignRewardRedeemed,
+} from "./lib/campaign.lib";
 import { loadUserRecommendation } from "./lib/user.lib";
 
 export function handleOnchainActivityRPUpdated(
@@ -198,7 +202,9 @@ function _handleManagerAddedOrUpdated(
   let id = Bytes.fromUTF8(campaignId.toString() + "-" + manager.toHex());
   let campaignManager = loadCampaignManagers(id, event);
 
-  const campaignKey = changetype<Bytes>(Bytes.fromByteArray(ByteArray.fromBigInt(campaignId)));
+  const campaignKey = changetype<Bytes>(
+    Bytes.fromByteArray(ByteArray.fromBigInt(campaignId)),
+  );
   const campaign = loadCampaign(campaignKey, event);
 
   // If the manager is new, increment the managers count
@@ -286,7 +292,9 @@ function _handleRewardClaimedCore(
   manager: Bytes,
   event: ethereum.Event,
 ): CampaignRewardRedeemed {
-  let claimId = Bytes.fromUTF8(campaignId.toString() + "-" + userAddress.toHex());
+  let claimId = Bytes.fromUTF8(
+    campaignId.toString() + "-" + userAddress.toHex(),
+  );
   let claimEntity = loadCampaignRewardRedeemed(claimId, event);
 
   claimEntity.campaignId = campaignId;
@@ -306,14 +314,20 @@ function _handleRewardClaimedCore(
   user.campaignClaims = campaignClaims;
   user.save();
 
-  let campaignKey = changetype<Bytes>(Bytes.fromByteArray(ByteArray.fromBigInt(campaignId)));
+  let campaignKey = changetype<Bytes>(
+    Bytes.fromByteArray(ByteArray.fromBigInt(campaignId)),
+  );
   let campaign = loadCampaign(campaignKey, event);
   campaign.claimsCount = campaign.claimsCount.plus(BigInt.fromI32(1));
   campaign.save();
 
-  let campaignManagersKey = Bytes.fromUTF8(campaignId.toString() + "-" + manager.toHex());
+  let campaignManagersKey = Bytes.fromUTF8(
+    campaignId.toString() + "-" + manager.toHex(),
+  );
   let campaignManagers = loadCampaignManagers(campaignManagersKey, event);
-  campaignManagers.claimsCount = campaignManagers.claimsCount.plus(BigInt.fromI32(1));
+  campaignManagers.claimsCount = campaignManagers.claimsCount.plus(
+    BigInt.fromI32(1),
+  );
   campaignManagers.save();
 
   return claimEntity;
@@ -332,7 +346,9 @@ export function handleRewardClaimed(event: RewardClaimedEvent): void {
   entity.save();
 }
 
-export function handleRewardClaimedWithHash(event: RewardClaimedWithHashEvent): void {
+export function handleRewardClaimedWithHash(
+  event: RewardClaimedWithHashEvent,
+): void {
   let entity = _handleRewardClaimedCore(
     event.params.campaignId,
     event.params.user,
@@ -348,7 +364,9 @@ export function handleRewardClaimedWithHash(event: RewardClaimedWithHashEvent): 
 }
 
 export function handleUserVoted(event: UserVotedEvent): void {
-  const key = Bytes.fromUTF8(event.params.voter.toHex() + "-" + event.params.votedUser.toHex());
+  const key = Bytes.fromUTF8(
+    event.params.voter.toHex() + "-" + event.params.votedUser.toHex(),
+  );
   let userRecommendation = loadUserRecommendation(key, event);
 
   userRecommendation.recommender = event.params.voter;
@@ -357,7 +375,7 @@ export function handleUserVoted(event: UserVotedEvent): void {
   userRecommendation.save();
 
   let user = loadUser(event.params.votedUser, event);
-  if(user.primaryRecommender.equals(Bytes.empty())) {
+  if (user.primaryRecommender.equals(Bytes.empty())) {
     user.primaryRecommender = event.params.voter;
   }
   user.save();

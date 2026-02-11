@@ -1,5 +1,10 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Circle, CircleDailyMetrics, CircleMetrics, CircleOrderMetricsByMonth } from "../../generated/schema";
+import {
+  Circle,
+  CircleDailyMetrics,
+  CircleMetrics,
+  CircleOrderMetricsByMonth,
+} from "../../generated/schema";
 import { STATUS_BOOTSTRAP, SECONDS_PER_DAY } from "../constants/circle-score";
 
 export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
@@ -23,7 +28,7 @@ export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
 
 export function loadCircleMetrics(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CircleMetrics {
   let circleMetrics = CircleMetrics.load(key);
   if (!circleMetrics) {
@@ -60,7 +65,7 @@ export function loadCircleMetrics(
 
 export function loadCircleDailyMetrics(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CircleDailyMetrics {
   let daily = CircleDailyMetrics.load(key);
   if (!daily) {
@@ -91,7 +96,7 @@ export function getDailyMetricsKey(circleId: Bytes, dayNumber: i32): Bytes {
 
 export function loadCircleOrderMetricsByMonth(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CircleOrderMetricsByMonth {
   let metrics = CircleOrderMetricsByMonth.load(key);
   if (!metrics) {

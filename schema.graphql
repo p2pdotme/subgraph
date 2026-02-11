@@ -10,7 +10,8 @@ type Circle @entity {
   isAutoApprovedPCEnabled: Boolean!
 
   metrics: CircleMetrics @relation(name: "circle")
-  orderMetricsByMonth: [CircleOrderMetricsByMonth!] @derivedFrom(field: "circle")
+  orderMetricsByMonth: [CircleOrderMetricsByMonth!]
+    @derivedFrom(field: "circle")
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -34,14 +35,14 @@ type Staker @entity {
   transactionHash: Bytes!
 }
 
-# CIRCLE STAKE RECORDS 
+# CIRCLE STAKE RECORDS
 # A record of a staker's stake in a circle
 type CircleStakeRecords @entity {
   id: Bytes!
 
   circle: Circle!
   staker: Staker!
-  
+
   amount: BigInt!
 
   unstakeRequest: CircleUnstakeRecords
@@ -57,15 +58,15 @@ type CircleStakeRecords @entity {
 # A record of a staker's unstake in a circle
 type CircleUnstakeRecords @entity {
   id: Bytes!
-  
+
   circle: Circle!
   staker: Staker!
-  
+
   amount: BigInt!
   availableAt: BigInt!
 
   status: BigInt!
-  
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -99,19 +100,17 @@ type CircleMetrics @entity {
   totalMerchantsCount: BigInt!
 
   # CIRCLE SCORE METRICS
-  circleScore: BigInt!              # Score 0–100
-  circleStatus: String!             # bootstrap | active | rejected | paused
-
+  circleScore: BigInt! # Score 0–100
+  circleStatus: String! # bootstrap | active | rejected | paused
   # Rolling 30d metrics (recomputed from CircleDailyMetrics)
-  avgSettlementSeconds: BigInt!     # 30d avg: paidAt → completedAt (SELL/PAY only)
-  disputeRate: BigInt!              # 30d rate × 10000
-  rolling30dVolume: BigInt!         # 30d USDC volume (computed from daily buckets)
-
+  avgSettlementSeconds: BigInt! # 30d avg: paidAt → completedAt (SELL/PAY only)
+  disputeRate: BigInt! # 30d rate × 10000
+  rolling30dVolume: BigInt! # 30d USDC volume (computed from daily buckets)
   # Lifetime counters
-  lifetimeAcceptedOrders: BigInt!   # All orders ever accepted by a merchant
+  lifetimeAcceptedOrders: BigInt! # All orders ever accepted by a merchant
   cumulativeSettlementSeconds: BigInt! # Running sum (all-time, for daily bucket tracking)
-  totalCompletedOrders: BigInt!     # All-time non-disputed completed (settlement avg denominator)
-  activeMerchantsCount: BigInt!     # Merchants with stakedAmount > 0
+  totalCompletedOrders: BigInt! # All-time non-disputed completed (settlement avg denominator)
+  activeMerchantsCount: BigInt! # Merchants with stakedAmount > 0
   merchantFaultDisputesCount: BigInt! # All-time merchant fault disputes
   hasMinOrdersForScore: Boolean!
   lastScoreUpdateTimestamp: BigInt!
@@ -152,8 +151,10 @@ type CircleMerchant @entity {
 
   paymentChannels: [MerchantPaymentChannels!] @derivedFrom(field: "merchant")
   volumeByMonth: [MerchantVolumeByMonth!] @derivedFrom(field: "merchant")
-  orderMetricsByMonth: [MerchantOrderMetricsByMonth!] @derivedFrom(field: "merchant")
-  paymentChannelMigrations: [PaymentChannelMigration!] @derivedFrom(field: "merchant")
+  orderMetricsByMonth: [MerchantOrderMetricsByMonth!]
+    @derivedFrom(field: "merchant")
+  paymentChannelMigrations: [PaymentChannelMigration!]
+    @derivedFrom(field: "merchant")
   delegationRecords: [MerchantDelegationRecord!] @derivedFrom(field: "merchant")
 
   blockNumber: BigInt!
@@ -434,7 +435,8 @@ type User @entity {
 
   orders: [Orders!] @relation(name: "UserOrders")
   socialVerified: [SocialVerified!] @relation(name: "UserSocialVerified")
-  campaignClaims: [CampaignRewardRedeemed!] @relation(name: "UserCampaignClaims")
+  campaignClaims: [CampaignRewardRedeemed!]
+    @relation(name: "UserCampaignClaims")
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -584,17 +586,15 @@ type UserRecommendation @entity {
 # CIRCLE DAILY METRICS
 # Rolling 30d window buckets for circle score calculation
 type CircleDailyMetrics @entity {
-  id: Bytes!                        # circleId-dayNumber
+  id: Bytes! # circleId-dayNumber
   circle: Circle!
-  dayNumber: BigInt!                # timestamp / 86400
-
+  dayNumber: BigInt! # timestamp / 86400
   # Daily counters (incremented during the day)
-  settlementSecondsSum: BigInt!     # Sum of settlement times for the day (SELL/PAY only)
-  completedOrdersCount: BigInt!     # Completed non-disputed orders (SELL/PAY, for settlement avg)
-  acceptedOrdersCount: BigInt!      # All orders accepted (BUY+SELL+PAY, for dispute rate denominator)
+  settlementSecondsSum: BigInt! # Sum of settlement times for the day (SELL/PAY only)
+  completedOrdersCount: BigInt! # Completed non-disputed orders (SELL/PAY, for settlement avg)
+  acceptedOrdersCount: BigInt! # All orders accepted (BUY+SELL+PAY, for dispute rate denominator)
   merchantFaultDisputesCount: BigInt!
-  volume: BigInt!                   # USDC volume
-
+  volume: BigInt! # USDC volume
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!

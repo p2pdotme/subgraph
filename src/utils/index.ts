@@ -1,1 +1,1 @@
-export {getYearMonthFromTimestamp } from "./date.utils";
+export { getYearMonthFromTimestamp } from "./date.utils";

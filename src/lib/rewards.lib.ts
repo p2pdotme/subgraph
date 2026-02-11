@@ -3,7 +3,7 @@ import { CircleAdminRewards, MerchantRewards } from "../../generated/schema";
 
 export function loadCircleAdminRewards(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CircleAdminRewards {
   let circleAdminRewards = CircleAdminRewards.load(key);
 
@@ -25,7 +25,7 @@ export function loadCircleAdminRewards(
 
 export function loadMerchantRewards(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): MerchantRewards {
   let merchantRewards = MerchantRewards.load(key);
 

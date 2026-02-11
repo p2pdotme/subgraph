@@ -19,7 +19,7 @@ import { UNSTAKE_REQUEST_RAISED, UNSTAKE_REQUEST_WITHDRAWN } from "./constants";
 
 export function handleExitRequested(event: ExitRequestedEvent): void {
   const stakeRecordKey = Bytes.fromHexString(
-    `${event.params.circleId.toString()}-${event.params.user.toHexString()}`
+    `${event.params.circleId.toString()}-${event.params.user.toHexString()}`,
   );
 
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
@@ -45,10 +45,10 @@ export function handleExitRequested(event: ExitRequestedEvent): void {
 }
 
 export function handleExitProceedsWithdrawn(
-  event: ExitProceedsWithdrawnEvent
+  event: ExitProceedsWithdrawnEvent,
 ): void {
   const stakeRecordKey = Bytes.fromHexString(
-    `${event.params.circleId.toString()}-${event.params.user.toHexString()}`
+    `${event.params.circleId.toString()}-${event.params.user.toHexString()}`,
   );
 
   // UPDATE CIRCLE UNSTAKE RECORD
@@ -66,11 +66,11 @@ export function handleExitProceedsWithdrawn(
   const circle = loadCircle(circleKey, event);
   const circleMetrics = loadCircleMetrics(circle.id, event);
   circleMetrics.totalStaked = circleMetrics.totalStaked.minus(
-    event.params.amount
+    event.params.amount,
   );
   if (event.params.user.toHexString() == circle.admin) {
     circleMetrics.adminStaked = circleMetrics.adminStaked.minus(
-      event.params.amount
+      event.params.amount,
     );
   }
   circleMetrics.save();
@@ -82,7 +82,7 @@ export function handleExitProceedsWithdrawn(
 }
 
 export function handleUsdcStakedForDelegationInCircle(
-  event: UsdcStakedForDelegationInCircleEvent
+  event: UsdcStakedForDelegationInCircleEvent,
 ): void {
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(circleKey, event);
@@ -92,7 +92,7 @@ export function handleUsdcStakedForDelegationInCircle(
   staker.save();
 
   const stakeRecordKey = Bytes.fromHexString(
-    `${event.params.circleId.toString()}-${event.params.user.toHexString()}`
+    `${event.params.circleId.toString()}-${event.params.user.toHexString()}`,
   );
   const stakeRecord = loadCircleStakeRecords(stakeRecordKey, event);
   stakeRecord.circle = circle.id;
@@ -108,26 +108,26 @@ export function handleUsdcStakedForDelegationInCircle(
 
   const circleMetrics = loadCircleMetrics(circle.id, event);
   circleMetrics.totalStaked = circleMetrics.totalStaked.plus(
-    event.params.amount
+    event.params.amount,
   );
   if (event.params.user.toHexString() == circle.admin) {
     circleMetrics.adminStaked = circleMetrics.adminStaked.plus(
-      event.params.amount
+      event.params.amount,
     );
   }
   circleMetrics.save();
 }
 
 export function handleUsdcDelegatedToMerchantInCircle(
-  event: UsdcDelegatedToMerchantInCircleEvent
+  event: UsdcDelegatedToMerchantInCircleEvent,
 ): void {
   // UPDATE CIRCLE MERCHANT
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
   merchant.delegatedStakedAmount = merchant.delegatedStakedAmount.plus(
-    event.params.amount
+    event.params.amount,
   );
   merchant.save();
 
@@ -136,9 +136,12 @@ export function handleUsdcDelegatedToMerchantInCircle(
   const circle = loadCircle(circleKey, event);
 
   const delegationRecordKey = Bytes.fromUTF8(
-    `${event.params.merchant.toHexString()}-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`
+    `${event.params.merchant.toHexString()}-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
   );
-  const delegationRecord = loadMerchantDelegationRecord(delegationRecordKey, event);
+  const delegationRecord = loadMerchantDelegationRecord(
+    delegationRecordKey,
+    event,
+  );
   delegationRecord.merchant = merchant.id;
   delegationRecord.circle = circle.id;
   delegationRecord.type = "DELEGATED";
@@ -149,21 +152,21 @@ export function handleUsdcDelegatedToMerchantInCircle(
   // UPDATE CIRCLE METRICS
   const circleMetrics = loadCircleMetrics(circleKey, event);
   circleMetrics.totalDelegatedStake = circleMetrics.totalDelegatedStake.plus(
-    event.params.amount
+    event.params.amount,
   );
   circleMetrics.save();
 }
 
 export function handleUsdcUndelegatedFromMerchantInCircle(
-  event: UsdcUndelegatedFromMerchantInCircleEvent
+  event: UsdcUndelegatedFromMerchantInCircleEvent,
 ): void {
   // UPDATE CIRCLE MERCHANT
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
   merchant.delegatedStakedAmount = merchant.delegatedStakedAmount.minus(
-    event.params.amount
+    event.params.amount,
   );
   merchant.save();
 
@@ -172,9 +175,12 @@ export function handleUsdcUndelegatedFromMerchantInCircle(
   const circle = loadCircle(circleKey, event);
 
   const delegationRecordKey = Bytes.fromUTF8(
-    `${event.params.merchant.toHexString()}-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`
+    `${event.params.merchant.toHexString()}-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
   );
-  const delegationRecord = loadMerchantDelegationRecord(delegationRecordKey, event);
+  const delegationRecord = loadMerchantDelegationRecord(
+    delegationRecordKey,
+    event,
+  );
   delegationRecord.merchant = merchant.id;
   delegationRecord.circle = circle.id;
   delegationRecord.type = "UNDELEGATED";
@@ -185,7 +191,7 @@ export function handleUsdcUndelegatedFromMerchantInCircle(
   // UPDATE CIRCLE METRICS
   const circleMetrics = loadCircleMetrics(circleKey, event);
   circleMetrics.totalDelegatedStake = circleMetrics.totalDelegatedStake.minus(
-    event.params.amount
+    event.params.amount,
   );
   circleMetrics.save();
 }
