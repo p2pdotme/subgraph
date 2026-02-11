@@ -31,7 +31,7 @@ export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
 
 export function loadCircleMetrics(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CircleMetrics {
   let circleMetrics = CircleMetrics.load(key);
   if (!circleMetrics) {
@@ -70,7 +70,7 @@ export function loadCircleMetrics(
 
 export function loadCircleDailyMetrics(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CircleDailyMetrics {
   let daily = CircleDailyMetrics.load(key);
   if (!daily) {
@@ -101,7 +101,7 @@ export function getDailyMetricsKey(circleId: Bytes, dayNumber: i32): Bytes {
 
 export function loadCircleOrderMetricsByMonth(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CircleOrderMetricsByMonth {
   let metrics = CircleOrderMetricsByMonth.load(key);
   if (!metrics) {
@@ -124,12 +124,12 @@ export function loadCircleOrderMetricsByMonth(
  */
 export function updateCircleMaxAllowedBalance(
   circleMetrics: CircleMetrics,
-  circleId: Bytes
+  circleId: Bytes,
 ): void {
   const merchants = store.loadRelated(
     "Circle",
     circleId.toHexString(),
-    "merchants"
+    "merchants",
   );
   let maxFiat = BigInt.zero();
   let maxUsdc = BigInt.zero();
@@ -151,11 +151,11 @@ export function updateCircleMaxAllowedBalance(
     const paymentChannels = store.loadRelated(
       "CircleMerchant",
       merchant.get("id")!.toBytes().toHexString(),
-      "paymentChannels"
+      "paymentChannels",
     );
 
     const merchantStakedAmount = merchant.stakedAmount.plus(
-      merchant.delegatedStakedAmount
+      merchant.delegatedStakedAmount,
     );
 
     const isOnline = merchant.get("isOnline")!.toBoolean();

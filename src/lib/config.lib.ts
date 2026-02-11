@@ -3,7 +3,7 @@ import { CurrencyPrice } from "../../generated/schema";
 
 export function loadOrCreateCurrencyPrice(
   currency: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CurrencyPrice {
   let price = CurrencyPrice.load(currency);
   if (!price) {

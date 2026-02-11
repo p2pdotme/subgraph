@@ -13,7 +13,7 @@ import {
 
 export function loadAssignedMerchants(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): AssignedMerchants {
   let assignedMerchant = AssignedMerchants.load(key);
 
@@ -30,7 +30,7 @@ export function loadAssignedMerchants(
 
 export function loadCircleMerchant(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CircleMerchant {
   let circleMerchant = CircleMerchant.load(key);
   if (!circleMerchant) {
@@ -64,7 +64,7 @@ export function loadCircleMerchant(
 
 export function loadMerchantPaymentChannels(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): MerchantPaymentChannels {
   let merchantPaymentChannel = MerchantPaymentChannels.load(key);
   if (!merchantPaymentChannel) {
@@ -89,7 +89,7 @@ export function loadMerchantPaymentChannels(
 
 export function loadMerchantVolumeByMonth(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): MerchantVolumeByMonth {
   let merchantVolumeByMonth = MerchantVolumeByMonth.load(key);
   if (!merchantVolumeByMonth) {
@@ -107,7 +107,7 @@ export function loadMerchantVolumeByMonth(
 
 export function loadPaymentChannelMigration(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): PaymentChannelMigration {
   let migration = PaymentChannelMigration.load(key);
   if (!migration) {
@@ -132,7 +132,7 @@ export function loadPaymentChannelMigration(
 
 export function loadMerchantOrderMetricsByMonth(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): MerchantOrderMetricsByMonth {
   let metrics = MerchantOrderMetricsByMonth.load(key);
   if (!metrics) {
@@ -151,7 +151,7 @@ export function loadMerchantOrderMetricsByMonth(
 
 export function loadMerchantDelegationRecord(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): MerchantDelegationRecord {
   let record = MerchantDelegationRecord.load(key);
   if (!record) {
@@ -170,7 +170,7 @@ export function loadMerchantDelegationRecord(
 
 export function loadMerchantReferralClaimed(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): MerchantReferralClaimed {
   let referralClaimed = MerchantReferralClaimed.load(key);
   if (!referralClaimed) {
@@ -188,7 +188,7 @@ export function loadMerchantReferralClaimed(
 
 export function loadMerchantReferralRevenueClaimed(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): MerchantReferralRevenueClaimed {
   let revenueClaimed = MerchantReferralRevenueClaimed.load(key);
   if (!revenueClaimed) {

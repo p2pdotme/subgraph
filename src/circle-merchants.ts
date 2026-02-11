@@ -27,13 +27,13 @@ import {
 import { getYearMonthFromTimestamp } from "./utils/date.utils";
 
 export function handleMerchantRegisteredToCircle(
-  event: MerchantRegisteredToCircleEvent
+  event: MerchantRegisteredToCircleEvent,
 ): void {
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(circleKey, event);
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
 
   merchant.circle = circle.id;
@@ -52,25 +52,25 @@ export function handleMerchantRegisteredToCircle(
 
   // UPDATE TOTAL MERCHANTS COUNT
   circleMetrics.totalMerchantsCount = circleMetrics.totalMerchantsCount.plus(
-    BigInt.fromI32(1)
+    BigInt.fromI32(1),
   );
 
   // New merchant: previous stake was 0
   updateActiveMerchantsCount(
     circleMetrics,
     BigInt.zero(),
-    event.params.stakeAmount
+    event.params.stakeAmount,
   );
 
   circleMetrics.save();
 }
 
 export function handleOnlineOfflineToggled(
-  event: OnlineOfflineToggledEvent
+  event: OnlineOfflineToggledEvent,
 ): void {
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
   merchant.isOnline = event.params.merchantDetails.isOnline;
 
@@ -91,18 +91,18 @@ export function handleOnlineOfflineToggled(
 export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
   merchant.isBlacklisted = event.params.isBlacklist;
   merchant.save();
 }
 
 export function handleMerchantOngoingOrder(
-  event: MerchantOngoingOrderEvent
+  event: MerchantOngoingOrderEvent,
 ): void {
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
   merchant.isOngoingOrder = event.params.isOngoing;
   merchant.save();
@@ -116,7 +116,7 @@ export function handleMerchantOngoingOrder(
 export function handleMerchant(event: MerchantEvent): void {
   let merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
 
   // ADD/UPDATE MERCHANT PAYMENT CHANNELS
@@ -124,7 +124,7 @@ export function handleMerchant(event: MerchantEvent): void {
     let paymentChannelDetails = event.params.merchantConfig.paymentChannels[i];
 
     const pcKey = Bytes.fromUTF8(
-      `${event.params.merchant.toHexString()}-${paymentChannelDetails.accountNo.toString()}`
+      `${event.params.merchant.toHexString()}-${paymentChannelDetails.accountNo.toString()}`,
     );
     let paymentChannel = loadMerchantPaymentChannels(pcKey, event);
     paymentChannel.merchant = merchant.id;
@@ -154,12 +154,12 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   // LOAD MERCHANT
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
 
   // LOAD PAYMENT CHANNEL
   const pcKey = Bytes.fromUTF8(
-    `${event.params.merchant.toHexString()}-${event.params.accountNo.toString()}`
+    `${event.params.merchant.toHexString()}-${event.params.accountNo.toString()}`,
   );
   const paymentChannel = loadMerchantPaymentChannels(pcKey, event);
 
@@ -173,7 +173,7 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   const merchantVolumeByMonthKey = `${event.params.merchant.toHexString()}-${paymentChannel.id.toHexString()}-${merchant.circleId.toString()}-${month}`;
   const merchantVolumeByMonth = loadMerchantVolumeByMonth(
     Bytes.fromUTF8(merchantVolumeByMonthKey),
-    event
+    event,
   );
 
   merchantVolumeByMonth.merchant = merchant.id;
@@ -181,7 +181,7 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   merchantVolumeByMonth.paymentChannel = paymentChannel.id;
   merchantVolumeByMonth.month = month;
   merchantVolumeByMonth.volume = merchantVolumeByMonth.volume.plus(
-    event.params.monthlyVolume
+    event.params.monthlyVolume,
   );
 
   merchantVolumeByMonth.save();
@@ -189,19 +189,19 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
 }
 
 export function handlePaymentChannelMigrationRequest(
-  event: PaymentChannelMigrationRequestEvent
+  event: PaymentChannelMigrationRequestEvent,
 ): void {
   // LOAD MERCHANT
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
 
   // CREATE CONSISTENT MIGRATION ID (without timestamp)
   // Using merchant address + fromAccountNo + toAccountNo as unique identifier
   // This allows us to track the same migration across status changes
   const migrationId = Bytes.fromUTF8(
-    `${event.params.merchant.toHexString()}-${event.params.fromAccountNo.toString()}-${event.params.toAccountNo.toString()}`
+    `${event.params.merchant.toHexString()}-${event.params.fromAccountNo.toString()}-${event.params.toAccountNo.toString()}`,
   );
 
   // LOAD OR CREATE MIGRATION RECORD
@@ -234,7 +234,7 @@ export function handlePaymentChannelMigrationRequest(
       // APPROVED
       // Update "from" payment channel - set to TERMINATED with fiat balance 0
       const fromPcKey = Bytes.fromUTF8(
-        `${event.params.merchant.toHexString()}-${event.params.fromAccountNo.toString()}`
+        `${event.params.merchant.toHexString()}-${event.params.fromAccountNo.toString()}`,
       );
       const fromPaymentChannel = loadMerchantPaymentChannels(fromPcKey, event);
       fromPaymentChannel.fiatBalance = event.params.fromFiatAmount;
@@ -244,11 +244,11 @@ export function handlePaymentChannelMigrationRequest(
 
       // Update "to" payment channel fiat balance
       const toPcKey = Bytes.fromUTF8(
-        `${event.params.merchant.toHexString()}-${event.params.toAccountNo.toString()}`
+        `${event.params.merchant.toHexString()}-${event.params.toAccountNo.toString()}`,
       );
       const toPaymentChannel = loadMerchantPaymentChannels(toPcKey, event);
       toPaymentChannel.fiatBalance = event.params.toFiatAmount;
-      toPaymentChannel.save()
+      toPaymentChannel.save();
 
       // UPDATE CIRCLE MAX FIAT ALLOWED
       const circleMetrics = loadCircleMetrics(merchant.circle, event);
@@ -265,7 +265,7 @@ export function handlePaymentChannelMigrationRequest(
 export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
 
   merchant.isUnstakeRequested = true;
@@ -276,11 +276,11 @@ export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
 }
 
 export function handleUnstakeRequestCancelled(
-  event: UnstakeRequestCancelledEvent
+  event: UnstakeRequestCancelledEvent,
 ): void {
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
 
   merchant.isUnstakeRequested = false;
@@ -293,7 +293,7 @@ export function handleUnstakeRequestCancelled(
 export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
 
   const previousStakedAmount = merchant.stakedAmount;
@@ -314,17 +314,17 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   updateActiveMerchantsCount(
     circleMetrics,
     previousStakedAmount,
-    event.params.stake
+    event.params.stake,
   );
   circleMetrics.save();
 }
 
 export function handleMerchantWithoutFundsTracker(
-  event: MerchantWithoutFundsTrackerEvent
+  event: MerchantWithoutFundsTrackerEvent,
 ): void {
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
-    event
+    event,
   );
 
   // Update telegram ID from merchant config
