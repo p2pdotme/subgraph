@@ -1,11 +1,6 @@
 // Minimum orders required before computing circle score
 export const MIN_ORDERS_FOR_SCORE: i32 = 10;
 
-// Order types (from OrderProcessorStorage.sol)
-export const ORDER_TYPE_BUY: i32 = 0;
-export const ORDER_TYPE_SELL: i32 = 1;
-export const ORDER_TYPE_PAY: i32 = 2;
-
 // Score formula weights (as percentages)
 export const WEIGHT_SPEED: i32 = 35; // 35%
 export const WEIGHT_DISPUTE: i32 = 30; // 30%

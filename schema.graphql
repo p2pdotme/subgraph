@@ -316,8 +316,15 @@ type MerchantOrderMetricsByMonth @entity {
   month: String!
 
   # Order counts for this month (totalOrders = completed + cancelled)
-  completedOrdersCount: BigInt!
-  cancelledOrdersCount: BigInt!
+  # Order counts for this month (cancelledOrdersCount = cancelledBuyOrdersCount + cancelledSellOrdersCount + cancelledPayOrdersCount)
+  cancelledBuyOrdersCount: BigInt!
+  cancelledSellOrdersCount: BigInt!
+  cancelledPayOrdersCount: BigInt!
+
+  # Order counts for this month (completedOrdersCount = completedBuyOrdersCount + completedSellOrdersCount + completedPayOrdersCount)
+  completedBuyOrdersCount: BigInt!
+  completedSellOrdersCount: BigInt!
+  completedPayOrdersCount: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

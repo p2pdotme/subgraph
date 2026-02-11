@@ -20,3 +20,8 @@ export const MIGRATION_STATUS_DEFAULT: i32 = 0;
 export const MIGRATION_STATUS_PENDING: i32 = 1;
 export const MIGRATION_STATUS_APPROVED: i32 = 2;
 export const MIGRATION_STATUS_REJECTED: i32 = 3;
+
+// Order Type enum values
+export const ORDER_TYPE_BUY: i32 = 0;
+export const ORDER_TYPE_SELL: i32 = 1;
+export const ORDER_TYPE_PAY: i32 = 2;

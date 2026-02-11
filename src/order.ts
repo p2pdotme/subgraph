@@ -34,8 +34,10 @@ import {
   DISPUTE_STATUS_SETTLED,
   ORDER_STATUS_COMPLETED,
   ORDER_STATUS_CANCELLED,
+  ORDER_TYPE_BUY,
+  ORDER_TYPE_SELL,
+  ORDER_TYPE_PAY,
 } from "./constants/status";
-import { ORDER_TYPE_SELL, ORDER_TYPE_PAY } from "./constants/circle-score";
 import {
   CancelledOrders as CancelledOrdersEvent,
   OrderPlaced as OrderPlacedEvent,
@@ -164,6 +166,8 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
     circleOrderMetrics.circle = circle;
     circleOrderMetrics.month = month;
 
+    const orderType = event.params._order.orderType;
+
     // Adjust counts based on status change
     // If previous status was COMPLETED and new status is CANCELLED: -1 completed, +1 cancelled
     // If previous status was CANCELLED and new status is COMPLETED: -1 cancelled, +1 completed
@@ -171,10 +175,30 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
       previousStatus === ORDER_STATUS_COMPLETED &&
       newStatus === ORDER_STATUS_CANCELLED
     ) {
-      orderMetrics.completedOrdersCount =
-        orderMetrics.completedOrdersCount.minus(BigInt.fromI32(1));
-      orderMetrics.cancelledOrdersCount =
-        orderMetrics.cancelledOrdersCount.plus(BigInt.fromI32(1));
+      // UPDATE COMPLETED ORDERS COUNT
+      if (orderType === ORDER_TYPE_BUY) {
+        orderMetrics.completedBuyOrdersCount =
+          orderMetrics.completedBuyOrdersCount.minus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_SELL) {
+        orderMetrics.completedSellOrdersCount =
+          orderMetrics.completedSellOrdersCount.minus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_PAY) {
+        orderMetrics.completedPayOrdersCount =
+          orderMetrics.completedPayOrdersCount.minus(BigInt.fromI32(1));
+      }
+
+      // UPDATE CANCELLED ORDERS COUNT
+      if (orderType === ORDER_TYPE_BUY) {
+        orderMetrics.cancelledBuyOrdersCount =
+          orderMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_SELL) {
+        orderMetrics.cancelledSellOrdersCount =
+          orderMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_PAY) {
+        orderMetrics.cancelledPayOrdersCount =
+          orderMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
+      }
+
       circleOrderMetrics.totalCompletedOrdersCount =
         circleOrderMetrics.totalCompletedOrdersCount.minus(BigInt.fromI32(1));
       circleOrderMetrics.totalCancelledOrdersCount =
@@ -183,10 +207,30 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
       previousStatus === ORDER_STATUS_CANCELLED &&
       newStatus === ORDER_STATUS_COMPLETED
     ) {
-      orderMetrics.cancelledOrdersCount =
-        orderMetrics.cancelledOrdersCount.minus(BigInt.fromI32(1));
-      orderMetrics.completedOrdersCount =
-        orderMetrics.completedOrdersCount.plus(BigInt.fromI32(1));
+      // UPDATE CANCELLED ORDERS COUNT
+      if (orderType === ORDER_TYPE_BUY) {
+        orderMetrics.cancelledBuyOrdersCount =
+          orderMetrics.cancelledBuyOrdersCount.minus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_SELL) {
+        orderMetrics.cancelledSellOrdersCount =
+          orderMetrics.cancelledSellOrdersCount.minus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_PAY) {
+        orderMetrics.cancelledPayOrdersCount =
+          orderMetrics.cancelledPayOrdersCount.minus(BigInt.fromI32(1));
+      }
+
+      // UPDATE COMPLETED ORDERS COUNT
+      if (orderType === ORDER_TYPE_BUY) {
+        orderMetrics.completedBuyOrdersCount =
+          orderMetrics.completedBuyOrdersCount.plus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_SELL) {
+        orderMetrics.completedSellOrdersCount =
+          orderMetrics.completedSellOrdersCount.plus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_PAY) {
+        orderMetrics.completedPayOrdersCount =
+          orderMetrics.completedPayOrdersCount.plus(BigInt.fromI32(1));
+      }
+
       circleOrderMetrics.totalCancelledOrdersCount =
         circleOrderMetrics.totalCancelledOrdersCount.minus(BigInt.fromI32(1));
       circleOrderMetrics.totalCompletedOrdersCount =
@@ -197,13 +241,33 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
     ) {
       // Order wasn't counted before (was in dispute state), count it now based on final status
       if (newStatus === ORDER_STATUS_COMPLETED) {
-        orderMetrics.completedOrdersCount =
-          orderMetrics.completedOrdersCount.plus(BigInt.fromI32(1));
+        // UPDATE COMPLETED ORDERS COUNT
+        if (orderType === ORDER_TYPE_BUY) {
+          orderMetrics.completedBuyOrdersCount =
+            orderMetrics.completedBuyOrdersCount.plus(BigInt.fromI32(1));
+        } else if (orderType === ORDER_TYPE_SELL) {
+          orderMetrics.completedSellOrdersCount =
+            orderMetrics.completedSellOrdersCount.plus(BigInt.fromI32(1));
+        } else if (orderType === ORDER_TYPE_PAY) {
+          orderMetrics.completedPayOrdersCount =
+            orderMetrics.completedPayOrdersCount.plus(BigInt.fromI32(1));
+        }
+
         circleOrderMetrics.totalCompletedOrdersCount =
           circleOrderMetrics.totalCompletedOrdersCount.plus(BigInt.fromI32(1));
       } else if (newStatus === ORDER_STATUS_CANCELLED) {
-        orderMetrics.cancelledOrdersCount =
-          orderMetrics.cancelledOrdersCount.plus(BigInt.fromI32(1));
+        // UPDATE CANCELLED ORDERS COUNT
+        if (orderType === ORDER_TYPE_BUY) {
+          orderMetrics.cancelledBuyOrdersCount =
+            orderMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
+        } else if (orderType === ORDER_TYPE_SELL) {
+          orderMetrics.cancelledSellOrdersCount =
+            orderMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
+        } else if (orderType === ORDER_TYPE_PAY) {
+          orderMetrics.cancelledPayOrdersCount =
+            orderMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
+        }
+
         circleOrderMetrics.totalCancelledOrdersCount =
           circleOrderMetrics.totalCancelledOrdersCount.plus(BigInt.fromI32(1));
       }
@@ -334,9 +398,21 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     );
     orderMetrics.merchant = merchant.id;
     orderMetrics.month = month;
-    orderMetrics.cancelledOrdersCount = orderMetrics.cancelledOrdersCount.plus(
-      BigInt.fromI32(1),
-    );
+
+    const orderType = event.params._order.orderType;
+
+    // UPDATE CANCELLED ORDERS COUNT
+    if (orderType === ORDER_TYPE_BUY) {
+      orderMetrics.cancelledBuyOrdersCount =
+        orderMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
+    } else if (orderType === ORDER_TYPE_SELL) {
+      orderMetrics.cancelledSellOrdersCount =
+        orderMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
+    } else if (orderType === ORDER_TYPE_PAY) {
+      orderMetrics.cancelledPayOrdersCount =
+        orderMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
+    }
+
     orderMetrics.save();
 
     // Update circle monthly order metrics
@@ -704,9 +780,21 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
   );
   orderMetrics.merchant = merchant.id;
   orderMetrics.month = month;
-  orderMetrics.completedOrdersCount = orderMetrics.completedOrdersCount.plus(
-    BigInt.fromI32(1),
-  );
+
+  const orderType = event.params._order.orderType;
+
+  // UPDATE COMPLETED ORDERS COUNT
+  if (orderType === ORDER_TYPE_BUY) {
+    orderMetrics.completedBuyOrdersCount =
+      orderMetrics.completedBuyOrdersCount.plus(BigInt.fromI32(1));
+  } else if (orderType === ORDER_TYPE_SELL) {
+    orderMetrics.completedSellOrdersCount =
+      orderMetrics.completedSellOrdersCount.plus(BigInt.fromI32(1));
+  } else if (orderType === ORDER_TYPE_PAY) {
+    orderMetrics.completedPayOrdersCount =
+      orderMetrics.completedPayOrdersCount.plus(BigInt.fromI32(1));
+  }
+
   orderMetrics.save();
 
   // Update circle monthly order metrics
