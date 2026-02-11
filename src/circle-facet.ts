@@ -3,10 +3,7 @@ import {
   CircleCreated as CircleCreatedEvent,
   // CircleProtocolTokenStaked as CircleProtocolTokenStakedEvent,
 } from "../generated/CircleFacet/CircleFacet";
-import {
-  loadCircle,
-  loadCircleMetrics,
-} from "./lib";
+import { loadCircle, loadCircleMetrics } from "./lib";
 
 export function handleCircleCreated(event: CircleCreatedEvent): void {
   const key = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
@@ -42,7 +39,6 @@ export function handleCircleCreated(event: CircleCreatedEvent): void {
 
 //   staker.totalStaked = staker.totalStaked.plus(event.params.stake);
 
-
 //   // UPDATE CIRCLE
 //   const circle = loadCircle(
 //     Bytes.fromHexString(event.params.circleId.toString()),
@@ -58,7 +54,7 @@ export function handleCircleCreated(event: CircleCreatedEvent): void {
 //   circleStakeRecord.staker = staker.id;
 //   circleStakeRecord.amount = circleStakeRecord.amount.plus(event.params.stake);
 //   staker.circleStakeRecords.push(circleStakeRecord.id);
-  
+
 //   circleStakeRecord.save();
 //   staker.save();
 

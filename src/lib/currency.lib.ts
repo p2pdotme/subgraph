@@ -15,4 +15,3 @@ export function loadCurrency(key: Bytes, event: ethereum.Event): Currency {
 
   return currency;
 }
-

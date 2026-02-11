@@ -1,5 +1,10 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { User, SocialVerified, ReputationChange, UserRecommendation } from "../../generated/schema";
+import {
+  User,
+  SocialVerified,
+  ReputationChange,
+  UserRecommendation,
+} from "../../generated/schema";
 
 export function loadUser(key: Bytes, event: ethereum.Event): User {
   let user = User.load(key);
@@ -21,7 +26,7 @@ export function loadUser(key: Bytes, event: ethereum.Event): User {
 
 export function loadSocialVerified(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): SocialVerified {
   let socialVerified = SocialVerified.load(key);
   if (!socialVerified) {
@@ -40,7 +45,7 @@ export function loadSocialVerified(
 
 export function loadReputationChange(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): ReputationChange {
   let reputationChange = ReputationChange.load(key);
   if (!reputationChange) {
@@ -59,7 +64,7 @@ export function loadReputationChange(
 
 export function loadUserRecommendation(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): UserRecommendation {
   let userRecommendation = UserRecommendation.load(key);
   if (!userRecommendation) {

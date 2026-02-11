@@ -7,7 +7,7 @@ import { PaymentChannelConfig } from "../generated/schema";
 import { loadCurrency } from "./lib";
 
 export function handlePaymentChannelConfigChanged(
-  event: PaymentChannelConfigChanged
+  event: PaymentChannelConfigChanged,
 ): void {
   // Use paymentChannelId as the entity ID
   const id = Bytes.fromI32(event.params.cfg.paymentChannelId.toI32());

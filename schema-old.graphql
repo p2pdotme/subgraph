@@ -4,7 +4,6 @@ type Circle @entity {
   circleId: String! # Circle ID
   owner: String! # Owner Address
   token: String! # Token Address
-
   stake: [CircleStake!]! @derivedFrom(field: "circle")
 }
 
@@ -13,16 +12,13 @@ type CircleStake @entity {
   circleId: String! # Circle ID
   amount: BigInt! # Staked Amount
   stakedBy: String! # Staked By Address
-
   Circle: Circle! @derivedFrom(field: "stake")
 }
 
-
 type Staker @entity {
   id: ID!
-  
-  totalStaked: BigInt! # Total Staked Amount
 
+  totalStaked: BigInt! # Total Staked Amount
   claimableRewards: [StakerClaimableRewards!]! @derivedFrom(field: "staker")
   earnedRewards: [StakerEarnedRewards!]! @derivedFrom(field: "staker")
 
@@ -48,15 +44,11 @@ type StakerClaimableRewards @entity {
 type CircleMetrics @entity {
   id: ID!
   circleId: String! # Circle ID
-
   circleTotalVolume: BigInt! # Total Volume
-
   totalStaked: BigInt! # Total Staked Amount
   adminStaked: BigInt! # Admin Staked Amount
-
   totalMerchantsCount: BigInt! # Total Merchants Count
   activeMerchantsCount: BigInt! # Active Merchants Count
-
   totalDisputesCount: BigInt! # Total Disputes Count
   pendingDisputesCount: BigInt! # Pending Disputes Count
   resolvedDisputesCount: BigInt! # Resolved Disputes Count

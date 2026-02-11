@@ -1,0 +1,13 @@
+# Graph CLI generated
+build/
+generated/
+
+# Dependencies
+node_modules/
+
+# ABI files (large, may have different formatting)
+abis/
+
+# Lock files
+package-lock.json
+yarn.lock

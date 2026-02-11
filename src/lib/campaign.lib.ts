@@ -1,5 +1,9 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Campaign, CampaignManagers, CampaignRewardRedeemed } from "../../generated/schema";
+import {
+  Campaign,
+  CampaignManagers,
+  CampaignRewardRedeemed,
+} from "../../generated/schema";
 
 export function loadCampaign(key: Bytes, event: ethereum.Event): Campaign {
   let campaign = Campaign.load(key);

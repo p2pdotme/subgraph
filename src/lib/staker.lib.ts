@@ -26,7 +26,7 @@ export function loadStaker(key: Address, event: ethereum.Event): Staker {
 
 export function loadCircleStakeRecords(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CircleStakeRecords {
   let circleStakeRecord = CircleStakeRecords.load(key);
 
@@ -47,7 +47,7 @@ export function loadCircleStakeRecords(
 
 export function loadCircleUnstakeRecords(
   key: Bytes,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): CircleUnstakeRecords {
   let circleUnstakeRecord = CircleUnstakeRecords.load(key);
 

@@ -72,11 +72,11 @@ export const syncOrder = (
   disputeStatus: i32,
   disputeRedactTransId: BigInt,
   disputeAccountNumber: BigInt,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): void => {
   let _order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(orderId)),
-    event
+    event,
   );
 
   _order.orderId = orderId;
