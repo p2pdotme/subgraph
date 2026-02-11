@@ -184,13 +184,18 @@ export function updateCircleMaxAllowedBalance(
     }
 
     // Only compute usdcBalance when sellPrice > 0 to avoid division by zero
+    // sellPrice is fiat units per 1 USDC (human); stakedAmount is in 6 decimals.
+    // fiatInUsdc = (fiatBalance / sellPrice) * 1e6 to get USDC in 6-decimal units
     if (
       sellPrice.gt(BigInt.zero()) &&
       isOnline &&
       !isBlacklisted &&
       !isOngoingOrder
     ) {
-      const fiatInUsdc = totalMerchantFiatBalance.div(sellPrice);
+      const USDC_DECIMALS = BigInt.fromI32(1_000_000);
+      const fiatInUsdc = totalMerchantFiatBalance
+        .times(USDC_DECIMALS)
+        .div(sellPrice);
       const usdcBalance = merchantStakedAmount.minus(fiatInUsdc);
       if (usdcBalance.gt(maxUsdc)) {
         maxUsdc = usdcBalance;
