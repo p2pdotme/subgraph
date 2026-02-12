@@ -17,6 +17,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - CircleFacet
+        - CurrencyCircles
       abis:
         - name: CircleFacet
           file: ./abis/CircleFacet.json
@@ -269,6 +270,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - CurrencyPrice
+        - CurrencyCircles
       abis:
         - name: P2pConfigFacet
           file: ./abis/P2pConfigFacet.json

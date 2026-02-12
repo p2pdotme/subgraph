@@ -6,6 +6,7 @@ export function loadCurrency(key: Bytes, event: ethereum.Event): Currency {
   if (!currency) {
     currency = new Currency(key);
     currency.currency = key;
+    currency.circles = [];
     currency.isActive = false;
   }
 

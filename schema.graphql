@@ -488,6 +488,7 @@ type Currency @entity {
   id: Bytes!
   currency: Bytes!
   isActive: Boolean!
+  circles: [Circle!]
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
