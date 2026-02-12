@@ -9,6 +9,10 @@ import {
   CurrencyPrice,
 } from "../../generated/schema";
 import { STATUS_BOOTSTRAP, SECONDS_PER_DAY } from "../constants/circle-score";
+import {
+  PAYMENT_CHANNEL_STATUS_APPROVED,
+  PAYMENT_CHANNEL_STATUS_ON_HOLD,
+} from "../constants/status";
 
 export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
   let circle = Circle.load(key);
@@ -161,20 +165,25 @@ export function updateCircleMaxAllowedBalance(
     const isOnline = merchant.get("isOnline")!.toBoolean();
     const isBlacklisted = merchant.get("isBlacklisted")!.toBoolean();
     const isOngoingOrder = merchant.get("isOngoingOrder")!.toBoolean();
+    const isDisputeOngoing = merchant.get("isDisputeOngoing")!.toBoolean();
+    const isUnstakeRequested = merchant.get("isUnstakeRequested")!.toBoolean();
 
     for (let j = 0; j < paymentChannels.length; j++) {
       const pc = changetype<MerchantPaymentChannels>(paymentChannels[j]);
       const fiatBalance = pc.get("fiatBalance")!.toBigInt();
-      const isApproved = pc.get("status")!.toI32() === 2;
+      const status = pc.get("status")!.toI32();
       const isActive = pc.get("isActive")!.toBoolean();
 
       if (
         fiatBalance.gt(maxFiat) &&
-        isApproved &&
+        (status === PAYMENT_CHANNEL_STATUS_APPROVED ||
+          status === PAYMENT_CHANNEL_STATUS_ON_HOLD) &&
         isActive &&
         isOnline &&
         !isBlacklisted &&
-        !isOngoingOrder
+        !isOngoingOrder &&
+        !isDisputeOngoing &&
+        !isUnstakeRequested
       ) {
         maxFiat = fiatBalance;
       }
@@ -189,7 +198,9 @@ export function updateCircleMaxAllowedBalance(
       sellPrice.gt(BigInt.zero()) &&
       isOnline &&
       !isBlacklisted &&
-      !isOngoingOrder
+      !isOngoingOrder &&
+      !isDisputeOngoing &&
+      !isUnstakeRequested
     ) {
       const USDC_DECIMALS = BigInt.fromI32(1_000_000);
       const fiatInUsdc = totalMerchantFiatBalance
