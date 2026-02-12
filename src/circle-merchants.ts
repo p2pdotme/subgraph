@@ -1,6 +1,7 @@
 import { BigInt, Bytes } from "@graphprotocol/graph-ts";
 import {
   MerchantRegisteredToCircle as MerchantRegisteredToCircleEvent,
+  MerchantStaked as MerchantStakedEvent,
   PaymentChannelMigrationRequest as PaymentChannelMigrationRequestEvent,
   UnstakeRequested as UnstakeRequestedEvent,
   UnstakeRequestCancelled as UnstakeRequestCancelledEvent,
@@ -62,6 +63,9 @@ export function handleMerchantRegisteredToCircle(
     event.params.stakeAmount,
   );
 
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
+  updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+
   circleMetrics.save();
 }
 
@@ -82,7 +86,7 @@ export function handleOnlineOfflineToggled(
 
   merchant.save();
 
-  // UPDATE CIRCLE MAX FIAT ALLOWED
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
   const circleMetrics = loadCircleMetrics(merchant.circle, event);
   updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
   circleMetrics.save();
@@ -95,6 +99,11 @@ export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
   );
   merchant.isBlacklisted = event.params.isBlacklist;
   merchant.save();
+
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
+  const circleMetrics = loadCircleMetrics(merchant.circle, event);
+  updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+  circleMetrics.save();
 }
 
 export function handleMerchantOngoingOrder(
@@ -107,7 +116,7 @@ export function handleMerchantOngoingOrder(
   merchant.isOngoingOrder = event.params.isOngoing;
   merchant.save();
 
-  // UPDATE CIRCLE MAX FIAT ALLOWED
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
   const circleMetrics = loadCircleMetrics(merchant.circle, event);
   updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
   circleMetrics.save();
@@ -144,7 +153,7 @@ export function handleMerchant(event: MerchantEvent): void {
 
   merchant.save();
 
-  // UPDATE CIRCLE MAX FIAT ALLOWED
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
   const circleMetrics = loadCircleMetrics(merchant.circle, event);
   updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
   circleMetrics.save();
@@ -250,7 +259,7 @@ export function handlePaymentChannelMigrationRequest(
       toPaymentChannel.fiatBalance = event.params.toFiatAmount;
       toPaymentChannel.save();
 
-      // UPDATE CIRCLE MAX FIAT ALLOWED
+      // UPDATE CIRCLE MAX ALLOWED BALANCE
       const circleMetrics = loadCircleMetrics(merchant.circle, event);
       updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
       circleMetrics.save();
@@ -316,7 +325,46 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
     previousStakedAmount,
     event.params.stake,
   );
+
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
+  updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+
   circleMetrics.save();
+}
+
+export function handleMerchantStaked(event: MerchantStakedEvent): void {
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event,
+  );
+
+  const previousStakedAmount = merchant.stakedAmount;
+  const newStakedAmount = event.params.stake;
+
+  // Ensure merchant has circle reference (in case MerchantStaked fires before MerchantRegisteredToCircle)
+  if (merchant.circleId.equals(BigInt.zero())) {
+    const circleKey = changetype<Bytes>(
+      Bytes.fromBigInt(event.params.merchantDetails.circleId),
+    );
+    merchant.circle = circleKey;
+    merchant.circleId = event.params.merchantDetails.circleId;
+  }
+  merchant.stakedAmount = newStakedAmount;
+  merchant.save();
+
+  if (merchant.circleId.gt(BigInt.zero())) {
+    const circleMetrics = loadCircleMetrics(merchant.circle, event);
+    updateActiveMerchantsCount(
+      circleMetrics,
+      previousStakedAmount,
+      newStakedAmount,
+    );
+
+    // UPDATE CIRCLE MAX ALLOWED BALANCE
+    updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+
+    circleMetrics.save();
+  }
 }
 
 export function handleMerchantWithoutFundsTracker(
@@ -331,4 +379,10 @@ export function handleMerchantWithoutFundsTracker(
   merchant.telegramId = event.params.merchantConfig.telegramId;
 
   merchant.save();
+
+  const circleMetrics = loadCircleMetrics(merchant.circle, event);
+
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
+  updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+  circleMetrics.save();
 }

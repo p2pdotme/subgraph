@@ -356,7 +356,7 @@ export function handleOrderDispute(event: OrderDisputeEvent): void {
 
   circleMetrics.save();
 
-  // UPDATE CIRCLE MAX FIAT ALLOWED
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
   updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
   circleMetrics.save();
 }
@@ -449,7 +449,7 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     event,
   );
 
-  // UPDATE CIRCLE MAX FIAT ALLOWED
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
   const circleMetrics = loadCircleMetrics(merchant.circle, event);
   updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
   circleMetrics.save();
@@ -651,7 +651,7 @@ export function handleSellOrderUpiSet(event: SellOrderUpiSetEvent): void {
     event,
   );
 
-  // UPDATE CIRCLE MAX FIAT ALLOWED
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
   const circleMetrics = loadCircleMetrics(merchant.circle, event);
   updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
   circleMetrics.save();
@@ -695,7 +695,7 @@ export function handleBuyOrderPaid(event: BuyOrderPaidEvent): void {
     event,
   );
 
-  // UPDATE CIRCLE MAX FIAT ALLOWED
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
   const circleMetrics = loadCircleMetrics(merchant.circle, event);
   updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
   circleMetrics.save();
@@ -959,7 +959,7 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
     user.save();
   }
 
-  // UPDATE CIRCLE MAX FIAT ALLOWED
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
   const _circleMetrics = loadCircleMetrics(merchant.circle, event);
   updateCircleMaxAllowedBalance(_circleMetrics, merchant.circle);
   _circleMetrics.save();
