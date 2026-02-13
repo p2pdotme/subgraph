@@ -250,9 +250,9 @@ export function updateCircleMaxAllowedBalance(
         (status === PAYMENT_CHANNEL_STATUS_APPROVED ||
           status === PAYMENT_CHANNEL_STATUS_ON_HOLD) &&
         isActive &&
+        isOnline &&
         !isDailyVolumeReached &&
         !isMonthlyVolumeReached &&
-        isOnline &&
         !isBlacklisted &&
         !isOngoingOrder &&
         !isDisputeOngoing &&
