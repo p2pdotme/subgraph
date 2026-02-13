@@ -206,7 +206,7 @@ export function updateCircleMaxAllowedBalance(
       let isMonthlyVolumeReached = false;
 
       // ===========================
-      // 📊 VOLUME LIMIT VERIFICATION
+      // 📊 VOLUME LIMIT CHECKS
       // ===========================
       const volumeUpdatedAt = pc.get("volumeUpdatedAt")!.toString();
       const volumeParts = volumeUpdatedAt.split("-");

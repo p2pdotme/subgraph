@@ -201,6 +201,11 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
 
   merchantVolumeByMonth.save();
   merchant.save();
+
+  // UPDATE CIRCLE MAX ALLOWED BALANCE
+  const circleMetrics = loadCircleMetrics(merchant.circle, event);
+  updateCircleMaxAllowedBalance(circleMetrics, merchant.circle);
+  circleMetrics.save();
 }
 
 export function handlePaymentChannelMigrationRequest(
