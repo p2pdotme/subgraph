@@ -118,6 +118,7 @@ type CircleMetrics @entity {
 
   maxFiatAllowed: BigInt!
   maxUsdcAllowed: BigInt!
+  maxLimitLog: String!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -184,6 +185,7 @@ type MerchantPaymentChannels @entity {
   # Current volume tracking for availability calculations
   dailyVolume: BigInt!
   monthlyVolume: BigInt!
+  volumeUpdatedAt: String!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -621,6 +623,18 @@ type CurrencyPrice @entity {
   currency: Bytes!
   buyExchangePrice: BigInt!
   sellExchangePrice: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MONTHLY VOLUME LIMIT
+# A record of a monthly volume limit
+type MonthlyVolumeLimit @entity {
+  id: Bytes!
+  currency: Bytes!
+  limit: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

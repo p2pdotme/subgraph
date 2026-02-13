@@ -78,6 +78,7 @@ export function loadMerchantPaymentChannels(
     merchantPaymentChannel.fiatBalance = BigInt.zero();
     merchantPaymentChannel.dailyVolume = BigInt.zero();
     merchantPaymentChannel.monthlyVolume = BigInt.zero();
+    merchantPaymentChannel.volumeUpdatedAt = "";
   }
 
   merchantPaymentChannel.blockNumber = event.block.number;

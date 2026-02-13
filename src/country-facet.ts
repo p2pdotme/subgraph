@@ -2,9 +2,11 @@ import { Bytes } from "@graphprotocol/graph-ts";
 import {
   PaymentChannelConfigChanged,
   CurrencyToggled,
+  MonthlyVolumeLimit,
 } from "../generated/CountryFacet/CountryFacet";
 import { PaymentChannelConfig } from "../generated/schema";
 import { loadCurrency } from "./lib";
+import { loadMonthlyVolumeLimit } from "./lib/currency.lib";
 
 export function handlePaymentChannelConfigChanged(
   event: PaymentChannelConfigChanged,
@@ -36,4 +38,12 @@ export function handleCurrencyToggled(event: CurrencyToggled): void {
   currency.isActive = event.params.isActive;
 
   currency.save();
+}
+
+export function handleMonthlyVolumeLimit(event: MonthlyVolumeLimit): void {
+  let monthlyVolumeLimit = loadMonthlyVolumeLimit(event.params.currency, event);
+
+  monthlyVolumeLimit.limit = event.params.limit;
+
+  monthlyVolumeLimit.save();
 }

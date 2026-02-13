@@ -1,5 +1,5 @@
-import { Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Currency } from "../../generated/schema";
+import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { Currency, MonthlyVolumeLimit } from "../../generated/schema";
 
 export function loadCurrency(key: Bytes, event: ethereum.Event): Currency {
   let currency = Currency.load(key);
@@ -15,4 +15,22 @@ export function loadCurrency(key: Bytes, event: ethereum.Event): Currency {
   currency.transactionHash = event.transaction.hash;
 
   return currency;
+}
+
+export function loadMonthlyVolumeLimit(
+  key: Bytes,
+  event: ethereum.Event,
+): MonthlyVolumeLimit {
+  let monthlyVolumeLimit = MonthlyVolumeLimit.load(key);
+  if (!monthlyVolumeLimit) {
+    monthlyVolumeLimit = new MonthlyVolumeLimit(key);
+    monthlyVolumeLimit.currency = key;
+    monthlyVolumeLimit.limit = BigInt.zero();
+  }
+
+  monthlyVolumeLimit.blockNumber = event.block.number;
+  monthlyVolumeLimit.blockTimestamp = event.block.timestamp;
+  monthlyVolumeLimit.transactionHash = event.transaction.hash;
+
+  return monthlyVolumeLimit;
 }

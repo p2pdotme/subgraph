@@ -25,7 +25,10 @@ import {
   Merchant as MerchantEvent,
   MerchantVolume as MerchantVolumeEvent,
 } from "../generated/MerchantRegistryFacet/MerchantRegistryFacet";
-import { getYearMonthFromTimestamp } from "./utils/date.utils";
+import {
+  getDayMonthYearFromTimestamp,
+  getYearMonthFromTimestamp,
+} from "./utils/date.utils";
 
 export function handleMerchantRegisteredToCircle(
   event: MerchantRegisteredToCircleEvent,
@@ -175,6 +178,9 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   // UPDATE DAILY AND MONTHLY VOLUME ON PAYMENT CHANNEL
   paymentChannel.dailyVolume = event.params.dailyVolume;
   paymentChannel.monthlyVolume = event.params.monthlyVolume;
+  paymentChannel.volumeUpdatedAt = getDayMonthYearFromTimestamp(
+    event.block.timestamp,
+  );
   paymentChannel.save();
 
   // LOAD MERCHANT VOLUME BY MONTH

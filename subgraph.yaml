@@ -256,6 +256,8 @@ dataSources:
           handler: handlePaymentChannelConfigChanged
         - event: CurrencyToggled(indexed bytes32,indexed bool)
           handler: handleCurrencyToggled
+        - event: MonthlyVolumeLimit(indexed bytes32,uint256)
+          handler: handleMonthlyVolumeLimit
       file: ./src/country-facet.ts
   - kind: ethereum
     name: P2pConfigFacet

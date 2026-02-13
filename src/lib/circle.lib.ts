@@ -7,12 +7,19 @@ import {
   CircleMerchant,
   MerchantPaymentChannels,
   CurrencyPrice,
+  PaymentChannelConfig,
+  MonthlyVolumeLimit,
 } from "../../generated/schema";
 import { STATUS_BOOTSTRAP, SECONDS_PER_DAY } from "../constants/circle-score";
 import {
   PAYMENT_CHANNEL_STATUS_APPROVED,
   PAYMENT_CHANNEL_STATUS_ON_HOLD,
 } from "../constants/status";
+import {
+  getDayStringFromTimestamp,
+  getMonthStringFromTimestamp,
+  getYearStringFromTimestamp,
+} from "../utils";
 
 export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
   let circle = Circle.load(key);
@@ -63,6 +70,7 @@ export function loadCircleMetrics(
     circleMetrics.lastScoreUpdateTimestamp = BigInt.zero();
     circleMetrics.maxFiatAllowed = BigInt.zero();
     circleMetrics.maxUsdcAllowed = BigInt.zero();
+    circleMetrics.maxLimitLog = "";
   }
 
   circleMetrics.blockNumber = event.block.number;
@@ -132,6 +140,9 @@ export function updateCircleMaxAllowedBalance(
   let maxFiat = BigInt.zero();
   let maxUsdc = BigInt.zero();
   let sellPrice = BigInt.zero();
+  let logString = "";
+
+  const currentTimestamp = circleMetrics.blockTimestamp;
 
   // LOAD CIRCLE MERCHANTS
   const merchants = store.loadRelated(
@@ -177,20 +188,70 @@ export function updateCircleMaxAllowedBalance(
 
     // LOOP THROUGH MERCHANT PAYMENT CHANNELS
     for (let j = 0; j < paymentChannels.length; j++) {
-
       const pc = changetype<MerchantPaymentChannels>(paymentChannels[j]);
+
+      // LOAD PAYMENT CHANNEL CONFIG
+      const pcConfigId = pc.get("pcConfigId")!.toBigInt();
+      const pcConfigKey = Bytes.fromI32(pcConfigId.toI32());
+      const paymentChannelConfig = PaymentChannelConfig.load(pcConfigKey);
+      const dailyVolumeLimit = paymentChannelConfig
+        ? paymentChannelConfig.dailyVolumeLimit
+        : BigInt.zero();
 
       // PAYMENT CHANNEL LEVEL CHECKS
       const fiatBalance = pc.get("fiatBalance")!.toBigInt();
       const status = pc.get("status")!.toI32();
       const isActive = pc.get("isActive")!.toBoolean();
+      let isDailyVolumeReached = false;
+      let isMonthlyVolumeReached = false;
 
-      // UPDATE MAX FIAT ALLOWED
+      // ===========================
+      // 📊 VOLUME LIMIT VERIFICATION
+      // ===========================
+      const volumeUpdatedAt = pc.get("volumeUpdatedAt")!.toString();
+      const volumeParts = volumeUpdatedAt.split("-");
+      const volumeDay = volumeParts.length > 0 ? volumeParts[0] : "";
+      const volumeMonth = volumeParts.length > 1 ? volumeParts[1] : "";
+      const volumeYear = volumeParts.length > 2 ? volumeParts[2] : "";
+
+      // DAILY VOLUME CHECK
+      if (volumeDay == getDayStringFromTimestamp(currentTimestamp)) {
+        const dailyVolume = pc.get("dailyVolume")!.toBigInt();
+        if (dailyVolume.ge(dailyVolumeLimit)) {
+          isDailyVolumeReached = true;
+        }
+      }
+
+      // MONTHLY VOLUME CHECK
+      if (
+        volumeMonth == getMonthStringFromTimestamp(currentTimestamp) &&
+        volumeYear == getYearStringFromTimestamp(currentTimestamp) &&
+        circle != null &&
+        !circle.currency.equals(Bytes.empty())
+      ) {
+        const monthlyVolumeLimit = MonthlyVolumeLimit.load(circle.currency);
+        const limit = monthlyVolumeLimit
+          ? monthlyVolumeLimit.limit
+          : BigInt.zero();
+        const monthlyVolume = pc.get("monthlyVolume")!.toBigInt();
+
+        const isMonthlyVolumeUnlimited = pc
+          .get("isMonthlyVolumeUnlimited")!
+          .toBoolean();
+
+        if (!isMonthlyVolumeUnlimited && limit.ge(monthlyVolume)) {
+          isMonthlyVolumeReached = true;
+        }
+      }
+
+      // UPDATE MAX FIAT ALLOWED (exclude when daily volume limit reached)
       if (
         fiatBalance.gt(maxFiat) &&
         (status === PAYMENT_CHANNEL_STATUS_APPROVED ||
           status === PAYMENT_CHANNEL_STATUS_ON_HOLD) &&
         isActive &&
+        !isDailyVolumeReached &&
+        !isMonthlyVolumeReached &&
         isOnline &&
         !isBlacklisted &&
         !isOngoingOrder &&
@@ -198,6 +259,9 @@ export function updateCircleMaxAllowedBalance(
         !isUnstakeRequested
       ) {
         maxFiat = fiatBalance;
+
+        // UPDATE MAX LIMIT LOG
+        logString += `{"maxFiat":{"merchant":"${merchant.get("merchant")!.toString()}","accountNo":"${pc.get("accountNo")!.toBigInt().toString()}","updatedAt":"${currentTimestamp.toString()}"}},`;
       }
 
       totalMerchantFiatBalance = totalMerchantFiatBalance.plus(fiatBalance);
@@ -212,6 +276,7 @@ export function updateCircleMaxAllowedBalance(
       !isDisputeOngoing &&
       !isUnstakeRequested
     ) {
+      let usdcBalance = BigInt.zero();
 
       // COMPUTE USDC BALANCE
       // 1. Convert fiat balance to USDC (fiat balance * 1_000_000)
@@ -221,15 +286,24 @@ export function updateCircleMaxAllowedBalance(
       const fiatInUsdc = totalMerchantFiatBalance
         .times(USDC_DECIMALS)
         .div(sellPrice);
-      const usdcBalance = merchantStakedAmount.minus(fiatInUsdc);
+
+      if (fiatInUsdc.gt(merchantStakedAmount)) {
+        usdcBalance = BigInt.zero();
+      } else {
+        usdcBalance = merchantStakedAmount.minus(fiatInUsdc);
+      }
 
       // UPDATE MAX USDC ALLOWED
       if (usdcBalance.gt(maxUsdc)) {
         maxUsdc = usdcBalance;
+
+        // UPDATE MAX LIMIT LOG
+        logString += `{"maxUsdc":{"merchant":"${merchant.get("merchant")!.toString()}","selfStakedAmount":"${merchant.stakedAmount.toString()}","delegatedStakedAmount":"${merchant.delegatedStakedAmount.toString()}","sellPrice":"${sellPrice.toString()}","fiatBalance":"${totalMerchantFiatBalance.toString()}","updatedAt":"${currentTimestamp.toString()}"}},`;
       }
     }
   }
 
   circleMetrics.maxFiatAllowed = maxFiat;
   circleMetrics.maxUsdcAllowed = maxUsdc;
+  circleMetrics.maxLimitLog = `[${logString}]`;
 }
