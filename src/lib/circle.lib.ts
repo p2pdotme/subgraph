@@ -123,24 +123,27 @@ export function loadCircleOrderMetricsByMonth(
 }
 
 /**
- * Recompute maxFiatAllowed for a circle by looping through all MerchantPaymentChannels
- * for that circle (via store.loadRelated) and taking the max fiatBalance.
+ * Iterate over all MerchantPaymentChannels to recalculate and update maxFiatAllowed and maxUsdcAllowed for the given circle
  */
 export function updateCircleMaxAllowedBalance(
   circleMetrics: CircleMetrics,
   circleId: Bytes,
 ): void {
+  let maxFiat = BigInt.zero();
+  let maxUsdc = BigInt.zero();
+  let sellPrice = BigInt.zero();
+
+  // LOAD CIRCLE MERCHANTS
   const merchants = store.loadRelated(
     "Circle",
     circleId.toHexString(),
     "merchants",
   );
-  let maxFiat = BigInt.zero();
-  let maxUsdc = BigInt.zero();
 
-  // Load Circle to get currency (scalar field - use load, not loadRelated)
+  // LOAD CIRCLE
   const circle = Circle.load(circleId);
-  let sellPrice = BigInt.zero();
+
+  // SET SELL PRICE
   if (circle && !circle.currency.equals(Bytes.empty())) {
     const currencyPrice = CurrencyPrice.load(circle.currency);
     if (currencyPrice) {
@@ -148,9 +151,11 @@ export function updateCircleMaxAllowedBalance(
     }
   }
 
+  // LOOP THROUGH MERCHANT
   for (let i = 0; i < merchants.length; i++) {
     let totalMerchantFiatBalance = BigInt.zero();
 
+    // LOAD MERCHANT PAYMENT CHANNELS
     const merchant = changetype<CircleMerchant>(merchants[i]);
     const paymentChannels = store.loadRelated(
       "CircleMerchant",
@@ -158,22 +163,29 @@ export function updateCircleMaxAllowedBalance(
       "paymentChannels",
     );
 
+    // STAKED AMOUNT = STAKED AMOUNT + DELEGATED STAKED AMOUNT
     const merchantStakedAmount = merchant.stakedAmount.plus(
       merchant.delegatedStakedAmount,
     );
 
+    // MERCHANT LEVEL CHECKS
     const isOnline = merchant.get("isOnline")!.toBoolean();
     const isBlacklisted = merchant.get("isBlacklisted")!.toBoolean();
     const isOngoingOrder = merchant.get("isOngoingOrder")!.toBoolean();
     const isDisputeOngoing = merchant.get("isDisputeOngoing")!.toBoolean();
     const isUnstakeRequested = merchant.get("isUnstakeRequested")!.toBoolean();
 
+    // LOOP THROUGH MERCHANT PAYMENT CHANNELS
     for (let j = 0; j < paymentChannels.length; j++) {
+
       const pc = changetype<MerchantPaymentChannels>(paymentChannels[j]);
+
+      // PAYMENT CHANNEL LEVEL CHECKS
       const fiatBalance = pc.get("fiatBalance")!.toBigInt();
       const status = pc.get("status")!.toI32();
       const isActive = pc.get("isActive")!.toBoolean();
 
+      // UPDATE MAX FIAT ALLOWED
       if (
         fiatBalance.gt(maxFiat) &&
         (status === PAYMENT_CHANNEL_STATUS_APPROVED ||
@@ -191,9 +203,7 @@ export function updateCircleMaxAllowedBalance(
       totalMerchantFiatBalance = totalMerchantFiatBalance.plus(fiatBalance);
     }
 
-    // Only compute usdcBalance when sellPrice > 0 to avoid division by zero
-    // sellPrice is fiat units per 1 USDC (human); stakedAmount is in 6 decimals.
-    // fiatInUsdc = (fiatBalance / sellPrice) * 1e6 to get USDC in 6-decimal units
+    // UPDATE MAX USDC ALLOWED
     if (
       sellPrice.gt(BigInt.zero()) &&
       isOnline &&
@@ -202,11 +212,18 @@ export function updateCircleMaxAllowedBalance(
       !isDisputeOngoing &&
       !isUnstakeRequested
     ) {
+
+      // COMPUTE USDC BALANCE
+      // 1. Convert fiat balance to USDC (fiat balance * 1_000_000)
+      // 2. Divide by sellPrice to get USDC balance
+      // 3. Subtract fiatInUsdc from staked amount to get available USDC balance
       const USDC_DECIMALS = BigInt.fromI32(1_000_000);
       const fiatInUsdc = totalMerchantFiatBalance
         .times(USDC_DECIMALS)
         .div(sellPrice);
       const usdcBalance = merchantStakedAmount.minus(fiatInUsdc);
+
+      // UPDATE MAX USDC ALLOWED
       if (usdcBalance.gt(maxUsdc)) {
         maxUsdc = usdcBalance;
       }
