@@ -404,6 +404,171 @@
         {
           "indexed": true,
           "internalType": "address",
+          "name": "by",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "orderId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "fiatAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "placedTimestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "completedTimestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "userCompletedTimestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "acceptedMerchant",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "user",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "recipientAddr",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "pubkey",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "encUpi",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "userCompleted",
+              "type": "bool"
+            },
+            {
+              "internalType": "enum OrderProcessorStorage.OrderStatus",
+              "name": "status",
+              "type": "uint8"
+            },
+            {
+              "internalType": "enum OrderProcessorStorage.OrderType",
+              "name": "orderType",
+              "type": "uint8"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "enum OrderProcessorStorage.Entity",
+                  "name": "raisedBy",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "enum OrderProcessorStorage.DisputeStatus",
+                  "name": "status",
+                  "type": "uint8"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "redactTransId",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "accountNumber",
+                  "type": "uint256"
+                }
+              ],
+              "internalType": "struct OrderProcessorStorage.Dispute",
+              "name": "disputeInfo",
+              "type": "tuple"
+            },
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "userPubKey",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "encMerchantUpi",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "acceptedAccountNo",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "assignedAccountNos",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "currency",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "preferredPaymentChannelConfigId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "circleId",
+              "type": "uint256"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct OrderProcessorStorage.Order",
+          "name": "_order",
+          "type": "tuple"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "faultType",
+          "type": "uint8"
+        }
+      ],
+      "name": "OrderDispute",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
           "name": "reputationManager",
           "type": "address"
         }
