@@ -269,17 +269,24 @@ export function updateSettlementTime(
 }
 
 /**
- * Update active merchants count based on stake transitions.
- * A merchant is "active" when stakedAmount > 0.
+ * A merchant is "active" when: stakedAmount > 0, isOnline, and not blacklisted.
+ */
+export function isMerchantActive(
+  stakedAmount: BigInt,
+  isOnline: boolean,
+  isBlacklisted: boolean,
+): boolean {
+  return stakedAmount.gt(BigInt.zero()) && isOnline && !isBlacklisted;
+}
+
+/**
+ * Update active merchants count based on active status transitions.
  */
 export function updateActiveMerchantsCount(
   circleMetrics: CircleMetrics,
-  previousStakedAmount: BigInt,
-  newStakedAmount: BigInt,
+  wasActive: boolean,
+  isActive: boolean,
 ): void {
-  const wasActive = previousStakedAmount.gt(BigInt.zero());
-  const isActive = newStakedAmount.gt(BigInt.zero());
-
   if (!wasActive && isActive) {
     circleMetrics.activeMerchantsCount =
       circleMetrics.activeMerchantsCount.plus(BigInt.fromI32(1));
