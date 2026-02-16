@@ -6,6 +6,7 @@ import {
   UnstakeRequestCancelled as UnstakeRequestCancelledEvent,
   UnstakeApproved as UnstakeApprovedEvent,
   MerchantWithoutFundsTracker as MerchantWithoutFundsTrackerEvent,
+  MerchantStaked as MerchantStakedEvent,
 } from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
 import {
   loadCircle,
@@ -320,6 +321,37 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   merchant.unstakeAmount = BigInt.zero();
 
   // Update staked amount
+  merchant.stakedAmount = event.params.stake;
+
+  merchant.save();
+
+  // Update active merchants count based on stake transition
+  const wasActive = isMerchantActive(
+    previousStakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+  );
+  const isActive = isMerchantActive(
+    event.params.stake,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+  );
+
+  let circle = loadCircle(merchant.circle, event);
+  let circleMetrics = loadCircleMetrics(circle.id, event);
+  updateActiveMerchantsCount(circleMetrics, wasActive, isActive);
+  circleMetrics.save();
+}
+
+export function handleMerchantStaked(event: MerchantStakedEvent): void {
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event,
+  );
+
+  const previousStakedAmount = merchant.stakedAmount;
+
+  // Update staked amount to new total stake
   merchant.stakedAmount = event.params.stake;
 
   merchant.save();
