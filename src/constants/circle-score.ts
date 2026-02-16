@@ -29,8 +29,6 @@ export const BOOTSTRAP_USDC_VOLUME: i64 = 20_000_000_000; // 20K USDC in raw 6-d
 export const BOOTSTRAP_MAX_WEIGHT: i32 = 25;
 
 // Trust Firewall thresholds
-export const MAX_DISPUTE_RATE: i32 = 1200; // 0.12 × 10000
-export const BOOTSTRAP_MAX_DISPUTE_RATE: i32 = 2000; // 0.20 × 10000
 export const MAX_SETTLEMENT_FOR_PAUSE: i32 = 600; // seconds
 
 // Circle status values

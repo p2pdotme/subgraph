@@ -14,8 +14,6 @@ import {
   DISPUTE_RATE_SCALE,
   ROLLING_WINDOW_DAYS,
   SECONDS_PER_DAY,
-  MAX_DISPUTE_RATE,
-  BOOTSTRAP_MAX_DISPUTE_RATE,
   MAX_SETTLEMENT_FOR_PAUSE,
   BOOTSTRAP_ORDERS,
   BOOTSTRAP_USDC_VOLUME,
@@ -140,7 +138,7 @@ export function compute30dMetrics(
  * Score stored as plain 0–100
  */
 export function updateCircleScore(circleMetrics: CircleMetrics): void {
-  // Skip if rejected
+  // Skip if rejected (set by on-chain CircleStatusUpdated event)
   if (circleMetrics.circleStatus == STATUS_REJECTED) {
     return;
   }
@@ -181,30 +179,12 @@ export function updateCircleScore(circleMetrics: CircleMetrics): void {
 
 /**
  * Trust Firewall: enforce hard limits on circle metrics
- * - disputeRate > 12% → rejected permanently
- * - bootstrap + disputeRate > 20% → rejected
+ * - Rejection is now handled on-chain via CircleStatusUpdated event
  * - avgSettlement > 600s → paused (recovers when ≤ 600s)
  */
 export function applyTrustFirewall(circleMetrics: CircleMetrics): void {
-  // Rejected is permanent
+  // Rejected is set by on-chain CircleStatusUpdated event — don't override
   if (circleMetrics.circleStatus == STATUS_REJECTED) {
-    return;
-  }
-
-  // Any circle with dispute rate > 12% → rejected
-  if (circleMetrics.disputeRate.gt(BigInt.fromI32(MAX_DISPUTE_RATE))) {
-    circleMetrics.circleStatus = STATUS_REJECTED;
-    circleMetrics.circleScore = BigInt.zero();
-    return;
-  }
-
-  // Bootstrap circles with dispute rate > 20% → rejected
-  if (
-    circleMetrics.circleStatus == STATUS_BOOTSTRAP &&
-    circleMetrics.disputeRate.gt(BigInt.fromI32(BOOTSTRAP_MAX_DISPUTE_RATE))
-  ) {
-    circleMetrics.circleStatus = STATUS_REJECTED;
-    circleMetrics.circleScore = BigInt.zero();
     return;
   }
 

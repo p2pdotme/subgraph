@@ -9,6 +9,7 @@ import {
   OrderDispute as OrderDisputeEvent,
   OrderDispute1 as OrderDisputeWithFaultTypeEvent,
   DisputeTransIdSet as DisputeTransIdSetEvent,
+  CircleStatusUpdated as CircleStatusUpdatedEvent,
 } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
 import {
   loadAssignedMerchants,
@@ -1240,4 +1241,42 @@ export function handleDisputeTransIdSet(event: DisputeTransIdSetEvent): void {
   );
   order.disputeSettledByAddr = event.params.by;
   order.save();
+}
+
+// On-chain CircleStorage.CircleStatus enum: DEFAULT=0, ACTIVE=1, INACTIVE=2, REJECTED=3
+const ONCHAIN_STATUS_ACTIVE: i32 = 1;
+const ONCHAIN_STATUS_INACTIVE: i32 = 2;
+const ONCHAIN_STATUS_REJECTED: i32 = 3;
+
+export function handleCircleStatusUpdated(
+  event: CircleStatusUpdatedEvent,
+): void {
+  const circleKey = changetype<Bytes>(
+    Bytes.fromBigInt(event.params.circleId),
+  );
+  let circle = loadCircle(circleKey, event);
+  let circleMetrics = loadCircleMetrics(circle.id, event);
+
+  if (event.params.newStatus == ONCHAIN_STATUS_REJECTED) {
+    circleMetrics.circleStatus = "rejected";
+    circleMetrics.circleScore = BigInt.zero();
+  } else if (event.params.newStatus == ONCHAIN_STATUS_ACTIVE) {
+    // Un-reject or re-activate: set to bootstrap and let scoring graduate to active
+    if (
+      circleMetrics.lifetimeAcceptedOrders.ge(BigInt.fromI32(40)) ||
+      circleMetrics.totalVolume.ge(BigInt.fromI64(20_000_000_000))
+    ) {
+      circleMetrics.circleStatus = "active";
+    } else {
+      circleMetrics.circleStatus = "bootstrap";
+    }
+    updateCircleScore(circleMetrics);
+    // Check if circle should be paused (avgSettlement > 600s)
+    applyTrustFirewall(circleMetrics);
+  } else if (event.params.newStatus == ONCHAIN_STATUS_INACTIVE) {
+    circleMetrics.circleStatus = "inactive";
+    circleMetrics.circleScore = BigInt.zero();
+  }
+
+  circleMetrics.save();
 }
