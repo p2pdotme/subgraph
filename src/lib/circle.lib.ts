@@ -1,9 +1,12 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   Circle,
+  CircleDailyMetrics,
   CircleMetrics,
   CircleOrderMetricsByMonth,
 } from "../../generated/schema";
+import { STATUS_BOOTSTRAP, SECONDS_PER_DAY } from "../constants/circle-score";
+
 
 export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
   let circle = Circle.load(key);
@@ -39,6 +42,19 @@ export function loadCircleMetrics(
     circleMetrics.totalDelegatedStake = BigInt.zero();
     circleMetrics.totalMerchantsCount = BigInt.zero();
     circleMetrics.totalPlacedOrdersCount = BigInt.zero();
+    // Initialize circle score fields
+    circleMetrics.circleScore = BigInt.fromI32(50); // bootstrap default
+    circleMetrics.circleStatus = STATUS_BOOTSTRAP;
+    circleMetrics.avgSettlementSeconds = BigInt.zero();
+    circleMetrics.disputeRate = BigInt.zero();
+    circleMetrics.rolling30dVolume = BigInt.zero();
+    circleMetrics.lifetimeAcceptedOrders = BigInt.zero();
+    circleMetrics.cumulativeSettlementSeconds = BigInt.zero();
+    circleMetrics.totalCompletedOrders = BigInt.zero();
+    circleMetrics.activeMerchantsCount = BigInt.zero();
+    circleMetrics.merchantFaultDisputesCount = BigInt.zero();
+    circleMetrics.hasMinOrdersForScore = false;
+    circleMetrics.lastScoreUpdateTimestamp = BigInt.zero();
   }
 
   circleMetrics.blockNumber = event.block.number;
@@ -46,6 +62,37 @@ export function loadCircleMetrics(
   circleMetrics.transactionHash = event.transaction.hash;
 
   return circleMetrics;
+}
+
+export function loadCircleDailyMetrics(
+  key: Bytes,
+  event: ethereum.Event,
+): CircleDailyMetrics {
+  let daily = CircleDailyMetrics.load(key);
+  if (!daily) {
+    daily = new CircleDailyMetrics(key);
+    daily.circle = Bytes.empty();
+    daily.dayNumber = BigInt.zero();
+    daily.settlementSecondsSum = BigInt.zero();
+    daily.completedOrdersCount = BigInt.zero();
+    daily.acceptedOrdersCount = BigInt.zero();
+    daily.merchantFaultDisputesCount = BigInt.zero();
+    daily.volume = BigInt.zero();
+  }
+
+  daily.blockNumber = event.block.number;
+  daily.blockTimestamp = event.block.timestamp;
+  daily.transactionHash = event.transaction.hash;
+
+  return daily;
+}
+
+export function getDayNumber(timestamp: BigInt): i32 {
+  return timestamp.toI32() / SECONDS_PER_DAY;
+}
+
+export function getDailyMetricsKey(circleId: Bytes, dayNumber: i32): Bytes {
+  return Bytes.fromUTF8(circleId.toHexString() + "-" + dayNumber.toString());
 }
 
 export function loadCircleOrderMetricsByMonth(

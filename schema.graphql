@@ -99,6 +99,22 @@ type CircleMetrics @entity {
   # MERCHANT METRICS
   totalMerchantsCount: BigInt!
 
+  # CIRCLE SCORE METRICS
+  circleScore: BigInt! # Score 0–100
+  circleStatus: String! # bootstrap | active | rejected | paused
+  # Rolling 30d metrics (recomputed from CircleDailyMetrics)
+  avgSettlementSeconds: BigInt! # 30d avg: paidAt → completedAt (SELL/PAY only)
+  disputeRate: BigInt! # 30d rate × 10000
+  rolling30dVolume: BigInt! # 30d USDC volume (computed from daily buckets)
+  # Lifetime counters
+  lifetimeAcceptedOrders: BigInt! # All orders ever accepted by a merchant
+  cumulativeSettlementSeconds: BigInt! # Running sum (all-time, for daily bucket tracking)
+  totalCompletedOrders: BigInt! # All-time non-disputed completed (settlement avg denominator)
+  activeMerchantsCount: BigInt! # Merchants with stakedAmount > 0
+  merchantFaultDisputesCount: BigInt! # All-time merchant fault disputes
+  hasMinOrdersForScore: Boolean!
+  lastScoreUpdateTimestamp: BigInt!
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -569,6 +585,23 @@ type UserRecommendation @entity {
   recipient: Bytes!
   timestamp: BigInt!
 
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CIRCLE DAILY METRICS
+# Rolling 30d window buckets for circle score calculation
+type CircleDailyMetrics @entity {
+  id: Bytes! # circleId-dayNumber
+  circle: Circle!
+  dayNumber: BigInt! # timestamp / 86400
+  # Daily counters (incremented during the day)
+  settlementSecondsSum: BigInt! # Sum of settlement times for the day (SELL/PAY only)
+  completedOrdersCount: BigInt! # Completed non-disputed orders (SELL/PAY, for settlement avg)
+  acceptedOrdersCount: BigInt! # All orders accepted (BUY+SELL+PAY, for dispute rate denominator)
+  merchantFaultDisputesCount: BigInt!
+  volume: BigInt! # USDC volume
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!

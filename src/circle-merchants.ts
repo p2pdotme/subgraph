@@ -6,6 +6,7 @@ import {
   UnstakeRequestCancelled as UnstakeRequestCancelledEvent,
   UnstakeApproved as UnstakeApprovedEvent,
   MerchantWithoutFundsTracker as MerchantWithoutFundsTrackerEvent,
+  MerchantStaked as MerchantStakedEvent,
 } from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
 import {
   loadCircle,
@@ -14,6 +15,8 @@ import {
   loadMerchantPaymentChannels,
   loadMerchantVolumeByMonth,
   loadPaymentChannelMigration,
+  updateActiveMerchantsCount,
+  isMerchantActive,
 } from "./lib";
 import {
   OnlineOfflineToggled as OnlineOfflineToggledEvent,
@@ -53,6 +56,13 @@ export function handleMerchantRegisteredToCircle(
     BigInt.fromI32(1),
   );
 
+  // New merchant: starts online and not blacklisted
+  updateActiveMerchantsCount(
+    circleMetrics,
+    false,
+    isMerchantActive(event.params.stakeAmount, true, false),
+  );
+
   circleMetrics.save();
 }
 
@@ -63,6 +73,13 @@ export function handleOnlineOfflineToggled(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+
+  const wasActive = isMerchantActive(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+  );
+
   merchant.isOnline = event.params.merchantDetails.isOnline;
 
   if (event.params.merchantDetails.isOnline) {
@@ -72,6 +89,17 @@ export function handleOnlineOfflineToggled(
   }
 
   merchant.save();
+
+  const isActive = isMerchantActive(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+  );
+
+  let circle = loadCircle(merchant.circle, event);
+  let circleMetrics = loadCircleMetrics(circle.id, event);
+  updateActiveMerchantsCount(circleMetrics, wasActive, isActive);
+  circleMetrics.save();
 }
 
 export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
@@ -79,8 +107,26 @@ export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+
+  const wasActive = isMerchantActive(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+  );
+
   merchant.isBlacklisted = event.params.isBlacklist;
   merchant.save();
+
+  const isActive = isMerchantActive(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+  );
+
+  let circle = loadCircle(merchant.circle, event);
+  let circleMetrics = loadCircleMetrics(circle.id, event);
+  updateActiveMerchantsCount(circleMetrics, wasActive, isActive);
+  circleMetrics.save();
 }
 
 export function handleMerchantOngoingOrder(
@@ -267,6 +313,8 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
     event,
   );
 
+  const previousStakedAmount = merchant.stakedAmount;
+
   // Reset unstake request state
   merchant.isUnstakeRequested = false;
   merchant.unstakeRequestedAt = BigInt.zero();
@@ -276,6 +324,54 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   merchant.stakedAmount = event.params.stake;
 
   merchant.save();
+
+  // Update active merchants count based on stake transition
+  const wasActive = isMerchantActive(
+    previousStakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+  );
+  const isActive = isMerchantActive(
+    event.params.stake,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+  );
+
+  let circle = loadCircle(merchant.circle, event);
+  let circleMetrics = loadCircleMetrics(circle.id, event);
+  updateActiveMerchantsCount(circleMetrics, wasActive, isActive);
+  circleMetrics.save();
+}
+
+export function handleMerchantStaked(event: MerchantStakedEvent): void {
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event,
+  );
+
+  const previousStakedAmount = merchant.stakedAmount;
+
+  // Update staked amount to new total stake
+  merchant.stakedAmount = event.params.stake;
+
+  merchant.save();
+
+  // Update active merchants count based on stake transition
+  const wasActive = isMerchantActive(
+    previousStakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+  );
+  const isActive = isMerchantActive(
+    event.params.stake,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+  );
+
+  let circle = loadCircle(merchant.circle, event);
+  let circleMetrics = loadCircleMetrics(circle.id, event);
+  updateActiveMerchantsCount(circleMetrics, wasActive, isActive);
+  circleMetrics.save();
 }
 
 export function handleMerchantWithoutFundsTracker(
