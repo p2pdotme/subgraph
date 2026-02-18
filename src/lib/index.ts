@@ -6,6 +6,9 @@ export {
 export {
   loadCircle,
   loadCircleMetrics,
+  loadCircleDailyMetrics,
+  getDayNumber,
+  getDailyMetricsKey,
   loadCircleOrderMetricsByMonth,
 } from "./circle.lib";
 export { loadOrders, syncOrder } from "./order.lib";
@@ -23,3 +26,4 @@ export {
 export { loadCircleAdminRewards, loadMerchantRewards } from "./rewards.lib";
 export { loadUser, loadSocialVerified, loadReputationChange } from "./user.lib";
 export { loadCurrency } from "./currency.lib";
+export * from "./circle-score.lib";

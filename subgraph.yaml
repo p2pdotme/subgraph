@@ -105,8 +105,12 @@ dataSources:
       eventHandlers:
         - event: OrderDispute(indexed address,indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
           handler: handleOrderDispute
+        - event: OrderDispute(indexed address,indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256),uint8)
+          handler: handleOrderDisputeWithFaultType
         - event: DisputeTransIdSet(indexed address,indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
           handler: handleDisputeTransIdSet
+        - event: CircleStatusUpdated(indexed address,indexed uint256,uint8)
+          handler: handleCircleStatusUpdated
       file: ./src/order.ts
   - kind: ethereum
     name: OrderFlowFacet
@@ -170,6 +174,8 @@ dataSources:
           handler: handleUnstakeApproved
         - event: MerchantWithoutFundsTracker(indexed address,(string,uint8,(uint256,uint256,string,uint8,bool,uint256,uint256)[]),(uint256,uint256,uint256,bool,uint256,uint256,uint256,bool,bytes32,uint256,(uint256,uint256,uint256)),uint256)
           handler: handleMerchantWithoutFundsTracker
+        - event: MerchantStaked(indexed address,uint256,(string,uint8,(uint256,uint256,string,uint8,bool,uint256,uint256)[]),(uint256,uint256,uint256,bool,uint256,uint256,uint256,bool,bytes32,uint256,(uint256,uint256,uint256)),uint256)
+          handler: handleMerchantStaked
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: MerchantRegistryFacet
