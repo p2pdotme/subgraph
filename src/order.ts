@@ -6,8 +6,7 @@ import {
   AdditionalOrderDetails as AdditionalOrderDetailsEvent,
 } from "../generated/OrderFlowHelper/OrderFlowHelper";
 import {
-  OrderDispute as OrderDisputeEvent,
-  OrderDispute1 as OrderDisputeWithFaultTypeEvent,
+  OrderDispute as OrderDisputeWithFaultTypeEvent,
   DisputeTransIdSet as DisputeTransIdSetEvent,
   CircleStatusUpdated as CircleStatusUpdatedEvent,
 } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
@@ -62,7 +61,7 @@ import {
  */
 const updateDisputeMetrics = (
   circleMetrics: CircleMetrics,
-  event: OrderDisputeEvent,
+  event: OrderDisputeWithFaultTypeEvent,
 ): void => {
   if (event.params._order.disputeInfo.status === DISPUTE_STATUS_RAISED) {
     circleMetrics.raisedDisputesCount = circleMetrics.raisedDisputesCount.plus(
@@ -79,7 +78,7 @@ const updateDisputeMetrics = (
   }
 };
 
-export function handleOrderDispute(event: OrderDisputeEvent): void {
+export function handleOrderDispute(event: OrderDisputeWithFaultTypeEvent): void {
   // Load order BEFORE syncOrder to capture previous status
   let orderBeforeSync = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
