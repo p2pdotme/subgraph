@@ -105,8 +105,6 @@ dataSources:
       eventHandlers:
         - event: OrderDispute(indexed address,indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256),uint8)
           handler: handleOrderDisputeWithFaultType
-        - event: DisputeTransIdSet(indexed address,indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
-          handler: handleDisputeTransIdSet
         - event: CircleStatusUpdated(indexed address,indexed uint256,uint8)
           handler: handleCircleStatusUpdated
       file: ./src/order.ts
