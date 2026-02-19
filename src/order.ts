@@ -7,7 +7,6 @@ import {
 } from "../generated/OrderFlowHelper/OrderFlowHelper";
 import {
   OrderDispute as OrderDisputeWithFaultTypeEvent,
-  DisputeTransIdSet as DisputeTransIdSetEvent,
   CircleStatusUpdated as CircleStatusUpdatedEvent,
 } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
 import {
@@ -127,6 +126,7 @@ export function handleOrderDispute(event: OrderDisputeWithFaultTypeEvent): void 
       event,
     );
     _order.disputeSettledAt = event.block.timestamp;
+    _order.disputeSettledByAddr = event.transaction.from;
     _order.save();
   }
 
@@ -400,6 +400,7 @@ export function handleOrderDisputeWithFaultType(
     );
     _order.disputeSettledAt = event.block.timestamp;
     _order.disputeFaultType = event.params.faultType;
+    _order.disputeSettledByAddr = event.transaction.from;
     _order.save();
   }
 
@@ -1205,40 +1206,6 @@ export function handleAdditionalOrderDetails(
   order.tipsPaid = event.params.details.tipsPaid;
   order.actualUsdcAmount = event.params.details.actualUsdtAmount;
   order.actualFiatAmount = event.params.details.actualFiatAmount;
-  order.save();
-}
-
-export function handleDisputeTransIdSet(event: DisputeTransIdSetEvent): void {
-  // Synchronize order data with the latest contract state
-  syncOrder(
-    event.params.orderId,
-    event.params._order.orderType,
-    event.params._order.status,
-    event.params._order.user,
-    event.params._order.recipientAddr,
-    event.params._order.amount,
-    event.params._order.fiatAmount,
-    event.params._order.currency,
-    event.params._order.userCompleted,
-    event.params._order.userCompletedTimestamp,
-    event.params._order.placedTimestamp,
-    event.params._order.completedTimestamp,
-    event.params._order.pubkey,
-    event.params._order.encUpi,
-    event.params._order.userPubKey,
-    event.params._order.encMerchantUpi,
-    event.params._order.circleId,
-    event.params._order.disputeInfo.status,
-    event.params._order.disputeInfo.redactTransId,
-    event.params._order.disputeInfo.accountNumber,
-    event,
-  );
-
-  let order = loadOrders(
-    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
-    event,
-  );
-  order.disputeSettledByAddr = event.params.by;
   order.save();
 }
 
