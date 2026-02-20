@@ -129,6 +129,7 @@ export function handleUsdcDelegatedToMerchantInCircle(
   merchant.delegatedStakedAmount = merchant.delegatedStakedAmount.plus(
     event.params.amount,
   );
+  merchant.stakedAmount = merchant.stakedAmount.plus(event.params.amount);
   merchant.save();
 
   // CREATE DELEGATION RECORD
