@@ -322,7 +322,7 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   merchant.unstakeAmount = BigInt.zero();
 
   // Update staked amount
-  merchant.stakedAmount = event.params.stake;
+  merchant.stakedAmount = event.params.merchantDetails.stake;
 
   merchant.save();
 
@@ -353,7 +353,7 @@ export function handleMerchantStaked(event: MerchantStakedEvent): void {
   const previousStakedAmount = merchant.stakedAmount;
 
   // Update staked amount to new total stake
-  merchant.stakedAmount = event.params.stake;
+  merchant.stakedAmount = event.params.merchantDetails.stake;
 
   merchant.save();
 
