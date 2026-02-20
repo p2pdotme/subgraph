@@ -7,6 +7,7 @@ import {
   UnstakeApproved as UnstakeApprovedEvent,
   MerchantWithoutFundsTracker as MerchantWithoutFundsTrackerEvent,
   MerchantStaked as MerchantStakedEvent,
+  MonthlyVolumeUnlimitedFlagUpdated as MonthlyVolumeUnlimitedFlagUpdatedEvent,
 } from "../generated/MerchantOnboardFacet/MerchantOnboardFacet";
 import {
   loadCircle,
@@ -386,4 +387,39 @@ export function handleMerchantWithoutFundsTracker(
   merchant.telegramId = event.params.merchantConfig.telegramId;
 
   merchant.save();
+}
+
+export function handleMonthlyVolumeUnlimitedFlagUpdated(
+  event: MonthlyVolumeUnlimitedFlagUpdatedEvent,
+): void {
+  const merchantEntity = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event,
+  );
+  if (
+    merchantEntity.circleId.equals(BigInt.zero()) ||
+    event.params.accountNo.toString().length < 4
+  ) {
+    return;
+  }
+
+  const paymentChannelConfigId = event.params.accountNo.toString().slice(0, -4);
+  const pcKey = Bytes.fromUTF8(
+    `${event.params.merchant.toHexString()}-${event.params.accountNo.toString()}`,
+  );
+  let paymentChannel = loadMerchantPaymentChannels(pcKey, event);
+  const isNewPaymentChannel = paymentChannel.pcConfigId.equals(BigInt.zero());
+
+  paymentChannel.isMonthlyVolumeUnlimited =
+    event.params.isMonthlyVolumeUnlimited;
+  paymentChannel.merchant = merchantEntity.id;
+  paymentChannel.accountNo = event.params.accountNo;
+  paymentChannel.pcConfigId = BigInt.fromString(paymentChannelConfigId);
+
+  if (isNewPaymentChannel) {
+    paymentChannel.isActive = false;
+    paymentChannel.status = 0;
+  }
+
+  paymentChannel.save();
 }
