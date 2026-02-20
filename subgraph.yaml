@@ -172,6 +172,8 @@ dataSources:
           handler: handleMerchantWithoutFundsTracker
         - event: MerchantStaked(indexed address,uint256,(string,uint8,(uint256,uint256,string,uint8,bool,uint256,uint256)[]),(uint256,bool,uint256,uint256,uint256,uint256,bool,bytes32,uint256,uint256,uint256),uint256)
           handler: handleMerchantStaked
+        - event: MonthlyVolumeUnlimitedFlagUpdated(indexed address,indexed uint256,bool)
+          handler: handleMonthlyVolumeUnlimitedFlagUpdated
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: MerchantRegistryFacet
