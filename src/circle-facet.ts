@@ -15,6 +15,7 @@ export function handleCircleCreated(event: CircleCreatedEvent): void {
   circle.currency = event.params.currency;
   circle.name = event.params.name;
   circle.communityLink = event.params.communityUrl;
+  circle.adminLink = event.params.adminCommunityUrl;
   circle.isAutoApprovedPCEnabled = event.params.autoApprovePaymentChannels;
 
   circle.save();
