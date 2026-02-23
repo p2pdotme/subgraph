@@ -203,9 +203,7 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   merchantVolumeByMonth.circle = merchant.circle;
   merchantVolumeByMonth.paymentChannel = paymentChannel.id;
   merchantVolumeByMonth.month = month;
-  merchantVolumeByMonth.volume = merchantVolumeByMonth.volume.plus(
-    event.params.monthlyVolume,
-  );
+  merchantVolumeByMonth.volume = event.params.monthlyVolume
 
   merchantVolumeByMonth.save();
   merchant.save();
