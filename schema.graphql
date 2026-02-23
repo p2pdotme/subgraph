@@ -7,6 +7,7 @@ type Circle @entity {
   currency: Bytes!
   name: String!
   communityLink: String!
+  adminLink: String!
   isAutoApprovedPCEnabled: Boolean!
 
   metrics: CircleMetrics @relation(name: "circle")

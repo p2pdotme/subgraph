@@ -14,6 +14,7 @@ export const loadCircle = (key: Bytes, event: ethereum.Event): Circle => {
     circle = new Circle(key);
     circle.circleId = BigInt.zero();
     circle.admin = "";
+    circle.adminLink = "";
     circle.currency = Bytes.empty();
     circle.name = "";
     circle.communityLink = "";
