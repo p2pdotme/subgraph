@@ -10,8 +10,8 @@ import {
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
-  loadCircleStakeRecords,
-  loadCircleUnstakeRecords,
+  loadCircleUsdcStakeRecords,
+  loadCircleUsdcUnstakeRecords,
   loadStaker,
   loadMerchantDelegationRecord,
 } from "./lib";
@@ -27,7 +27,7 @@ export function handleExitRequested(event: ExitRequestedEvent): void {
 
   const staker = loadStaker(event.params.user, event);
 
-  let circleUnstakeRecord = loadCircleUnstakeRecords(stakeRecordKey, event);
+  let circleUnstakeRecord = loadCircleUsdcUnstakeRecords(stakeRecordKey, event);
 
   circleUnstakeRecord.circle = circle.id;
   circleUnstakeRecord.staker = staker.id;
@@ -35,11 +35,11 @@ export function handleExitRequested(event: ExitRequestedEvent): void {
   circleUnstakeRecord.status = BigInt.fromI32(UNSTAKE_REQUEST_RAISED);
   circleUnstakeRecord.availableAt = event.params.availableAt;
 
-  staker.circleUnstakeRecords.push(circleUnstakeRecord.id);
+  staker.circleUsdcUnstakeRecords.push(circleUnstakeRecord.id);
 
   circleUnstakeRecord.save();
 
-  const stakeRecord = loadCircleStakeRecords(stakeRecordKey, event);
+  const stakeRecord = loadCircleUsdcStakeRecords(stakeRecordKey, event);
   stakeRecord.unstakeRequest = circleUnstakeRecord.id;
   stakeRecord.save();
 }
@@ -52,12 +52,12 @@ export function handleExitProceedsWithdrawn(
   );
 
   // UPDATE CIRCLE UNSTAKE RECORD
-  let unstakeRecord = loadCircleUnstakeRecords(stakeRecordKey, event);
+  let unstakeRecord = loadCircleUsdcUnstakeRecords(stakeRecordKey, event);
   unstakeRecord.status = BigInt.fromI32(UNSTAKE_REQUEST_WITHDRAWN);
   unstakeRecord.save();
 
   // UPDATE CIRCLE STAKE RECORD
-  const stakeRecord = loadCircleStakeRecords(stakeRecordKey, event);
+  const stakeRecord = loadCircleUsdcStakeRecords(stakeRecordKey, event);
   stakeRecord.amount = stakeRecord.amount.minus(event.params.amount);
   stakeRecord.save();
 
@@ -65,11 +65,11 @@ export function handleExitProceedsWithdrawn(
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(circleKey, event);
   const circleMetrics = loadCircleMetrics(circle.id, event);
-  circleMetrics.totalStaked = circleMetrics.totalStaked.minus(
+  circleMetrics.totalUsdcStaked = circleMetrics.totalUsdcStaked.minus(
     event.params.amount,
   );
   if (event.params.user.toHexString() == circle.admin) {
-    circleMetrics.adminStaked = circleMetrics.adminStaked.minus(
+    circleMetrics.adminUsdcStaked = circleMetrics.adminUsdcStaked.minus(
       event.params.amount,
     );
   }
@@ -94,7 +94,7 @@ export function handleUsdcStakedForDelegationInCircle(
   const stakeRecordKey = Bytes.fromHexString(
     `${event.params.circleId.toString()}-${event.params.user.toHexString()}`,
   );
-  const stakeRecord = loadCircleStakeRecords(stakeRecordKey, event);
+  const stakeRecord = loadCircleUsdcStakeRecords(stakeRecordKey, event);
   stakeRecord.circle = circle.id;
   stakeRecord.staker = staker.id;
   stakeRecord.amount = stakeRecord.amount.plus(event.params.amount);
@@ -103,15 +103,15 @@ export function handleUsdcStakedForDelegationInCircle(
   stakeRecord.stakedAt = event.block.timestamp;
   stakeRecord.save();
 
-  staker.circleStakeRecords.push(stakeRecord.id);
+  staker.circleUsdcStakeRecords.push(stakeRecord.id);
   staker.save();
 
   const circleMetrics = loadCircleMetrics(circle.id, event);
-  circleMetrics.totalStaked = circleMetrics.totalStaked.plus(
+  circleMetrics.totalUsdcStaked = circleMetrics.totalUsdcStaked.plus(
     event.params.amount,
   );
   if (event.params.user.toHexString() == circle.admin) {
-    circleMetrics.adminStaked = circleMetrics.adminStaked.plus(
+    circleMetrics.adminUsdcStaked = circleMetrics.adminUsdcStaked.plus(
       event.params.amount,
     );
   }
