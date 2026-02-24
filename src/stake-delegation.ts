@@ -169,6 +169,7 @@ export function handleUsdcUndelegatedFromMerchantInCircle(
   merchant.delegatedStakedAmount = merchant.delegatedStakedAmount.minus(
     event.params.amount,
   );
+  merchant.stakedAmount = merchant.stakedAmount.minus(event.params.amount);
   merchant.save();
 
   // CREATE DELEGATION RECORD (UNDELEGATED/DECREASED)
