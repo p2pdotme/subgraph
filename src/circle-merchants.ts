@@ -189,6 +189,7 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   // UPDATE DAILY AND MONTHLY VOLUME ON PAYMENT CHANNEL
   paymentChannel.dailyVolume = event.params.dailyVolume;
   paymentChannel.monthlyVolume = event.params.monthlyVolume;
+  paymentChannel.lastUpdatedDailyVolumeAt = event.block.timestamp;
   paymentChannel.save();
 
   // LOAD MERCHANT VOLUME BY MONTH

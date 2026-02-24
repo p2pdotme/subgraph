@@ -180,6 +180,7 @@ type MerchantPaymentChannels @entity {
   # Current volume tracking for availability calculations
   dailyVolume: BigInt!
   monthlyVolume: BigInt!
+  lastUpdatedDailyVolumeAt: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
