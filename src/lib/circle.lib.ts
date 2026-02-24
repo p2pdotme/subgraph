@@ -35,8 +35,8 @@ export function loadCircleMetrics(
   let circleMetrics = CircleMetrics.load(key);
   if (!circleMetrics) {
     circleMetrics = new CircleMetrics(key);
-    circleMetrics.totalStaked = BigInt.zero();
-    circleMetrics.adminStaked = BigInt.zero();
+    circleMetrics.totalUsdcStaked = BigInt.zero();
+    circleMetrics.adminUsdcStaked = BigInt.zero();
     circleMetrics.totalVolume = BigInt.zero();
     circleMetrics.resolvedDisputesCount = BigInt.zero();
     circleMetrics.raisedDisputesCount = BigInt.zero();

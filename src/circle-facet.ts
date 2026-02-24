@@ -46,7 +46,7 @@ export function handleCircleCreated(event: CircleCreatedEvent): void {
 //     event
 //   );
 
-//   const circleStakeRecord = loadCircleStakeRecords(
+//   const circleStakeRecord = loadCircleUsdcStakeRecords(
 //     Bytes.fromHexString(`${event.params.circleId.toString()}-${event.params.staker.toHexString()}`),
 //     event
 //   );
@@ -54,7 +54,7 @@ export function handleCircleCreated(event: CircleCreatedEvent): void {
 //   circleStakeRecord.circle = circle.id;
 //   circleStakeRecord.staker = staker.id;
 //   circleStakeRecord.amount = circleStakeRecord.amount.plus(event.params.stake);
-//   staker.circleStakeRecords.push(circleStakeRecord.id);
+//   staker.circleUsdcStakeRecords.push(circleStakeRecord.id);
 
 //   circleStakeRecord.save();
 //   staker.save();

@@ -1,7 +1,7 @@
 export {
   loadStaker,
-  loadCircleStakeRecords,
-  loadCircleUnstakeRecords,
+  loadCircleUsdcStakeRecords,
+  loadCircleUsdcUnstakeRecords,
 } from "./staker.lib";
 export {
   loadCircle,

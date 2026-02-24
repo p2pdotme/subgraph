@@ -28,8 +28,8 @@ type Staker @entity {
 
   totalStaked: BigInt!
 
-  circleStakeRecords: [CircleStakeRecords!]!
-  circleUnstakeRecords: [CircleUnstakeRecords!]!
+  circleUsdcStakeRecords: [CircleUsdcStakeRecords!]!
+  circleUsdcUnstakeRecords: [CircleUsdcUnstakeRecords!]!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -38,7 +38,7 @@ type Staker @entity {
 
 # CIRCLE STAKE RECORDS
 # A record of a staker's stake in a circle
-type CircleStakeRecords @entity {
+type CircleUsdcStakeRecords @entity {
   id: Bytes!
 
   circle: Circle!
@@ -46,7 +46,7 @@ type CircleStakeRecords @entity {
 
   amount: BigInt!
 
-  unstakeRequest: CircleUnstakeRecords
+  unstakeRequest: CircleUsdcUnstakeRecords
 
   stakedAt: BigInt!
 
@@ -57,7 +57,7 @@ type CircleStakeRecords @entity {
 
 # CIRCLE UNSTAKE RECORDS
 # A record of a staker's unstake in a circle
-type CircleUnstakeRecords @entity {
+type CircleUsdcUnstakeRecords @entity {
   id: Bytes!
 
   circle: Circle!
@@ -81,8 +81,8 @@ type CircleMetrics @entity {
   circle: Circle @relation(name: "metrics")
 
   # STAKING METRICS
-  totalStaked: BigInt!
-  adminStaked: BigInt!
+  totalUsdcStaked: BigInt!
+  adminUsdcStaked: BigInt!
 
   # DELEGATION METRICS
   totalDelegatedStake: BigInt!
