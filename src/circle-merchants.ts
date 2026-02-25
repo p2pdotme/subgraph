@@ -16,6 +16,8 @@ import {
   loadMerchantPaymentChannels,
   loadMerchantVolumeByMonth,
   loadPaymentChannelMigration,
+  loadFCMToken,
+  loadMerchantWithdrawFeePercentage,
   updateActiveMerchantsCount,
   isMerchantActive,
 } from "./lib";
@@ -25,6 +27,8 @@ import {
   MerchantOngoingOrder as MerchantOngoingOrderEvent,
   Merchant as MerchantEvent,
   MerchantVolume as MerchantVolumeEvent,
+  FCMToken as FCMTokenEvent,
+  MerchantWithdrawFeePercentage as MerchantWithdrawFeePercentageEvent,
 } from "../generated/MerchantRegistryFacet/MerchantRegistryFacet";
 import { getYearMonthFromTimestamp } from "./utils/date.utils";
 
@@ -204,7 +208,7 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   merchantVolumeByMonth.circle = merchant.circle;
   merchantVolumeByMonth.paymentChannel = paymentChannel.id;
   merchantVolumeByMonth.month = month;
-  merchantVolumeByMonth.volume = event.params.monthlyVolume
+  merchantVolumeByMonth.volume = event.params.monthlyVolume;
 
   merchantVolumeByMonth.save();
   merchant.save();
@@ -421,4 +425,36 @@ export function handleMonthlyVolumeUnlimitedFlagUpdated(
   }
 
   paymentChannel.save();
+}
+
+export function handleFCMToken(event: FCMTokenEvent): void {
+  const merchant = loadCircleMerchant(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event,
+  );
+  if (merchant.circleId.equals(BigInt.zero())) {
+    return;
+  }
+
+  const fcmToken = loadFCMToken(
+    Bytes.fromHexString(event.params.merchant.toHexString()),
+    event,
+  );
+  fcmToken.address = event.params.merchant;
+  fcmToken.tokens = event.params.tokens;
+  fcmToken.merchant = merchant.id;
+  fcmToken.save();
+}
+
+export function handleMerchantWithdrawFeePercentage(
+  event: MerchantWithdrawFeePercentageEvent,
+): void {
+  const withdrawFee = loadMerchantWithdrawFeePercentage(
+    event.params.currency,
+    event,
+  );
+  withdrawFee.currency = event.params.currency;
+  withdrawFee.feePercentage = event.params.feePercentage;
+  withdrawFee.time = event.block.timestamp;
+  withdrawFee.save();
 }

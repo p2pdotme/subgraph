@@ -77,7 +77,9 @@ const updateDisputeMetrics = (
   }
 };
 
-export function handleOrderDispute(event: OrderDisputeWithFaultTypeEvent): void {
+export function handleOrderDispute(
+  event: OrderDisputeWithFaultTypeEvent,
+): void {
   // Load order BEFORE syncOrder to capture previous status
   let orderBeforeSync = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
@@ -1231,9 +1233,7 @@ function applyActiveOrDefaultStatus(circleMetrics: CircleMetrics): void {
 export function handleCircleStatusUpdated(
   event: CircleStatusUpdatedEvent,
 ): void {
-  const circleKey = changetype<Bytes>(
-    Bytes.fromBigInt(event.params.circleId),
-  );
+  const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   let circle = loadCircle(circleKey, event);
   let circleMetrics = loadCircleMetrics(circle.id, event);
 
