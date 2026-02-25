@@ -157,6 +157,7 @@ type CircleMerchant @entity {
   paymentChannelMigrations: [PaymentChannelMigration!]
     @derivedFrom(field: "merchant")
   delegationRecords: [MerchantDelegationRecord!] @derivedFrom(field: "merchant")
+  fcmTokens: [FCMToken!] @derivedFrom(field: "merchant")
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -604,6 +605,33 @@ type CircleDailyMetrics @entity {
   acceptedOrdersCount: BigInt! # All orders accepted (BUY+SELL+PAY, for dispute rate denominator)
   merchantFaultDisputesCount: BigInt!
   volume: BigInt! # USDC volume
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# FCM TOKEN
+# A FCM token for a merchant
+type FCMToken @entity {
+  id: Bytes!
+  address: Bytes!
+  tokens: [String!]
+
+  merchant: CircleMerchant @relation(name: "MerchantFCM")
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT WITHDRAW FEE PERCENTAGE
+# A withdraw fee percentage for a merchant
+type MerchantWithdrawFeePercentage @entity {
+  id: Bytes!
+  currency: Bytes!
+  feePercentage: BigInt!
+  time: BigInt!
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!

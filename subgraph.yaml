@@ -188,6 +188,8 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - MerchantRegistryFacet
+        - FCMToken
+        - MerchantWithdrawFeePercentage
       abis:
         - name: MerchantRegistryFacet
           file: ./abis/MerchantRegistryFacet.json
@@ -202,6 +204,10 @@ dataSources:
           handler: handleMerchant
         - event: MerchantVolume(indexed address,uint256,uint256,uint256)
           handler: handleMerchantVolume
+        - event: FCMToken(indexed address,string[])
+          handler: handleFCMToken
+        - event: MerchantWithdrawFeePercentage(bytes32,uint256)
+          handler: handleMerchantWithdrawFeePercentage
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: RewardsFacet

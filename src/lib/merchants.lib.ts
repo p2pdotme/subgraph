@@ -9,6 +9,8 @@ import {
   MerchantDelegationRecord,
   MerchantReferralClaimed,
   MerchantReferralRevenueClaimed,
+  FCMToken as FCMTokenEntity,
+  MerchantWithdrawFeePercentage,
 } from "../../generated/schema";
 
 export function loadAssignedMerchants(
@@ -206,4 +208,41 @@ export function loadMerchantReferralRevenueClaimed(
   revenueClaimed.transactionHash = event.transaction.hash;
 
   return revenueClaimed;
+}
+
+export function loadFCMToken(
+  key: Bytes,
+  event: ethereum.Event,
+): FCMTokenEntity {
+  let fcmToken = FCMTokenEntity.load(key);
+  if (!fcmToken) {
+    fcmToken = new FCMTokenEntity(key);
+    fcmToken.address = Bytes.empty();
+    fcmToken.tokens = [];
+  }
+
+  fcmToken.blockNumber = event.block.number;
+  fcmToken.blockTimestamp = event.block.timestamp;
+  fcmToken.transactionHash = event.transaction.hash;
+
+  return fcmToken;
+}
+
+export function loadMerchantWithdrawFeePercentage(
+  key: Bytes,
+  event: ethereum.Event,
+): MerchantWithdrawFeePercentage {
+  let withdrawFeePercentage = MerchantWithdrawFeePercentage.load(key);
+  if (!withdrawFeePercentage) {
+    withdrawFeePercentage = new MerchantWithdrawFeePercentage(key);
+    withdrawFeePercentage.currency = Bytes.empty();
+    withdrawFeePercentage.feePercentage = BigInt.zero();
+    withdrawFeePercentage.time = BigInt.zero();
+  }
+
+  withdrawFeePercentage.blockNumber = event.block.number;
+  withdrawFeePercentage.blockTimestamp = event.block.timestamp;
+  withdrawFeePercentage.transactionHash = event.transaction.hash;
+
+  return withdrawFeePercentage;
 }
