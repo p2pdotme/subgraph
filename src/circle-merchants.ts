@@ -450,7 +450,9 @@ export function handleMerchantWithdrawFeePercentage(
   event: MerchantWithdrawFeePercentageEvent,
 ): void {
   const withdrawFee = loadMerchantWithdrawFeePercentage(
-    event.params.currency,
+    event.params.currency.concat(
+      Bytes.fromByteArray(Bytes.fromBigInt(event.block.timestamp))
+    ),
     event,
   );
   withdrawFee.currency = event.params.currency;
