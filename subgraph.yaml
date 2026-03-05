@@ -326,3 +326,38 @@ dataSources:
         - event: UserVoted(indexed address,indexed address)
           handler: handleUserVoted
       file: ./src/reputation-manager.ts
+  # UPGRADE EMIT EVENTS -> Sync up with older data
+  - kind: ethereum
+    name: UpgradeEmitEvents
+    network: base-sepolia
+    source:
+      address: "0x5Fb19218655c96780f27dF33289153174c45adF6"
+      abi: UpgradeEmitEvents
+      startBlock: 38032241
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - CircleCreatedUpdate
+      abis:
+        - name: UpgradeEmitEvents
+          file: ./abis/UpgradeEmitEvents.json
+      eventHandlers:
+        - event: CircleCreatedUpdate(indexed address,indexed uint256,bytes32,string,string,string,bool)
+          handler: handleCircleCreatedUpdate
+        - event: CircleMerchantDetailsAndConfigUpdate(indexed address,indexed uint256,indexed bytes32,string,uint256,uint256,bool,bool,bool,bool,uint256,uint256)
+          handler: handleCircleMerchantDetailsAndConfigUpdate
+        - event: MerchantPaymentChannelUpdate(indexed address,indexed uint256,uint256,string,uint8,bool,bool,uint256,uint256,uint256)
+          handler: handleMerchantPaymentChannelUpdate
+        - event: CurrencyAddedUpdate(indexed bytes32,bool)
+          handler: handleCurrencyAddedUpdate
+        - event: CurrencyMonthlyVolumeLimitUpdate(indexed bytes32,uint256)
+          handler: handleCurrencyMonthlyVolumeLimitUpdate
+        - event: MerchantWithdrawFeePercentageUpdate(indexed bytes32,uint256)
+          handler: handleMerchantWithdrawFeePercentageUpdate
+        - event: PaymentChannelConfigUpdate(indexed uint256,indexed bytes32,string,uint256,bool)
+          handler: handlePaymentChannelConfigUpdate
+        - event: MerchantClaimableRewardsUpdate(indexed address,uint256)
+          handler: handleMerchantClaimableRewardsUpdate
+      file: ./src/sync-data.ts
