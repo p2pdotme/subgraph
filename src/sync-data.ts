@@ -1,6 +1,6 @@
-import { Bytes } from "@graphprotocol/graph-ts";
+import { BigInt, Bytes } from "@graphprotocol/graph-ts";
 import {
-  CircleCreatedUpdate as CircleCreatedUpdateEvent,
+  // CircleCreatedUpdate as CircleCreatedUpdateEvent,
   CircleMerchantDetailsAndConfigUpdate as CircleMerchantDetailsAndConfigUpdateEvent,
   MerchantPaymentChannelUpdate as MerchantPaymentChannelUpdateEvent,
   CurrencyAddedUpdate as CurrencyAddedUpdateEvent,
@@ -8,33 +8,34 @@ import {
   MerchantWithdrawFeePercentageUpdate as MerchantWithdrawFeePercentageUpdateEvent,
   PaymentChannelConfigUpdate as PaymentChannelConfigUpdateEvent,
   MerchantClaimableRewardsUpdate as MerchantClaimableRewardsUpdateEvent,
-} from "../generated/UpgradeEmitEvents/UpgradeEmitEvents";
+} from "../generated/SetterFacet/SetterFacet";
 import { CurrencyConfig, PaymentChannelConfig } from "../generated/schema";
 import {
   loadCircle,
   loadCircleMerchant,
+  loadCircleMetrics,
   loadCurrency,
   loadMerchantPaymentChannels,
   loadMerchantRewards,
   loadMerchantWithdrawFeePercentage,
 } from "./lib";
 
-export function handleCircleCreatedUpdate(
-  event: CircleCreatedUpdateEvent,
-): void {
-  const key = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
-  const circle = loadCircle(key, event);
+// export function handleCircleCreatedUpdate(
+//   event: CircleCreatedUpdateEvent,
+// ): void {
+//   const key = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
+//   const circle = loadCircle(key, event);
 
-  circle.circleId = event.params.circleId;
-  circle.admin = event.params.admin.toHexString();
-  circle.currency = event.params.currency;
-  circle.name = event.params.name;
-  circle.communityLink = event.params.communityUrl;
-  circle.adminLink = event.params.adminCommunityUrl;
-  circle.isAutoApprovedPCEnabled = event.params.autoApprovePaymentChannels;
+//   circle.circleId = event.params.circleId;
+//   circle.admin = event.params.admin.toHexString();
+//   circle.currency = event.params.currency;
+//   circle.name = event.params.name;
+//   circle.communityLink = event.params.communityUrl;
+//   circle.adminLink = event.params.adminCommunityUrl;
+//   circle.isAutoApprovedPCEnabled = event.params.autoApprovePaymentChannels;
 
-  circle.save();
-}
+//   circle.save();
+// }
 
 export function handleCircleMerchantDetailsAndConfigUpdate(
   event: CircleMerchantDetailsAndConfigUpdateEvent,
@@ -60,7 +61,13 @@ export function handleCircleMerchantDetailsAndConfigUpdate(
   merchant.isUnstakeRequested = event.params.isUnstakeRequested;
   merchant.unstakeAmount = event.params.unstakeAmount;
 
-  circle.save();
+  merchant.save()
+
+  let circleMetrics = loadCircleMetrics(circle.id, event);
+  circleMetrics.totalMerchantsCount = circleMetrics.totalMerchantsCount.plus(
+    BigInt.fromI32(1),
+  );
+  circleMetrics.save()
 }
 
 export function handleMerchantPaymentChannelUpdate(

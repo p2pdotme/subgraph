@@ -263,6 +263,7 @@ export function handlePaymentChannelMigrationRequest(
         `${event.params.merchant.toHexString()}-${event.params.fromAccountNo.toString()}`,
       );
       const fromPaymentChannel = loadMerchantPaymentChannels(fromPcKey, event);
+      fromPaymentChannel.merchant = merchant.id;
       fromPaymentChannel.fiatBalance = event.params.fromFiatAmount;
       fromPaymentChannel.status = 5; // TERMINATED
       fromPaymentChannel.isActive = false;
@@ -273,6 +274,7 @@ export function handlePaymentChannelMigrationRequest(
         `${event.params.merchant.toHexString()}-${event.params.toAccountNo.toString()}`,
       );
       const toPaymentChannel = loadMerchantPaymentChannels(toPcKey, event);
+      toPaymentChannel.merchant = merchant.id;
       toPaymentChannel.fiatBalance = event.params.toFiatAmount;
       toPaymentChannel.save();
     }
