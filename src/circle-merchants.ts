@@ -120,6 +120,8 @@ export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
   );
 
   merchant.isBlacklisted = event.params.isBlacklist;
+
+  merchant.paymentChannels
   merchant.save();
 
   const isActive = isMerchantActive(
@@ -331,6 +333,18 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
 
   merchant.save();
 
+  // SET FIAT BALANCE 0
+  for (let i = 0; i < event.params.merchantConfig.paymentChannels.length; i++) {
+    let paymentChannelDetails = event.params.merchantConfig.paymentChannels[i];
+    const pcKey = Bytes.fromUTF8(
+      `${event.params.merchant.toHexString()}-${paymentChannelDetails.accountNo.toString()}`,
+    );
+    let paymentChannel = loadMerchantPaymentChannels(pcKey, event);
+    paymentChannel.fiatBalance = BigInt.fromI32(0);
+    paymentChannel.save();
+  }
+
+
   // Update active merchants count based on stake transition
   const wasActive = isMerchantActive(
     previousStakedAmount,
@@ -347,6 +361,7 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   let circleMetrics = loadCircleMetrics(circle.id, event);
   updateActiveMerchantsCount(circleMetrics, wasActive, isActive);
   circleMetrics.save();
+  
 }
 
 export function handleMerchantStaked(event: MerchantStakedEvent): void {
