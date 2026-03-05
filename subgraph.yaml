@@ -328,11 +328,11 @@ dataSources:
       file: ./src/reputation-manager.ts
   # UPGRADE EMIT EVENTS -> Sync up with older data
   - kind: ethereum
-    name: UpgradeEmitEvents
+    name: SetterFacet
     network: base-sepolia
     source:
       address: "0x49018C16770611BCCB12402c5616aBA30255aE0F"
-      abi: UpgradeEmitEvents
+      abi: SetterFacet
       startBlock: 38481028
     mapping:
       kind: ethereum/events
@@ -341,11 +341,11 @@ dataSources:
       entities:
         - CircleCreatedUpdate
       abis:
-        - name: UpgradeEmitEvents
-          file: ./abis/UpgradeEmitEvents.json
+        - name: SetterFacet
+          file: ./abis/SetterFacet.json
       eventHandlers:
-        - event: CircleCreatedUpdate(indexed address,indexed uint256,bytes32,string,string,string,bool)
-          handler: handleCircleCreatedUpdate
+        # - event: CircleCreatedUpdate(indexed address,indexed uint256,bytes32,string,string,string,bool)
+        #   handler: handleCircleCreatedUpdate
         - event: CircleMerchantDetailsAndConfigUpdate(indexed address,indexed uint256,indexed bytes32,string,uint256,uint256,bool,bool,bool,bool,uint256,uint256)
           handler: handleCircleMerchantDetailsAndConfigUpdate
         - event: MerchantPaymentChannelUpdate(indexed address,indexed uint256,uint256,string,uint8,bool,bool,uint256,uint256,uint256)
