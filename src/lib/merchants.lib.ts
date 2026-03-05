@@ -70,6 +70,7 @@ export function loadMerchantPaymentChannels(
   let merchantPaymentChannel = MerchantPaymentChannels.load(key);
   if (!merchantPaymentChannel) {
     merchantPaymentChannel = new MerchantPaymentChannels(key);
+    merchantPaymentChannel.merchant = Bytes.empty();
     merchantPaymentChannel.pcConfigId = BigInt.zero();
     merchantPaymentChannel.accountNo = BigInt.zero();
     merchantPaymentChannel.label = "";
