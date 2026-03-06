@@ -2,43 +2,85 @@
   "base-sepolia": {
     "CircleFacet": {
       "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 38481028
+      "startBlock": 43010996
     },
     "USDCStakeDelegationFacet": {
       "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 38481028
+      "startBlock": 43010996
     },
     "OrderFlowHelper": {
       "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 38481028
+      "startBlock": 43010996
     },
     "OrderProcessorFacet": {
       "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 38481028
+      "startBlock": 43010996
     },
     "OrderFlowFacet": {
       "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 38481028
+      "startBlock": 43010996
     },
     "MerchantOnboardFacet": {
       "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 38481028
+      "startBlock": 43010996
     },
     "MerchantRegistryFacet": {
       "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 38481028
+      "startBlock": 43010996
     },
     "RewardsFacet": {
       "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 38481028
+      "startBlock": 43010996
     },
     "CountryFacet": {
       "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 38481028
+      "startBlock": 43010996
     },
     "ReputationManager": {
       "address": "0x72B3168229eE6b93ffB58E5ca5e59A3Ac24E49A9",
-      "startBlock": 38481028
+      "startBlock": 43010996
+    }
+  },
+  "base": {
+    "CircleFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 43010996
+    },
+    "USDCStakeDelegationFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 43010996
+    },
+    "OrderFlowHelper": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 43010996
+    },
+    "OrderProcessorFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 43010996
+    },
+    "OrderFlowFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 43010996
+    },
+    "MerchantOnboardFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 43010996
+    },
+    "MerchantRegistryFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 43010996
+    },
+    "RewardsFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 43010996
+    },
+    "CountryFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 43010996
+    },
+    "ReputationManager": {
+      "address": "0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D",
+      "startBlock": 43010996
     }
   }
 }
