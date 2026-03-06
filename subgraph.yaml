@@ -28,7 +28,7 @@ dataSources:
       file: ./src/circle-facet.ts
   - kind: ethereum
     name: USDCStakeDelegationFacet
-    network: base-sepolia
+    network: base
     source:
       address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: USDCStakeDelegationFacet
@@ -62,7 +62,7 @@ dataSources:
       file: ./src/stake-delegation.ts
   - kind: ethereum
     name: OrderFlowHelper
-    network: base-sepolia
+    network: base
     source:
       address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: OrderFlowHelper
@@ -88,7 +88,7 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: OrderProcessorFacet
-    network: base-sepolia
+    network: base
     source:
       address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: OrderProcessorFacet
@@ -110,7 +110,7 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: OrderFlowFacet
-    network: base-sepolia
+    network: base
     source:
       address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: OrderFlowFacet
@@ -142,7 +142,7 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: MerchantOnboardFacet
-    network: base-sepolia
+    network: base
     source:
       address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: MerchantOnboardFacet
@@ -177,7 +177,7 @@ dataSources:
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: MerchantRegistryFacet
-    network: base-sepolia
+    network: base
     source:
       address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: MerchantRegistryFacet
@@ -211,7 +211,7 @@ dataSources:
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: RewardsFacet
-    network: base-sepolia
+    network: base
     source:
       address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: RewardsFacet
@@ -243,7 +243,7 @@ dataSources:
       file: ./src/rewards.ts
   - kind: ethereum
     name: CountryFacet
-    network: base-sepolia
+    network: base
     source:
       address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: CountryFacet
@@ -266,7 +266,7 @@ dataSources:
       file: ./src/country-facet.ts
   - kind: ethereum
     name: ReputationManager
-    network: base-sepolia
+    network: base
     source:
       address: "0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D"
       abi: ReputationManager
@@ -329,7 +329,7 @@ dataSources:
   # UPGRADE EMIT EVENTS -> Sync up with older data
   - kind: ethereum
     name: SetterFacet
-    network: base-sepolia
+    network: base
     source:
       address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: SetterFacet
@@ -346,7 +346,7 @@ dataSources:
       eventHandlers:
         # - event: CircleCreatedUpdate(indexed address,indexed uint256,bytes32,string,string,string,bool)
         #   handler: handleCircleCreatedUpdate
-        - event: CircleMerchantDetailsAndConfigUpdate(indexed address,indexed uint256,indexed bytes32,string,uint256,uint256,bool,bool,bool,bool,uint256,uint256)
+        - event: CircleMerchantDetailsAndConfigUpdate(indexed address,indexed uint256,indexed bytes32,string,uint256,uint256,bool,bool,bool,bool,uint256,uint256,uint256,uint256,uint256)
           handler: handleCircleMerchantDetailsAndConfigUpdate
         - event: MerchantPaymentChannelUpdate(indexed address,indexed uint256,uint256,string,uint8,bool,bool,uint256,uint256,uint256)
           handler: handleMerchantPaymentChannelUpdate

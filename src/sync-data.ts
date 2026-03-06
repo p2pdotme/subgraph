@@ -60,6 +60,9 @@ export function handleCircleMerchantDetailsAndConfigUpdate(
   merchant.unstakeRequestedAt = event.params.unstakeRequestedAt;
   merchant.isUnstakeRequested = event.params.isUnstakeRequested;
   merchant.unstakeAmount = event.params.unstakeAmount;
+  merchant.startedAt = event.params.startedAt;
+  merchant.onlineAt = event.params.onlineAt;
+  merchant.offlineAt = event.params.offlineAt;
 
   merchant.save()
 
