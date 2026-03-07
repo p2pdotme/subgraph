@@ -11,6 +11,7 @@ import {
 } from "../generated/SetterFacet/SetterFacet";
 import { CurrencyConfig, PaymentChannelConfig } from "../generated/schema";
 import {
+  isMerchantActive,
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
@@ -64,13 +65,24 @@ export function handleCircleMerchantDetailsAndConfigUpdate(
   merchant.onlineAt = event.params.onlineAt;
   merchant.offlineAt = event.params.offlineAt;
 
-  merchant.save()
+  merchant.save();
 
   let circleMetrics = loadCircleMetrics(circle.id, event);
   circleMetrics.totalMerchantsCount = circleMetrics.totalMerchantsCount.plus(
     BigInt.fromI32(1),
   );
-  circleMetrics.save()
+  const isActive = isMerchantActive(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+  );
+
+  if (isActive) {
+    circleMetrics.activeMerchantsCount =
+      circleMetrics.activeMerchantsCount.plus(BigInt.fromI32(1));
+  }
+
+  circleMetrics.save();
 }
 
 export function handleMerchantPaymentChannelUpdate(
@@ -100,7 +112,9 @@ export function handleMerchantPaymentChannelUpdate(
   paymentChannel.save();
 }
 
-export function handleCurrencyAddedUpdate(event: CurrencyAddedUpdateEvent): void {
+export function handleCurrencyAddedUpdate(
+  event: CurrencyAddedUpdateEvent,
+): void {
   const currency = loadCurrency(event.params.currency, event);
   currency.isActive = event.params.isActive;
   currency.save();
@@ -127,7 +141,7 @@ export function handleMerchantWithdrawFeePercentageUpdate(
 ): void {
   const withdrawFee = loadMerchantWithdrawFeePercentage(
     event.params.currency.concat(
-      Bytes.fromByteArray(Bytes.fromBigInt(event.block.timestamp))
+      Bytes.fromByteArray(Bytes.fromBigInt(event.block.timestamp)),
     ),
     event,
   );
