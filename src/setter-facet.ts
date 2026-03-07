@@ -8,6 +8,7 @@ import {
   MerchantWithdrawFeePercentageUpdate as MerchantWithdrawFeePercentageUpdateEvent,
   PaymentChannelConfigUpdate as PaymentChannelConfigUpdateEvent,
   MerchantClaimableRewardsUpdate as MerchantClaimableRewardsUpdateEvent,
+  MerchantWithdrawFeePercentage as MerchantWithdrawFeePercentageEvent,
 } from "../generated/SetterFacet/SetterFacet";
 import { CurrencyConfig, PaymentChannelConfig } from "../generated/schema";
 import {
@@ -180,4 +181,19 @@ export function handleMerchantClaimableRewardsUpdate(
   merchantRewards.merchant = event.params.merchant.toHexString();
   merchantRewards.claimableRewards = event.params.claimableRewards;
   merchantRewards.save();
+}
+
+export function handleMerchantWithdrawFeePercentage(
+  event: MerchantWithdrawFeePercentageEvent,
+): void {
+  const withdrawFee = loadMerchantWithdrawFeePercentage(
+    event.params.currency.concat(
+      Bytes.fromByteArray(Bytes.fromBigInt(event.block.timestamp)),
+    ),
+    event,
+  );
+  withdrawFee.currency = event.params.currency;
+  withdrawFee.feePercentage = event.params.feePercentage;
+  withdrawFee.time = event.block.timestamp;
+  withdrawFee.save();
 }

@@ -17,7 +17,6 @@ import {
   loadMerchantVolumeByMonth,
   loadPaymentChannelMigration,
   loadFCMToken,
-  loadMerchantWithdrawFeePercentage,
   updateActiveMerchantsCount,
   isMerchantActive,
 } from "./lib";
@@ -28,7 +27,6 @@ import {
   Merchant as MerchantEvent,
   MerchantVolume as MerchantVolumeEvent,
   FCMToken as FCMTokenEvent,
-  MerchantWithdrawFeePercentage as MerchantWithdrawFeePercentageEvent,
 } from "../generated/MerchantRegistryFacet/MerchantRegistryFacet";
 import { getYearMonthFromTimestamp } from "./utils/date.utils";
 
@@ -461,19 +459,4 @@ export function handleFCMToken(event: FCMTokenEvent): void {
   fcmToken.tokens = event.params.tokens;
   fcmToken.merchant = merchant.id;
   fcmToken.save();
-}
-
-export function handleMerchantWithdrawFeePercentage(
-  event: MerchantWithdrawFeePercentageEvent,
-): void {
-  const withdrawFee = loadMerchantWithdrawFeePercentage(
-    event.params.currency.concat(
-      Bytes.fromByteArray(Bytes.fromBigInt(event.block.timestamp))
-    ),
-    event,
-  );
-  withdrawFee.currency = event.params.currency;
-  withdrawFee.feePercentage = event.params.feePercentage;
-  withdrawFee.time = event.block.timestamp;
-  withdrawFee.save();
 }
