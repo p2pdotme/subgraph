@@ -1,44 +1,44 @@
 {
   "base-sepolia": {
     "CircleFacet": {
-      "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 43010996
+      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
+      "startBlock": 38525395
     },
     "USDCStakeDelegationFacet": {
-      "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 43010996
+      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
+      "startBlock": 38525395
     },
     "OrderFlowHelper": {
-      "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 43010996
+      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
+      "startBlock": 38525395
     },
     "OrderProcessorFacet": {
-      "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 43010996
+      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
+      "startBlock": 38525395
     },
     "OrderFlowFacet": {
-      "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 43010996
+      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
+      "startBlock": 38525395
     },
     "MerchantOnboardFacet": {
-      "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 43010996
+      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
+      "startBlock": 38525395
     },
     "MerchantRegistryFacet": {
-      "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 43010996
+      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
+      "startBlock": 38525395
     },
     "RewardsFacet": {
-      "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 43010996
+      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
+      "startBlock": 38525395
     },
     "CountryFacet": {
-      "address": "0x49018C16770611BCCB12402c5616aBA30255aE0F",
-      "startBlock": 43010996
+      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
+      "startBlock": 38525395
     },
     "ReputationManager": {
-      "address": "0x72B3168229eE6b93ffB58E5ca5e59A3Ac24E49A9",
-      "startBlock": 43010996
+      "address": "0x59687fD7c3Be0d61A476e6E718503F3Ab56Ab1E3",
+      "startBlock": 38525395
     }
   },
   "base": {

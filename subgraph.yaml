@@ -6,11 +6,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: CircleFacet
-    network: base
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
       abi: CircleFacet
-      startBlock: 43010996
+      startBlock: 38525395
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -28,11 +28,11 @@ dataSources:
       file: ./src/circle-facet.ts
   - kind: ethereum
     name: USDCStakeDelegationFacet
-    network: base
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
       abi: USDCStakeDelegationFacet
-      startBlock: 43010996
+      startBlock: 38525395
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -62,11 +62,11 @@ dataSources:
       file: ./src/stake-delegation.ts
   - kind: ethereum
     name: OrderFlowHelper
-    network: base
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
       abi: OrderFlowHelper
-      startBlock: 43010996
+      startBlock: 38525395
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -88,11 +88,11 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: OrderProcessorFacet
-    network: base
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
       abi: OrderProcessorFacet
-      startBlock: 43010996
+      startBlock: 38525395
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -110,11 +110,11 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: OrderFlowFacet
-    network: base
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
       abi: OrderFlowFacet
-      startBlock: 43010996
+      startBlock: 38525395
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -142,11 +142,11 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: MerchantOnboardFacet
-    network: base
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
       abi: MerchantOnboardFacet
-      startBlock: 43010996
+      startBlock: 38525395
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -177,11 +177,11 @@ dataSources:
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: MerchantRegistryFacet
-    network: base
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
       abi: MerchantRegistryFacet
-      startBlock: 43010996
+      startBlock: 38525395
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -189,7 +189,6 @@ dataSources:
       entities:
         - MerchantRegistryFacet
         - FCMToken
-        - MerchantWithdrawFeePercentage
       abis:
         - name: MerchantRegistryFacet
           file: ./abis/MerchantRegistryFacet.json
@@ -206,16 +205,14 @@ dataSources:
           handler: handleMerchantVolume
         - event: FCMToken(indexed address,string[])
           handler: handleFCMToken
-        - event: MerchantWithdrawFeePercentage(bytes32,uint256)
-          handler: handleMerchantWithdrawFeePercentage
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: RewardsFacet
-    network: base
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
       abi: RewardsFacet
-      startBlock: 43010996
+      startBlock: 38525395
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -243,11 +240,11 @@ dataSources:
       file: ./src/rewards.ts
   - kind: ethereum
     name: CountryFacet
-    network: base
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
       abi: CountryFacet
-      startBlock: 43010996
+      startBlock: 38525395
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -266,11 +263,11 @@ dataSources:
       file: ./src/country-facet.ts
   - kind: ethereum
     name: ReputationManager
-    network: base
+    network: base-sepolia
     source:
-      address: "0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D"
+      address: "0x59687fD7c3Be0d61A476e6E718503F3Ab56Ab1E3"
       abi: ReputationManager
-      startBlock: 43010996
+      startBlock: 38525395
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -329,11 +326,11 @@ dataSources:
   # UPGRADE EMIT EVENTS -> Sync up with older data
   - kind: ethereum
     name: SetterFacet
-    network: base
+    network: base-sepolia
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
       abi: SetterFacet
-      startBlock: 43010996
+      startBlock: 38525395
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -360,4 +357,6 @@ dataSources:
           handler: handlePaymentChannelConfigUpdate
         - event: MerchantClaimableRewardsUpdate(indexed address,uint256)
           handler: handleMerchantClaimableRewardsUpdate
-      file: ./src/sync-data.ts
+        - event: MerchantWithdrawFeePercentage(bytes32,uint256)
+          handler: handleMerchantWithdrawFeePercentage
+      file: ./src/setter-facet.ts
