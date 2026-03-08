@@ -7,11 +7,14 @@ type Circle @entity {
   currency: Bytes!
   name: String!
   communityLink: String!
-  isAutoApprovedPCEnabled: Boolean! 
+  adminLink: String!
+  isAutoApprovedPCEnabled: Boolean!
 
   metrics: CircleMetrics @relation(name: "circle")
+  orderMetricsByMonth: [CircleOrderMetricsByMonth!]
+    @derivedFrom(field: "circle")
 
-  blockNumber: BigInt! 
+  blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
@@ -25,25 +28,25 @@ type Staker @entity {
 
   totalStaked: BigInt!
 
-  circleStakeRecords: [CircleStakeRecords!]!
-  circleUnstakeRecords: [CircleUnstakeRecords!]!
+  circleUsdcStakeRecords: [CircleUsdcStakeRecords!]!
+  circleUsdcUnstakeRecords: [CircleUsdcUnstakeRecords!]!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
 
-# CIRCLE STAKE RECORDS 
+# CIRCLE STAKE RECORDS
 # A record of a staker's stake in a circle
-type CircleStakeRecords @entity {
+type CircleUsdcStakeRecords @entity {
   id: Bytes!
 
   circle: Circle!
   staker: Staker!
-  
+
   amount: BigInt!
 
-  unstakeRequest: CircleUnstakeRecords
+  unstakeRequest: CircleUsdcUnstakeRecords
 
   stakedAt: BigInt!
 
@@ -54,17 +57,17 @@ type CircleStakeRecords @entity {
 
 # CIRCLE UNSTAKE RECORDS
 # A record of a staker's unstake in a circle
-type CircleUnstakeRecords @entity {
+type CircleUsdcUnstakeRecords @entity {
   id: Bytes!
-  
+
   circle: Circle!
   staker: Staker!
-  
+
   amount: BigInt!
   availableAt: BigInt!
 
   status: BigInt!
-  
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -78,8 +81,8 @@ type CircleMetrics @entity {
   circle: Circle @relation(name: "metrics")
 
   # STAKING METRICS
-  totalStaked: BigInt!
-  adminStaked: BigInt!
+  totalUsdcStaked: BigInt!
+  adminUsdcStaked: BigInt!
 
   # DELEGATION METRICS
   totalDelegatedStake: BigInt!
@@ -94,8 +97,24 @@ type CircleMetrics @entity {
   raisedDisputesCount: BigInt!
   resolvedDisputesCount: BigInt!
 
-  #merchant metrics
+  # MERCHANT METRICS
   totalMerchantsCount: BigInt!
+
+  # CIRCLE SCORE METRICS
+  circleScore: BigInt! # Score 0–100
+  circleStatus: String! # bootstrap | active | rejected | paused
+  # Rolling 30d metrics (recomputed from CircleDailyMetrics)
+  avgSettlementSeconds: BigInt! # 30d avg: paidAt → completedAt (SELL/PAY only)
+  disputeRate: BigInt! # 30d rate × 10000
+  rolling30dVolume: BigInt! # 30d USDC volume (computed from daily buckets)
+  # Lifetime counters
+  lifetimeAcceptedOrders: BigInt! # All orders ever accepted by a merchant
+  cumulativeSettlementSeconds: BigInt! # Running sum (all-time, for daily bucket tracking)
+  totalCompletedOrders: BigInt! # All-time non-disputed completed (settlement avg denominator)
+  activeMerchantsCount: BigInt! # Merchants with stakedAmount > 0
+  merchantFaultDisputesCount: BigInt! # All-time merchant fault disputes
+  hasMinOrdersForScore: Boolean!
+  lastScoreUpdateTimestamp: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -115,10 +134,15 @@ type CircleMerchant @entity {
 
   stakedAmount: BigInt!
   delegatedStakedAmount: BigInt!
-  
+
   isOnline: Boolean!
   isBlacklisted: Boolean!
   isOngoingOrder: Boolean!
+
+  # Unstake request tracking for availability
+  isUnstakeRequested: Boolean!
+  unstakeRequestedAt: BigInt!
+  unstakeAmount: BigInt!
 
   onlineAt: BigInt!
   offlineAt: BigInt!
@@ -126,8 +150,15 @@ type CircleMerchant @entity {
 
   currency: Bytes!
 
-  paymentChannels: [MerchantPaymentChannels!]
-  
+  paymentChannels: [MerchantPaymentChannels!] @derivedFrom(field: "merchant")
+  volumeByMonth: [MerchantVolumeByMonth!] @derivedFrom(field: "merchant")
+  orderMetricsByMonth: [MerchantOrderMetricsByMonth!]
+    @derivedFrom(field: "merchant")
+  paymentChannelMigrations: [PaymentChannelMigration!]
+    @derivedFrom(field: "merchant")
+  delegationRecords: [MerchantDelegationRecord!] @derivedFrom(field: "merchant")
+  fcmTokens: [FCMToken!] @derivedFrom(field: "merchant")
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -145,6 +176,12 @@ type MerchantPaymentChannels @entity {
   isActive: Boolean!
   status: Int!
   isMonthlyVolumeUnlimited: Boolean!
+  fiatBalance: BigInt!
+
+  # Current volume tracking for availability calculations
+  dailyVolume: BigInt!
+  monthlyVolume: BigInt!
+  lastUpdatedDailyVolumeAt: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -199,6 +236,8 @@ type Orders @entity(immutable: false) {
   disputeAccountNumber: BigInt!
   disputeSettledByAddr: Bytes!
   disputeFaultType: Int!
+  disputePlacedAt: BigInt!
+  disputeSettledAt: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -214,6 +253,384 @@ type AssignedMerchants @entity {
   assignedPCId: BigInt!
   orderId: BigInt!
   merchant: CircleMerchant
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CIRCLE ADMIN REWARDS
+# A rewards for a circle admin
+type CircleAdminRewards @entity {
+  id: Bytes!
+  admin: String!
+
+  lockedRewards: BigInt!
+  earnedRewards: BigInt!
+  withdrawnRewards: BigInt!
+  claimableRewards: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT REWARDS
+# A rewards for a merchant
+type MerchantRewards @entity {
+  id: Bytes!
+  merchant: String!
+
+  lockedRewards: BigInt!
+  earnedRewards: BigInt!
+  withdrawnRewards: BigInt!
+  claimableRewards: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT VOLUME BY MONTH
+# A volume for a merchant by month
+type MerchantVolumeByMonth @entity {
+  id: Bytes!
+
+  merchant: CircleMerchant!
+  circle: Circle!
+  paymentChannel: MerchantPaymentChannels!
+
+  month: String!
+  volume: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT ORDER METRICS BY MONTH
+# Order metrics for a merchant by year-month
+type MerchantOrderMetricsByMonth @entity {
+  id: Bytes!
+
+  merchant: CircleMerchant!
+
+  # Year-month format: "YYYY-MM" (e.g., "2024-01")
+  month: String!
+
+  # Order counts for this month (totalOrders = completed + cancelled)
+  # Order counts for this month (cancelledOrdersCount = cancelledBuyOrdersCount + cancelledSellOrdersCount + cancelledPayOrdersCount)
+  cancelledBuyOrdersCount: BigInt!
+  cancelledSellOrdersCount: BigInt!
+  cancelledPayOrdersCount: BigInt!
+
+  # Order counts for this month (completedOrdersCount = completedBuyOrdersCount + completedSellOrdersCount + completedPayOrdersCount)
+  completedBuyOrdersCount: BigInt!
+  completedSellOrdersCount: BigInt!
+  completedPayOrdersCount: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CIRCLE ORDER METRICS BY MONTH
+# Order metrics for a circle by year-month
+type CircleOrderMetricsByMonth @entity {
+  id: Bytes!
+
+  circle: Circle!
+
+  # Year-month format: "YYYY-MM" (e.g., "2024-01")
+  month: String!
+
+  # Order counts for this month
+  totalCompletedOrdersCount: BigInt!
+  totalCancelledOrdersCount: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT DELEGATION RECORD
+# A record of delegation activity for a merchant
+type MerchantDelegationRecord @entity {
+  id: Bytes!
+
+  merchant: CircleMerchant!
+  circle: Circle!
+
+  # Type of delegation: DELEGATED, UNDELEGATED
+  type: String!
+
+  # Amount delegated/undelegated
+  amount: BigInt!
+
+  # Running balance after this record
+  balanceAfter: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# PAYMENT CHANNEL CONFIG
+# Configuration for a payment channel (e.g., UPI, IMPS, Pix, etc.)
+type PaymentChannelConfig @entity {
+  id: Bytes!
+
+  paymentChannelId: BigInt!
+  name: String!
+  dailyVolumeLimit: BigInt!
+  currency: Bytes!
+  isActive: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CURRENCY CONFIG
+# Monthly volume limit configuration per currency
+type CurrencyConfig @entity {
+  id: Bytes!
+
+  currency: Bytes!
+  monthlyVolumeLimit: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# PAYMENT CHANNEL MIGRATION
+# A record of payment channel migration requests
+type PaymentChannelMigration @entity {
+  id: Bytes!
+
+  merchant: CircleMerchant!
+
+  fromAccountNo: BigInt!
+  toAccountNo: BigInt!
+  fromPaymentChannelIndex: BigInt!
+  toPaymentChannelIndex: BigInt!
+
+  # Migration status: 0=DEFAULT, 1=PENDING, 2=APPROVED, 3=REJECTED
+  status: BigInt!
+
+  # Fiat balance transferred during migration
+  fromFiatBalance: BigInt!
+  toFiatBalance: BigInt!
+
+  requestedAt: BigInt!
+  settledAt: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# USER
+# A user who is registered in a circle
+type User @entity {
+  id: Bytes!
+
+  address: Bytes!
+  reputationPoint: BigInt!
+  isBlacklisted: Boolean!
+  primaryRecommender: Bytes!
+
+  firstOrderCompletedAt: BigInt!
+
+  orders: [Orders!] @relation(name: "UserOrders")
+  socialVerified: [SocialVerified!] @relation(name: "UserSocialVerified")
+  campaignClaims: [CampaignRewardRedeemed!]
+    @relation(name: "UserCampaignClaims")
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# SOCIAL VERIFIED
+# A social verified record for a user
+type SocialVerified @entity {
+  id: Bytes!
+  socialName: String!
+  verified: Boolean!
+  timestamp: BigInt!
+  user: User! @relation(name: "UserSocialVerified")
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# REPUTATION CHANGE
+# A record of admin-initiated reputation point changes
+type ReputationChange @entity {
+  id: Bytes!
+  admin: Bytes!
+  user: Bytes!
+  rpChange: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CURRENCY
+# A record of currencies
+type Currency @entity {
+  id: Bytes!
+  currency: Bytes!
+  isActive: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT REFERRAL CLAIMED
+# A record of a merchant referral claim
+type MerchantReferralClaimed @entity {
+  id: Bytes!
+  recommender: Bytes!
+  recipient: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT REFERRAL REVENUE CLAIMED
+# A record of a merchant referral revenue claim
+type MerchantReferralRevenueClaimed @entity {
+  id: Bytes!
+  merchant: CircleMerchant!
+  yearMonthKey: BigInt!
+  reward: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CAMPAIGN
+# A campaign
+type Campaign @entity {
+  id: Bytes!
+  campaignId: BigInt!
+  isActive: Boolean!
+  createdAt: BigInt!
+
+  managers: [CampaignManagers!] @derivedFrom(field: "campaign")
+
+  # Metrics
+  managersCount: BigInt!
+  claimsCount: BigInt!
+  totalVolume: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CAMPAIGN MANAGERS
+# A manager for a campaign
+type CampaignManagers @entity {
+  id: Bytes!
+
+  campaign: Campaign
+
+  campaignId: BigInt!
+  manager: Bytes!
+  rpReward: BigInt!
+  usdcReward: BigInt!
+  isActive: Boolean!
+  usernameHash: Bytes!
+  claimLimit: BigInt!
+  requiresZk: Boolean!
+
+  # Metrics
+  claimsCount: BigInt!
+  totalVolume: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CAMPAIGN REWARD REDEEMED
+# A record of a reward redeemed for a campaign
+type CampaignRewardRedeemed @entity {
+  id: Bytes!
+
+  user: User!
+
+  campaignId: BigInt!
+  manager: Bytes!
+  usernameHash: Bytes
+  rpReward: BigInt!
+  usdcReward: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# USER RECOMMENDATION
+# User recommendations to other users
+type UserRecommendation @entity {
+  id: Bytes!
+  recommender: Bytes!
+  recipient: Bytes!
+  timestamp: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CIRCLE DAILY METRICS
+# Rolling 30d window buckets for circle score calculation
+type CircleDailyMetrics @entity {
+  id: Bytes! # circleId-dayNumber
+  circle: Circle!
+  dayNumber: BigInt! # timestamp / 86400
+  # Daily counters (incremented during the day)
+  settlementSecondsSum: BigInt! # Sum of settlement times for the day (SELL/PAY only)
+  completedOrdersCount: BigInt! # Completed non-disputed orders (SELL/PAY, for settlement avg)
+  acceptedOrdersCount: BigInt! # All orders accepted (BUY+SELL+PAY, for dispute rate denominator)
+  merchantFaultDisputesCount: BigInt!
+  volume: BigInt! # USDC volume
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# FCM TOKEN
+# A FCM token for a merchant
+type FCMToken @entity {
+  id: Bytes!
+  address: Bytes!
+  tokens: [String!]
+
+  merchant: CircleMerchant @relation(name: "MerchantFCM")
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT WITHDRAW FEE PERCENTAGE
+# A withdraw fee percentage for a merchant
+type MerchantWithdrawFeePercentage @entity {
+  id: Bytes!
+  currency: Bytes!
+  feePercentage: BigInt!
+  time: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

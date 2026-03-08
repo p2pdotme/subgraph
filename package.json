@@ -4,6 +4,8 @@
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ event-indexer",
     "create-local": "graph create --node http://localhost:8020/ event-indexer",
     "remove-local": "graph remove --node http://localhost:8020/ event-indexer",
@@ -14,5 +16,8 @@
     "@graphprotocol/graph-cli": "0.81.0",
     "@graphprotocol/graph-ts": "0.32.0"
   },
-  "devDependencies": { "matchstick-as": "0.5.0" }
+  "devDependencies": {
+    "matchstick-as": "0.5.0",
+    "prettier": "^3.4.2"
+  }
 }

@@ -40,6 +40,8 @@ export function loadOrders(key: Bytes, event: ethereum.Event): Orders {
     order.disputeAccountNumber = BigInt.fromI32(0);
     order.disputeSettledByAddr = Bytes.empty();
     order.disputeFaultType = -1;
+    order.disputePlacedAt = BigInt.fromI32(0);
+    order.disputeSettledAt = BigInt.fromI32(0);
   }
 
   order.blockNumber = event.block.number;
@@ -70,11 +72,11 @@ export const syncOrder = (
   disputeStatus: i32,
   disputeRedactTransId: BigInt,
   disputeAccountNumber: BigInt,
-  event: ethereum.Event
+  event: ethereum.Event,
 ): void => {
   let _order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(orderId)),
-    event
+    event,
   );
 
   _order.orderId = orderId;
