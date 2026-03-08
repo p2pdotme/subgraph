@@ -3,13 +3,7 @@ import {
   CircleCreated as CircleCreatedEvent,
   // CircleProtocolTokenStaked as CircleProtocolTokenStakedEvent,
 } from "../generated/CircleFacet/CircleFacet";
-import {
-  loadStaker,
-  loadCircle,
-  loadCircleMetrics,
-  loadCircleStakeRecords,
-} from "./utils";
-import { Circle } from "../generated/schema";
+import { loadCircle, loadCircleMetrics } from "./lib";
 
 export function handleCircleCreated(event: CircleCreatedEvent): void {
   const key = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
@@ -21,6 +15,7 @@ export function handleCircleCreated(event: CircleCreatedEvent): void {
   circle.currency = event.params.currency;
   circle.name = event.params.name;
   circle.communityLink = event.params.communityUrl;
+  circle.adminLink = event.params.adminCommunityUrl;
   circle.isAutoApprovedPCEnabled = event.params.autoApprovePaymentChannels;
 
   circle.save();
@@ -45,14 +40,13 @@ export function handleCircleCreated(event: CircleCreatedEvent): void {
 
 //   staker.totalStaked = staker.totalStaked.plus(event.params.stake);
 
-
 //   // UPDATE CIRCLE
 //   const circle = loadCircle(
 //     Bytes.fromHexString(event.params.circleId.toString()),
 //     event
 //   );
 
-//   const circleStakeRecord = loadCircleStakeRecords(
+//   const circleStakeRecord = loadCircleUsdcStakeRecords(
 //     Bytes.fromHexString(`${event.params.circleId.toString()}-${event.params.staker.toHexString()}`),
 //     event
 //   );
@@ -60,8 +54,8 @@ export function handleCircleCreated(event: CircleCreatedEvent): void {
 //   circleStakeRecord.circle = circle.id;
 //   circleStakeRecord.staker = staker.id;
 //   circleStakeRecord.amount = circleStakeRecord.amount.plus(event.params.stake);
-//   staker.circleStakeRecords.push(circleStakeRecord.id);
-  
+//   staker.circleUsdcStakeRecords.push(circleStakeRecord.id);
+
 //   circleStakeRecord.save();
 //   staker.save();
 

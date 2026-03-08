@@ -1,7 +1,7 @@
 import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
-  CircleStakeRecords,
-  CircleUnstakeRecords,
+  CircleUsdcStakeRecords,
+  CircleUsdcUnstakeRecords,
   Staker,
 } from "../../generated/schema";
 import { UNSTAKE_REQUEST_RAISED } from "../constants";
@@ -13,8 +13,8 @@ export function loadStaker(key: Address, event: ethereum.Event): Staker {
     staker = new Staker(key);
     staker.staker = key.toHexString();
     staker.totalStaked = BigInt.fromI32(0);
-    staker.circleStakeRecords = [];
-    staker.circleUnstakeRecords = [];
+    staker.circleUsdcStakeRecords = [];
+    staker.circleUsdcUnstakeRecords = [];
   }
 
   staker.blockNumber = event.block.number;
@@ -24,14 +24,16 @@ export function loadStaker(key: Address, event: ethereum.Event): Staker {
   return staker;
 }
 
-export function loadCircleStakeRecords(
+export function loadCircleUsdcStakeRecords(
   key: Bytes,
-  event: ethereum.Event
-): CircleStakeRecords {
-  let circleStakeRecord = CircleStakeRecords.load(key);
+  event: ethereum.Event,
+): CircleUsdcStakeRecords {
+  let circleStakeRecord = CircleUsdcStakeRecords.load(key);
 
   if (!circleStakeRecord) {
-    circleStakeRecord = new CircleStakeRecords(key);
+    circleStakeRecord = new CircleUsdcStakeRecords(key);
+    circleStakeRecord.circle = Bytes.fromI32(0);
+    circleStakeRecord.staker = Bytes.fromI32(0);
     circleStakeRecord.amount = BigInt.fromI32(0);
     circleStakeRecord.stakedAt = BigInt.fromI32(0);
   }
@@ -43,14 +45,14 @@ export function loadCircleStakeRecords(
   return circleStakeRecord;
 }
 
-export function loadCircleUnstakeRecords(
+export function loadCircleUsdcUnstakeRecords(
   key: Bytes,
-  event: ethereum.Event
-): CircleUnstakeRecords {
-  let circleUnstakeRecord = CircleUnstakeRecords.load(key);
+  event: ethereum.Event,
+): CircleUsdcUnstakeRecords {
+  let circleUnstakeRecord = CircleUsdcUnstakeRecords.load(key);
 
   if (!circleUnstakeRecord) {
-    circleUnstakeRecord = new CircleUnstakeRecords(key);
+    circleUnstakeRecord = new CircleUsdcUnstakeRecords(key);
     circleUnstakeRecord.amount = BigInt.fromI32(0);
     circleUnstakeRecord.availableAt = BigInt.fromI32(0);
     circleUnstakeRecord.status = BigInt.fromI32(UNSTAKE_REQUEST_RAISED);
