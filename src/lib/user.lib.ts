@@ -15,6 +15,7 @@ export function loadUser(key: Bytes, event: ethereum.Event): User {
     user.isBlacklisted = false;
     user.primaryRecommender = Bytes.empty();
     user.firstOrderCompletedAt = BigInt.zero();
+    user.firstOrderCompletedCurrency = Bytes.empty();
   }
 
   user.blockNumber = event.block.number;
