@@ -841,6 +841,7 @@ export function handleMerchantReAssignedNewOrder(
     `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`,
   );
   let assignedMerchant = loadAssignedMerchants(assignedMerchantKey, event);
+  assignedMerchant.assignedMerchant = event.params.merchant.toHexString();
   assignedMerchant.merchant = merchant.id;
   assignedMerchant.orderId = event.params.orderId;
   assignedMerchant.assignedPCId = event.params.accountNo;
