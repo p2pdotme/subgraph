@@ -16,6 +16,8 @@ export function loadUser(key: Bytes, event: ethereum.Event): User {
     user.primaryRecommender = Bytes.empty();
     user.firstOrderCompletedAt = BigInt.zero();
     user.firstOrderCompletedCurrency = Bytes.empty();
+    user.recentOrderCompletedAt = BigInt.zero();
+    user.recentOrderCompletedCurrency = Bytes.empty();
   }
 
   user.blockNumber = event.block.number;

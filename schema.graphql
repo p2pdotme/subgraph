@@ -444,6 +444,9 @@ type User @entity {
   firstOrderCompletedAt: BigInt!
   firstOrderCompletedCurrency: Bytes!
 
+  recentOrderCompletedAt: BigInt!
+  recentOrderCompletedCurrency: Bytes!
+
   orders: [Orders!] @relation(name: "UserOrders")
   socialVerified: [SocialVerified!] @relation(name: "UserSocialVerified")
   campaignClaims: [CampaignRewardRedeemed!]
