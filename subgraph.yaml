@@ -6,11 +6,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: CircleFacet
-    network: base-sepolia
+    network: base
     source:
-      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: CircleFacet
-      startBlock: 38525395
+      startBlock: 43132705
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -23,16 +23,18 @@ dataSources:
       eventHandlers:
         - event: CircleCreated(indexed address,indexed uint256,bytes32,string,string,string,bool)
           handler: handleCircleCreated
+        - event: CircleAdminUpdated(indexed uint256,indexed address,indexed address)
+          handler: handleCircleAdminUpdated
         # - event: CircleProtocolTokenStaked(indexed uint256,indexed address,uint256)
         #   handler: handleCircleProtocolTokenStaked
       file: ./src/circle-facet.ts
   - kind: ethereum
     name: USDCStakeDelegationFacet
-    network: base-sepolia
+    network: base
     source:
-      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: USDCStakeDelegationFacet
-      startBlock: 38525395
+      startBlock: 43132705
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -62,11 +64,11 @@ dataSources:
       file: ./src/stake-delegation.ts
   - kind: ethereum
     name: OrderFlowHelper
-    network: base-sepolia
+    network: base
     source:
-      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: OrderFlowHelper
-      startBlock: 38525395
+      startBlock: 43132705
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -88,11 +90,11 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: OrderProcessorFacet
-    network: base-sepolia
+    network: base
     source:
-      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: OrderProcessorFacet
-      startBlock: 38525395
+      startBlock: 43132705
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -110,11 +112,11 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: OrderFlowFacet
-    network: base-sepolia
+    network: base
     source:
-      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: OrderFlowFacet
-      startBlock: 38525395
+      startBlock: 43132705
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -142,11 +144,11 @@ dataSources:
       file: ./src/order.ts
   - kind: ethereum
     name: MerchantOnboardFacet
-    network: base-sepolia
+    network: base
     source:
-      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: MerchantOnboardFacet
-      startBlock: 38525395
+      startBlock: 43132705
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -177,11 +179,11 @@ dataSources:
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: MerchantRegistryFacet
-    network: base-sepolia
+    network: base
     source:
-      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: MerchantRegistryFacet
-      startBlock: 38525395
+      startBlock: 43132705
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -208,11 +210,11 @@ dataSources:
       file: ./src/circle-merchants.ts
   - kind: ethereum
     name: RewardsFacet
-    network: base-sepolia
+    network: base
     source:
-      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: RewardsFacet
-      startBlock: 38525395
+      startBlock: 43132705
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -240,11 +242,11 @@ dataSources:
       file: ./src/rewards.ts
   - kind: ethereum
     name: CountryFacet
-    network: base-sepolia
+    network: base
     source:
-      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: CountryFacet
-      startBlock: 38525395
+      startBlock: 43132705
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -263,11 +265,11 @@ dataSources:
       file: ./src/country-facet.ts
   - kind: ethereum
     name: ReputationManager
-    network: base-sepolia
+    network: base
     source:
-      address: "0x59687fD7c3Be0d61A476e6E718503F3Ab56Ab1E3"
+      address: "0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D"
       abi: ReputationManager
-      startBlock: 38525395
+      startBlock: 43132705
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -326,11 +328,11 @@ dataSources:
   # UPGRADE EMIT EVENTS -> Sync up with older data
   - kind: ethereum
     name: SetterFacet
-    network: base-sepolia
+    network: base
     source:
-      address: "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0"
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: SetterFacet
-      startBlock: 38525395
+      startBlock: 43132705
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
