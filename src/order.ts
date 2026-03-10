@@ -1185,8 +1185,12 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
   if (user.firstOrderCompletedAt.equals(BigInt.zero())) {
     user.firstOrderCompletedAt = event.block.timestamp;
     user.firstOrderCompletedCurrency = event.params._order.currency;
-    user.save();
   }
+
+  user.recentOrderCompletedAt = event.block.timestamp;
+  user.recentOrderCompletedCurrency = event.params._order.currency;
+
+  user.save();
 }
 
 export function handleOrderCancelledBy(event: OrderCancelledByEvent): void {
