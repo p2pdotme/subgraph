@@ -968,6 +968,7 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
   order.acceptedMerchantAddress = event.params._order.acceptedMerchant;
   order.merchant = merchant.id;
   order.acceptedAt = event.block.timestamp;
+  order.circle = merchant.circle
   order.save();
 
   // SET ORDERS IN MERCHANT ENTITY
