@@ -448,6 +448,17 @@ type User @entity {
   recentOrderCompletedAt: BigInt!
   recentOrderCompletedCurrency: Bytes!
 
+  # Order metrics
+  totalVolume: BigInt!
+
+  cancelledBuyOrdersCount: BigInt!
+  cancelledSellOrdersCount: BigInt!
+  cancelledPayOrdersCount: BigInt!
+
+  completedBuyOrdersCount: BigInt!
+  completedSellOrdersCount: BigInt!
+  completedPayOrdersCount: BigInt!
+
   orders: [Orders!] @relation(name: "UserOrders")
   socialVerified: [SocialVerified!] @relation(name: "UserSocialVerified")
   campaignClaims: [CampaignRewardRedeemed!]
