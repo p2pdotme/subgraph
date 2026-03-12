@@ -18,6 +18,13 @@ export function loadUser(key: Bytes, event: ethereum.Event): User {
     user.firstOrderCompletedCurrency = Bytes.empty();
     user.recentOrderCompletedAt = BigInt.zero();
     user.recentOrderCompletedCurrency = Bytes.empty();
+    user.totalVolume = BigInt.zero();
+    user.cancelledBuyOrdersCount = BigInt.zero();
+    user.cancelledSellOrdersCount = BigInt.zero();
+    user.cancelledPayOrdersCount = BigInt.zero();
+    user.completedBuyOrdersCount = BigInt.zero();
+    user.completedSellOrdersCount = BigInt.zero();
+    user.completedPayOrdersCount = BigInt.zero();
   }
 
   user.blockNumber = event.block.number;
