@@ -206,7 +206,25 @@ export function handleOrderDisputeWithFaultType(
 
   // Update metrics when dispute is settled
   if (event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED) {
-    const month = getYearMonthFromTimestamp(event.block.timestamp);
+    // Load the order to get original timestamps for correct month bucket
+    const disputedOrder = loadOrders(
+      Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+      event,
+    );
+
+    // Use the original event's timestamp to target the correct month bucket:
+    // - COMPLETED → CANCELLED: use completedAt (month where completion was recorded)
+    // - CANCELLED → COMPLETED: use cancelledAt (month where cancellation was recorded)
+    // - fresh: use current block timestamp
+    let originalTimestamp: BigInt;
+    if (previousStatus === ORDER_STATUS_COMPLETED) {
+      originalTimestamp = disputedOrder.completedAt;
+    } else if (previousStatus === ORDER_STATUS_CANCELLED) {
+      originalTimestamp = disputedOrder.cancelledAt;
+    } else {
+      originalTimestamp = event.block.timestamp;
+    }
+    const month = getYearMonthFromTimestamp(originalTimestamp);
 
     // Update merchant monthly order metrics
     const merchantMetricsKey = Bytes.fromUTF8(
@@ -307,21 +325,22 @@ export function handleOrderDisputeWithFaultType(
       scoreState.merchantFaultDisputesCount =
         scoreState.merchantFaultDisputesCount.plus(BigInt.fromI32(1));
 
-      // Record dispute in today's daily bucket
-      const dayNum = getDayNumber(event.block.timestamp);
-      const dailyKey = getDailyMetricsKey(circle, dayNum);
-      let daily = loadCircleDailyMetrics(dailyKey, event);
-      daily.circle = circle;
-      daily.dayNumber = BigInt.fromI32(dayNum);
-      daily.merchantFaultDisputesCount = daily.merchantFaultDisputesCount.plus(
-        BigInt.fromI32(1),
-      );
-      daily.save();
-
       // Reverse settlement metrics for the disputed order using actual values
       const order = loadOrders(
         Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
         event,
+      );
+
+      // Use the original completion day's bucket (not settlement day) so that
+      // dispute rate stays consistent with completed order counts in the
+      // 30-day rolling window
+      const completedDayNum = getDayNumber(order.completedAt);
+      const completedDailyKey = getDailyMetricsKey(circle, completedDayNum);
+      let completedDaily = loadCircleDailyMetrics(completedDailyKey, event);
+      completedDaily.circle = circle;
+      completedDaily.dayNumber = BigInt.fromI32(completedDayNum);
+      completedDaily.merchantFaultDisputesCount = completedDaily.merchantFaultDisputesCount.plus(
+        BigInt.fromI32(1),
       );
 
       if (
@@ -332,20 +351,12 @@ export function handleOrderDisputeWithFaultType(
       ) {
         const actualSettlementSeconds = order.completedAt.minus(order.paidAt);
 
-        // Reverse the daily bucket where this order was originally completed
-        const completedDayNum = getDayNumber(order.completedAt);
-        const completedDailyKey = getDailyMetricsKey(circle, completedDayNum);
-        let completedDaily = loadCircleDailyMetrics(completedDailyKey, event);
-        completedDaily.circle = circle;
-        completedDaily.dayNumber = BigInt.fromI32(completedDayNum);
-
         if (completedDaily.completedOrdersCount.gt(BigInt.zero())) {
           completedDaily.settlementSecondsSum =
             completedDaily.settlementSecondsSum.minus(actualSettlementSeconds);
           completedDaily.completedOrdersCount =
             completedDaily.completedOrdersCount.minus(BigInt.fromI32(1));
         }
-        completedDaily.save();
 
         // Reverse cumulative settlement metrics
         if (scoreState.completedSellPayOrders.gt(BigInt.zero())) {
@@ -362,6 +373,7 @@ export function handleOrderDisputeWithFaultType(
           }
         }
       }
+      completedDaily.save();
     }
 
     compute30dMetrics(scoreState, event.block.timestamp);
