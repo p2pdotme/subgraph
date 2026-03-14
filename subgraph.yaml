@@ -360,3 +360,62 @@ dataSources:
         - event: MerchantWithdrawFeePercentage(bytes32,uint256)
           handler: handleMerchantWithdrawFeePercentage
       file: ./src/setter-facet.ts
+  # LEGACY (Pre-COT) Order Data Sources
+  - kind: ethereum
+    name: LegacyOrderFlowFacet
+    network: base
+    source:
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      abi: LegacyOrderFlowFacet
+      startBlock: 29875200
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Orders
+        - User
+      abis:
+        - name: LegacyOrderFlowFacet
+          file: ./abis/LegacyOrderFlowFacet.json
+      eventHandlers:
+        - event: OrderPlaced(indexed uint256,indexed address,indexed address,uint256,uint8,uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256))
+          handler: handleLegacyOrderPlaced
+        - event: OrderAccepted(indexed uint256,indexed address,string,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256))
+          handler: handleLegacyOrderAccepted
+        - event: BuyOrderPaid(indexed uint256,indexed address,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256))
+          handler: handleLegacyBuyOrderPaid
+        - event: SellOrderUpiSet(indexed uint256,indexed address,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256))
+          handler: handleLegacySellOrderUpiSet
+        - event: OrderCompleted(indexed uint256,indexed address,uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256))
+          handler: handleLegacyOrderCompleted
+        - event: CancelledOrders(indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256))
+          handler: handleLegacyCancelledOrders
+        - event: OrderCancelledBy(indexed uint256,address)
+          handler: handleLegacyOrderCancelledBy
+        - event: AdditionalOrderDetails(indexed uint256,(uint64,uint64,uint128,uint128,uint128,uint256,uint256))
+          handler: handleLegacyAdditionalOrderDetails
+      file: ./src/legacy-order.ts
+  - kind: ethereum
+    name: LegacyOrderProcessorFacet
+    network: base
+    source:
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      abi: LegacyOrderProcessorFacet
+      startBlock: 29875200
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Orders
+        - User
+      abis:
+        - name: LegacyOrderProcessorFacet
+          file: ./abis/LegacyOrderProcessorFacet.json
+      eventHandlers:
+        - event: OrderDispute(indexed address,indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256))
+          handler: handleLegacyOrderDispute
+        - event: OrderDispute(indexed address,indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256),uint8)
+          handler: handleLegacyOrderDisputeV2
+      file: ./src/legacy-order.ts

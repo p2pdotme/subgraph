@@ -206,7 +206,8 @@ type Orders @entity(immutable: false) {
   type: Int!
   status: Int!
   circleId: BigInt!
-  circle: Circle!
+  circle: Circle
+  isLegacyOrder: Boolean!
 
   userAddress: Bytes!
   usdcRecipientAddress: Bytes!
