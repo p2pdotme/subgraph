@@ -4,6 +4,7 @@ import {
   CircleDailyMetrics,
   CircleMetrics,
   CircleOrderMetricsByMonth,
+  CircleScoreState,
 } from "../../generated/schema";
 import { STATUS_BOOTSTRAP, SECONDS_PER_DAY } from "../constants/circle-score";
 
@@ -45,16 +46,9 @@ export function loadCircleMetrics(
     // Initialize circle score fields
     circleMetrics.circleScore = BigInt.fromI32(50); // bootstrap default
     circleMetrics.circleStatus = STATUS_BOOTSTRAP;
-    circleMetrics.avgSettlementSeconds = BigInt.zero();
-    circleMetrics.disputeRate = BigInt.zero();
-    circleMetrics.rolling30dVolume = BigInt.zero();
-    circleMetrics.lifetimeAcceptedOrders = BigInt.zero();
-    circleMetrics.cumulativeSettlementSeconds = BigInt.zero();
-    circleMetrics.totalCompletedOrders = BigInt.zero();
-    circleMetrics.activeMerchantsCount = BigInt.zero();
-    circleMetrics.merchantFaultDisputesCount = BigInt.zero();
     circleMetrics.hasMinOrdersForScore = false;
     circleMetrics.lastScoreUpdateTimestamp = BigInt.zero();
+    circleMetrics.scoreState = key;
   }
 
   circleMetrics.blockNumber = event.block.number;
@@ -62,6 +56,30 @@ export function loadCircleMetrics(
   circleMetrics.transactionHash = event.transaction.hash;
 
   return circleMetrics;
+}
+
+export function loadCircleScoreState(
+  key: Bytes,
+  event: ethereum.Event,
+): CircleScoreState {
+  let scoreState = CircleScoreState.load(key);
+  if (!scoreState) {
+    scoreState = new CircleScoreState(key);
+    scoreState.avgSettlementSeconds = BigInt.zero();
+    scoreState.disputeRate = BigInt.zero();
+    scoreState.rolling30dVolume = BigInt.zero();
+    scoreState.lifetimeAcceptedOrders = BigInt.zero();
+    scoreState.cumulativeSettlementSeconds = BigInt.zero();
+    scoreState.completedSellPayOrders = BigInt.zero();
+    scoreState.activeMerchantsCount = BigInt.zero();
+    scoreState.merchantFaultDisputesCount = BigInt.zero();
+  }
+
+  scoreState.blockNumber = event.block.number;
+  scoreState.blockTimestamp = event.block.timestamp;
+  scoreState.transactionHash = event.transaction.hash;
+
+  return scoreState;
 }
 
 export function loadCircleDailyMetrics(
@@ -103,8 +121,12 @@ export function loadCircleOrderMetricsByMonth(
   if (!metrics) {
     metrics = new CircleOrderMetricsByMonth(key);
     metrics.month = "";
-    metrics.totalCompletedOrdersCount = BigInt.zero();
-    metrics.totalCancelledOrdersCount = BigInt.zero();
+    metrics.cancelledBuyOrdersCount = BigInt.zero();
+    metrics.cancelledSellOrdersCount = BigInt.zero();
+    metrics.cancelledPayOrdersCount = BigInt.zero();
+    metrics.completedBuyOrdersCount = BigInt.zero();
+    metrics.completedSellOrdersCount = BigInt.zero();
+    metrics.completedPayOrdersCount = BigInt.zero();
   }
 
   metrics.blockNumber = event.block.number;
