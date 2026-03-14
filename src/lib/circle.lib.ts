@@ -103,8 +103,12 @@ export function loadCircleOrderMetricsByMonth(
   if (!metrics) {
     metrics = new CircleOrderMetricsByMonth(key);
     metrics.month = "";
-    metrics.totalCompletedOrdersCount = BigInt.zero();
-    metrics.totalCancelledOrdersCount = BigInt.zero();
+    metrics.cancelledBuyOrdersCount = BigInt.zero();
+    metrics.cancelledSellOrdersCount = BigInt.zero();
+    metrics.cancelledPayOrdersCount = BigInt.zero();
+    metrics.completedBuyOrdersCount = BigInt.zero();
+    metrics.completedSellOrdersCount = BigInt.zero();
+    metrics.completedPayOrdersCount = BigInt.zero();
   }
 
   metrics.blockNumber = event.block.number;
