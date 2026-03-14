@@ -26,7 +26,7 @@ export function loadOrders(key: Bytes, event: ethereum.Event): Orders {
     order.acceptedPCId = BigInt.fromI32(0);
     order.acceptedMerchantAddress = Bytes.empty();
     order.circleId = BigInt.fromI32(0);
-    order.circle = Bytes.empty();
+    order.isLegacyOrder = false;
     order.pubkey = "";
     order.encUpi = "";
     order.userPubKey = "";
@@ -86,6 +86,7 @@ export const syncOrder = (
   _order.userAddress = user;
   _order.usdcRecipientAddress = recipientAddr;
   _order.circleId = circleId;
+  _order.circle = changetype<Bytes>(Bytes.fromBigInt(circleId));
   _order.usdcAmount = amount;
   _order.fiatAmount = fiatAmount;
   _order.currency = currency;

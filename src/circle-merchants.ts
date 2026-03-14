@@ -13,6 +13,7 @@ import {
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
+  loadCircleScoreState,
   loadMerchantPaymentChannels,
   loadMerchantVolumeByMonth,
   loadPaymentChannelMigration,
@@ -53,6 +54,7 @@ export function handleMerchantRegisteredToCircle(
 
   // UPDATE CIRCLE METRICS
   let circleMetrics = loadCircleMetrics(circle.id, event);
+  let scoreState = loadCircleScoreState(circle.id, event);
 
   // UPDATE TOTAL MERCHANTS COUNT
   circleMetrics.totalMerchantsCount = circleMetrics.totalMerchantsCount.plus(
@@ -61,12 +63,13 @@ export function handleMerchantRegisteredToCircle(
 
   // New merchant: starts online and not blacklisted
   updateActiveMerchantsCount(
-    circleMetrics,
+    scoreState,
     false,
     isMerchantActive(event.params.stakeAmount, true, false),
   );
 
   circleMetrics.save();
+  scoreState.save();
 }
 
 export function handleOnlineOfflineToggled(
@@ -100,9 +103,9 @@ export function handleOnlineOfflineToggled(
   );
 
   let circle = loadCircle(merchant.circle, event);
-  let circleMetrics = loadCircleMetrics(circle.id, event);
-  updateActiveMerchantsCount(circleMetrics, wasActive, isActive);
-  circleMetrics.save();
+  let scoreState = loadCircleScoreState(circle.id, event);
+  updateActiveMerchantsCount(scoreState, wasActive, isActive);
+  scoreState.save();
 }
 
 export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
@@ -129,9 +132,9 @@ export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
   );
 
   let circle = loadCircle(merchant.circle, event);
-  let circleMetrics = loadCircleMetrics(circle.id, event);
-  updateActiveMerchantsCount(circleMetrics, wasActive, isActive);
-  circleMetrics.save();
+  let scoreState = loadCircleScoreState(circle.id, event);
+  updateActiveMerchantsCount(scoreState, wasActive, isActive);
+  scoreState.save();
 }
 
 export function handleMerchantOngoingOrder(
@@ -356,10 +359,10 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   );
 
   let circle = loadCircle(merchant.circle, event);
-  let circleMetrics = loadCircleMetrics(circle.id, event);
-  updateActiveMerchantsCount(circleMetrics, wasActive, isActive);
-  circleMetrics.save();
-  
+  let scoreState = loadCircleScoreState(circle.id, event);
+  updateActiveMerchantsCount(scoreState, wasActive, isActive);
+  scoreState.save();
+
 }
 
 export function handleMerchantStaked(event: MerchantStakedEvent): void {
@@ -388,9 +391,9 @@ export function handleMerchantStaked(event: MerchantStakedEvent): void {
   );
 
   let circle = loadCircle(merchant.circle, event);
-  let circleMetrics = loadCircleMetrics(circle.id, event);
-  updateActiveMerchantsCount(circleMetrics, wasActive, isActive);
-  circleMetrics.save();
+  let scoreState = loadCircleScoreState(circle.id, event);
+  updateActiveMerchantsCount(scoreState, wasActive, isActive);
+  scoreState.save();
 }
 
 export function handleMerchantWithoutFundsTracker(
