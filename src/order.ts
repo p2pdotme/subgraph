@@ -23,6 +23,7 @@ import {
   loadMerchantOrderMetricsByMonth,
   syncOrder,
   loadUser,
+  adjustUserMetricsByOrderType,
   updateCircleScore,
   updateSettlementTime,
   compute30dMetrics,
@@ -106,30 +107,6 @@ function adjustCircleMetricsByOrderType(
       metrics.completedPayOrdersCount.plus(completedDelta);
     metrics.cancelledPayOrdersCount =
       metrics.cancelledPayOrdersCount.plus(cancelledDelta);
-  }
-}
-
-function adjustUserMetricsByOrderType(
-  user: User,
-  orderType: i32,
-  completedDelta: BigInt,
-  cancelledDelta: BigInt,
-): void {
-  if (orderType === ORDER_TYPE_BUY) {
-    user.completedBuyOrdersCount =
-      user.completedBuyOrdersCount.plus(completedDelta);
-    user.cancelledBuyOrdersCount =
-      user.cancelledBuyOrdersCount.plus(cancelledDelta);
-  } else if (orderType === ORDER_TYPE_SELL) {
-    user.completedSellOrdersCount =
-      user.completedSellOrdersCount.plus(completedDelta);
-    user.cancelledSellOrdersCount =
-      user.cancelledSellOrdersCount.plus(cancelledDelta);
-  } else if (orderType === ORDER_TYPE_PAY) {
-    user.completedPayOrdersCount =
-      user.completedPayOrdersCount.plus(completedDelta);
-    user.cancelledPayOrdersCount =
-      user.cancelledPayOrdersCount.plus(cancelledDelta);
   }
 }
 

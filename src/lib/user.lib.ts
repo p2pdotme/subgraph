@@ -5,6 +5,11 @@ import {
   ReputationChange,
   UserRecommendation,
 } from "../../generated/schema";
+import {
+  ORDER_TYPE_BUY,
+  ORDER_TYPE_SELL,
+  ORDER_TYPE_PAY,
+} from "../constants/status";
 
 export function loadUser(key: Bytes, event: ethereum.Event): User {
   let user = User.load(key);
@@ -32,6 +37,30 @@ export function loadUser(key: Bytes, event: ethereum.Event): User {
   user.transactionHash = event.transaction.hash;
 
   return user;
+}
+
+export function adjustUserMetricsByOrderType(
+  user: User,
+  orderType: i32,
+  completedDelta: BigInt,
+  cancelledDelta: BigInt,
+): void {
+  if (orderType === ORDER_TYPE_BUY) {
+    user.completedBuyOrdersCount =
+      user.completedBuyOrdersCount.plus(completedDelta);
+    user.cancelledBuyOrdersCount =
+      user.cancelledBuyOrdersCount.plus(cancelledDelta);
+  } else if (orderType === ORDER_TYPE_SELL) {
+    user.completedSellOrdersCount =
+      user.completedSellOrdersCount.plus(completedDelta);
+    user.cancelledSellOrdersCount =
+      user.cancelledSellOrdersCount.plus(cancelledDelta);
+  } else if (orderType === ORDER_TYPE_PAY) {
+    user.completedPayOrdersCount =
+      user.completedPayOrdersCount.plus(completedDelta);
+    user.cancelledPayOrdersCount =
+      user.cancelledPayOrdersCount.plus(cancelledDelta);
+  }
 }
 
 export function loadSocialVerified(
