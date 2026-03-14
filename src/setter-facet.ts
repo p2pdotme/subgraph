@@ -16,6 +16,7 @@ import {
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
+  loadCircleScoreState,
   loadCurrency,
   loadMerchantPaymentChannels,
   loadMerchantRewards,
@@ -72,6 +73,8 @@ export function handleCircleMerchantDetailsAndConfigUpdate(
   circleMetrics.totalMerchantsCount = circleMetrics.totalMerchantsCount.plus(
     BigInt.fromI32(1),
   );
+  circleMetrics.save();
+
   const isActive = isMerchantActive(
     merchant.stakedAmount,
     merchant.isOnline,
@@ -79,11 +82,11 @@ export function handleCircleMerchantDetailsAndConfigUpdate(
   );
 
   if (isActive) {
-    circleMetrics.activeMerchantsCount =
-      circleMetrics.activeMerchantsCount.plus(BigInt.fromI32(1));
+    let scoreState = loadCircleScoreState(circle.id, event);
+    scoreState.activeMerchantsCount =
+      scoreState.activeMerchantsCount.plus(BigInt.fromI32(1));
+    scoreState.save();
   }
-
-  circleMetrics.save();
 }
 
 export function handleMerchantPaymentChannelUpdate(
