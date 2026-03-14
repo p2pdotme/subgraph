@@ -405,6 +405,7 @@ export function handleOrderDisputeWithFaultType(
       scoreState.merchantFaultDisputesCount =
         scoreState.merchantFaultDisputesCount.plus(BigInt.fromI32(1));
 
+      // Record dispute in today's daily bucket
       const dayNum = getDayNumber(event.block.timestamp);
       const dailyKey = getDailyMetricsKey(circle, dayNum);
       let daily = loadCircleDailyMetrics(dailyKey, event);
@@ -415,23 +416,48 @@ export function handleOrderDisputeWithFaultType(
       );
       daily.save();
 
-      if (scoreState.completedSellPayOrders.gt(BigInt.zero())) {
-        scoreState.completedSellPayOrders =
-          scoreState.completedSellPayOrders.minus(BigInt.fromI32(1));
+      // Reverse settlement metrics for the disputed order using actual values
+      const order = loadOrders(
+        Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+        event,
+      );
 
+      if (
+        (order.type === ORDER_TYPE_SELL || order.type === ORDER_TYPE_PAY) &&
+        order.paidAt.gt(BigInt.zero()) &&
+        order.completedAt.gt(BigInt.zero()) &&
+        order.completedAt.ge(order.paidAt)
+      ) {
+        const actualSettlementSeconds = order.completedAt.minus(order.paidAt);
+
+        // Reverse the daily bucket where this order was originally completed
+        const completedDayNum = getDayNumber(order.completedAt);
+        const completedDailyKey = getDailyMetricsKey(circle, completedDayNum);
+        let completedDaily = loadCircleDailyMetrics(completedDailyKey, event);
+        completedDaily.circle = circle;
+        completedDaily.dayNumber = BigInt.fromI32(completedDayNum);
+
+        if (completedDaily.completedOrdersCount.gt(BigInt.zero())) {
+          completedDaily.settlementSecondsSum =
+            completedDaily.settlementSecondsSum.minus(actualSettlementSeconds);
+          completedDaily.completedOrdersCount =
+            completedDaily.completedOrdersCount.minus(BigInt.fromI32(1));
+        }
+        completedDaily.save();
+
+        // Reverse cumulative settlement metrics
         if (scoreState.completedSellPayOrders.gt(BigInt.zero())) {
-          scoreState.cumulativeSettlementSeconds =
-            scoreState.cumulativeSettlementSeconds.minus(
-              scoreState.avgSettlementSeconds,
-            );
+          scoreState.completedSellPayOrders =
+            scoreState.completedSellPayOrders.minus(BigInt.fromI32(1));
 
-          scoreState.avgSettlementSeconds =
-            scoreState.cumulativeSettlementSeconds.div(
-              scoreState.completedSellPayOrders,
-            );
-        } else {
-          scoreState.cumulativeSettlementSeconds = BigInt.zero();
-          scoreState.avgSettlementSeconds = BigInt.zero();
+          if (scoreState.completedSellPayOrders.gt(BigInt.zero())) {
+            scoreState.cumulativeSettlementSeconds =
+              scoreState.cumulativeSettlementSeconds.minus(
+                actualSettlementSeconds,
+              );
+          } else {
+            scoreState.cumulativeSettlementSeconds = BigInt.zero();
+          }
         }
       }
     }
