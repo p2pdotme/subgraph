@@ -100,22 +100,32 @@ type CircleMetrics @entity {
   # MERCHANT METRICS
   totalMerchantsCount: BigInt!
 
-  # CIRCLE SCORE METRICS
+  # CIRCLE SCORE
   circleScore: BigInt! # Score 0–100
   circleStatus: String! # bootstrap | active | rejected | paused
-  # Rolling 30d metrics (recomputed from CircleDailyMetrics)
-  avgSettlementSeconds: BigInt! # 30d avg: paidAt → completedAt (SELL/PAY only)
-  disputeRate: BigInt! # 30d rate × 10000
-  rolling30dVolume: BigInt! # 30d USDC volume (computed from daily buckets)
-  # Lifetime counters
-  lifetimeAcceptedOrders: BigInt! # All orders ever accepted by a merchant
-  cumulativeSettlementSeconds: BigInt! # Running sum (all-time, for daily bucket tracking)
-  totalCompletedOrders: BigInt! # All-time non-disputed completed (settlement avg denominator)
-  activeMerchantsCount: BigInt! # Merchants with stakedAmount > 0
-  merchantFaultDisputesCount: BigInt! # All-time merchant fault disputes
   hasMinOrdersForScore: Boolean!
   lastScoreUpdateTimestamp: BigInt!
+  scoreState: CircleScoreState!
 
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CIRCLE SCORE STATE
+# Internal state used to calculate circle score. Separated from CircleMetrics
+type CircleScoreState @entity {
+  id: Bytes! # same as circle id
+  # 30d rolling metrics (recomputed from CircleDailyMetrics)
+  avgSettlementSeconds: BigInt! # paidAt → completedAt (SELL/PAY only)
+  disputeRate: BigInt! # 30d rate × 10000
+  rolling30dVolume: BigInt! # 30d USDC volume
+  # Lifetime counters
+  lifetimeAcceptedOrders: BigInt! # All orders ever accepted by a merchant
+  cumulativeSettlementSeconds: BigInt! # Running sum for settlement avg
+  completedSellPayOrders: BigInt! # SELL/PAY completed minus dispute-reversed (settlement avg denominator)
+  activeMerchantsCount: BigInt! # Merchants with stake > 0, online, not blacklisted
+  merchantFaultDisputesCount: BigInt! # All-time merchant fault disputes
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!

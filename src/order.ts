@@ -14,6 +14,7 @@ import {
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
+  loadCircleScoreState,
   loadCircleDailyMetrics,
   getDayNumber,
   getDailyMetricsKey,
@@ -28,7 +29,7 @@ import {
   applyTrustFirewall,
   checkBootstrapGraduation,
 } from "./lib";
-import { CircleMetrics } from "../generated/schema";
+import { CircleMetrics, CircleScoreState } from "../generated/schema";
 import {
   DISPUTE_STATUS_RAISED,
   DISPUTE_STATUS_SETTLED,
@@ -375,6 +376,8 @@ export function handleOrderDisputeWithFaultType(
 
   if (!circleMetrics) return;
 
+  let scoreState = loadCircleScoreState(circle, event);
+
   // updateDisputeMetrics expects OrderDisputeEvent but the logic only uses
   // disputeInfo.status which is the same field, so we cast safely
   if (event.params._order.disputeInfo.status === DISPUTE_STATUS_RAISED) {
@@ -399,8 +402,8 @@ export function handleOrderDisputeWithFaultType(
       newStatus === ORDER_STATUS_CANCELLED &&
       previousStatus === ORDER_STATUS_COMPLETED
     ) {
-      circleMetrics.merchantFaultDisputesCount =
-        circleMetrics.merchantFaultDisputesCount.plus(BigInt.fromI32(1));
+      scoreState.merchantFaultDisputesCount =
+        scoreState.merchantFaultDisputesCount.plus(BigInt.fromI32(1));
 
       const dayNum = getDayNumber(event.block.timestamp);
       const dailyKey = getDailyMetricsKey(circle, dayNum);
@@ -412,36 +415,37 @@ export function handleOrderDisputeWithFaultType(
       );
       daily.save();
 
-      if (circleMetrics.totalCompletedOrders.gt(BigInt.zero())) {
-        circleMetrics.totalCompletedOrders =
-          circleMetrics.totalCompletedOrders.minus(BigInt.fromI32(1));
+      if (scoreState.completedSellPayOrders.gt(BigInt.zero())) {
+        scoreState.completedSellPayOrders =
+          scoreState.completedSellPayOrders.minus(BigInt.fromI32(1));
 
-        if (circleMetrics.totalCompletedOrders.gt(BigInt.zero())) {
-          circleMetrics.cumulativeSettlementSeconds =
-            circleMetrics.cumulativeSettlementSeconds.minus(
-              circleMetrics.avgSettlementSeconds,
+        if (scoreState.completedSellPayOrders.gt(BigInt.zero())) {
+          scoreState.cumulativeSettlementSeconds =
+            scoreState.cumulativeSettlementSeconds.minus(
+              scoreState.avgSettlementSeconds,
             );
 
-          circleMetrics.avgSettlementSeconds =
-            circleMetrics.cumulativeSettlementSeconds.div(
-              circleMetrics.totalCompletedOrders,
+          scoreState.avgSettlementSeconds =
+            scoreState.cumulativeSettlementSeconds.div(
+              scoreState.completedSellPayOrders,
             );
         } else {
-          circleMetrics.cumulativeSettlementSeconds = BigInt.zero();
-          circleMetrics.avgSettlementSeconds = BigInt.zero();
+          scoreState.cumulativeSettlementSeconds = BigInt.zero();
+          scoreState.avgSettlementSeconds = BigInt.zero();
         }
       }
     }
 
-    compute30dMetrics(circleMetrics, event.block.timestamp);
-    updateCircleScore(circleMetrics);
+    compute30dMetrics(scoreState, event.block.timestamp);
+    updateCircleScore(circleMetrics, scoreState);
 
-    applyTrustFirewall(circleMetrics);
+    applyTrustFirewall(circleMetrics, scoreState);
 
     circleMetrics.lastScoreUpdateTimestamp = event.block.timestamp;
   }
 
   circleMetrics.save();
+  scoreState.save();
 }
 
 export function handleCancelledOrders(event: CancelledOrdersEvent): void {
@@ -830,10 +834,10 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
   // Increment lifetime accepted orders and daily bucket for circle score
   const circle = merchant.circle;
   if (circle && !circle.equals(Bytes.fromI32(0))) {
-    let circleMetrics = loadCircleMetrics(circle, event);
-    circleMetrics.lifetimeAcceptedOrders =
-      circleMetrics.lifetimeAcceptedOrders.plus(BigInt.fromI32(1));
-    circleMetrics.save();
+    let scoreState = loadCircleScoreState(circle, event);
+    scoreState.lifetimeAcceptedOrders =
+      scoreState.lifetimeAcceptedOrders.plus(BigInt.fromI32(1));
+    scoreState.save();
 
     // Increment daily bucket accepted orders count (dispute rate denominator)
     const dayNum = getDayNumber(event.block.timestamp);
@@ -959,6 +963,8 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
     event.params._order.amount,
   );
 
+  let scoreState = loadCircleScoreState(circle, event);
+
   // Load the order to check dispute status and timestamps
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
@@ -987,7 +993,7 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
         // Calculate: completedAt - paidAt
         if (order.completedAt.ge(order.paidAt)) {
           const settlementSeconds = order.completedAt.minus(order.paidAt);
-          updateSettlementTime(circleMetrics, settlementSeconds);
+          updateSettlementTime(scoreState, settlementSeconds);
 
           // Write settlement time to daily bucket
           daily.settlementSecondsSum =
@@ -1002,20 +1008,21 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
     daily.save();
 
     // Recompute 30d rolling metrics
-    compute30dMetrics(circleMetrics, event.block.timestamp);
+    compute30dMetrics(scoreState, event.block.timestamp);
 
     // Update circle score
-    updateCircleScore(circleMetrics);
+    updateCircleScore(circleMetrics, scoreState);
 
     // Check lifecycle transitions
-    checkBootstrapGraduation(circleMetrics);
-    applyTrustFirewall(circleMetrics);
+    checkBootstrapGraduation(circleMetrics, scoreState);
+    applyTrustFirewall(circleMetrics, scoreState);
 
     // Update timestamp
     circleMetrics.lastScoreUpdateTimestamp = event.block.timestamp;
   }
 
   circleMetrics.save();
+  scoreState.save();
 
   // UPDATE CAMPAIGN VOLUME
   let campaignClaims = user.campaignClaims;
@@ -1090,17 +1097,20 @@ const ONCHAIN_STATUS_ACTIVE: i32 = 1;
 const ONCHAIN_STATUS_INACTIVE: i32 = 2;
 const ONCHAIN_STATUS_REJECTED: i32 = 3;
 
-function applyActiveOrDefaultStatus(circleMetrics: CircleMetrics): void {
+function applyActiveOrDefaultStatus(
+  circleMetrics: CircleMetrics,
+  scoreState: CircleScoreState,
+): void {
   if (
-    circleMetrics.lifetimeAcceptedOrders.ge(BigInt.fromI32(40)) ||
+    scoreState.lifetimeAcceptedOrders.ge(BigInt.fromI32(40)) ||
     circleMetrics.totalVolume.ge(BigInt.fromI64(20_000_000_000))
   ) {
     circleMetrics.circleStatus = "active";
   } else {
     circleMetrics.circleStatus = "bootstrap";
   }
-  updateCircleScore(circleMetrics);
-  applyTrustFirewall(circleMetrics);
+  updateCircleScore(circleMetrics, scoreState);
+  applyTrustFirewall(circleMetrics, scoreState);
 }
 
 export function handleCircleStatusUpdated(
@@ -1109,6 +1119,7 @@ export function handleCircleStatusUpdated(
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   let circle = loadCircle(circleKey, event);
   let circleMetrics = loadCircleMetrics(circle.id, event);
+  let scoreState = loadCircleScoreState(circle.id, event);
 
   if (event.params.newStatus == ONCHAIN_STATUS_REJECTED) {
     circleMetrics.circleStatus = "rejected";
@@ -1117,11 +1128,12 @@ export function handleCircleStatusUpdated(
     event.params.newStatus == ONCHAIN_STATUS_ACTIVE ||
     event.params.newStatus == ONCHAIN_STATUS_DEFAULT
   ) {
-    applyActiveOrDefaultStatus(circleMetrics);
+    applyActiveOrDefaultStatus(circleMetrics, scoreState);
   } else if (event.params.newStatus == ONCHAIN_STATUS_INACTIVE) {
     circleMetrics.circleStatus = "inactive";
     circleMetrics.circleScore = BigInt.zero();
   }
 
   circleMetrics.save();
+  scoreState.save();
 }

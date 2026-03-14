@@ -6,6 +6,7 @@ export {
 export {
   loadCircle,
   loadCircleMetrics,
+  loadCircleScoreState,
   loadCircleDailyMetrics,
   getDayNumber,
   getDailyMetricsKey,
