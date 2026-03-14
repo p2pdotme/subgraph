@@ -1,5 +1,9 @@
 import { BigInt, Bytes } from "@graphprotocol/graph-ts";
-import { CircleDailyMetrics, CircleMetrics } from "../../generated/schema";
+import {
+  CircleDailyMetrics,
+  CircleMetrics,
+  CircleScoreState,
+} from "../../generated/schema";
 import {
   MIN_ORDERS_FOR_SCORE,
   WEIGHT_SPEED,
@@ -84,7 +88,7 @@ function calculateVolumeScore(volume: BigInt): i32 {
  * Recompute 30d rolling metrics from CircleDailyMetrics buckets
  */
 export function compute30dMetrics(
-  circleMetrics: CircleMetrics,
+  scoreState: CircleScoreState,
   currentTimestamp: BigInt,
 ): void {
   const currentDay = currentTimestamp.toI32() / SECONDS_PER_DAY;
@@ -97,7 +101,7 @@ export function compute30dMetrics(
   for (let i = 0; i < ROLLING_WINDOW_DAYS; i++) {
     const dayNum = currentDay - i;
     const dayKey = Bytes.fromUTF8(
-      circleMetrics.id.toHexString() + "-" + dayNum.toString(),
+      scoreState.id.toHexString() + "-" + dayNum.toString(),
     );
     const daily = CircleDailyMetrics.load(dayKey);
     if (daily) {
@@ -113,23 +117,23 @@ export function compute30dMetrics(
 
   // Avg settlement (30d) — uses SELL/PAY completed orders only
   if (totalCompletedOrders.gt(BigInt.zero())) {
-    circleMetrics.avgSettlementSeconds =
+    scoreState.avgSettlementSeconds =
       totalSettlement.div(totalCompletedOrders);
   } else {
-    circleMetrics.avgSettlementSeconds = BigInt.zero();
+    scoreState.avgSettlementSeconds = BigInt.zero();
   }
 
   // Dispute rate (30d) = merchant fault disputes / accepted orders × 10000
   if (totalAcceptedOrders.gt(BigInt.zero())) {
-    circleMetrics.disputeRate = totalDisputes
+    scoreState.disputeRate = totalDisputes
       .times(BigInt.fromI32(DISPUTE_RATE_SCALE))
       .div(totalAcceptedOrders);
   } else {
-    circleMetrics.disputeRate = BigInt.zero();
+    scoreState.disputeRate = BigInt.zero();
   }
 
   // Store 30d volume for volume score calculation
-  circleMetrics.rolling30dVolume = totalVolume;
+  scoreState.rolling30dVolume = totalVolume;
 }
 
 /**
@@ -137,7 +141,10 @@ export function compute30dMetrics(
  * Formula: 0.35*speed + 0.30*dispute + 0.20*merchants + 0.15*volume
  * Score stored as plain 0–100
  */
-export function updateCircleScore(circleMetrics: CircleMetrics): void {
+export function updateCircleScore(
+  circleMetrics: CircleMetrics,
+  scoreState: CircleScoreState,
+): void {
   // Skip if rejected (set by on-chain CircleStatusUpdated event)
   if (circleMetrics.circleStatus == STATUS_REJECTED) {
     return;
@@ -145,7 +152,7 @@ export function updateCircleScore(circleMetrics: CircleMetrics): void {
 
   // Check minimum orders threshold using lifetime accepted orders
   if (
-    circleMetrics.lifetimeAcceptedOrders.lt(
+    scoreState.lifetimeAcceptedOrders.lt(
       BigInt.fromI32(MIN_ORDERS_FOR_SCORE),
     )
   ) {
@@ -156,12 +163,12 @@ export function updateCircleScore(circleMetrics: CircleMetrics): void {
   circleMetrics.hasMinOrdersForScore = true;
 
   // Calculate component scores
-  const speedScore = calculateSpeedScore(circleMetrics.avgSettlementSeconds);
-  const disputeScore = calculateDisputeScore(circleMetrics.disputeRate);
+  const speedScore = calculateSpeedScore(scoreState.avgSettlementSeconds);
+  const disputeScore = calculateDisputeScore(scoreState.disputeRate);
   const merchantsScore = calculateMerchantsScore(
-    circleMetrics.activeMerchantsCount,
+    scoreState.activeMerchantsCount,
   );
-  const volumeScore = calculateVolumeScore(circleMetrics.rolling30dVolume);
+  const volumeScore = calculateVolumeScore(scoreState.rolling30dVolume);
 
   // Apply weights: weighted sum out of 10000
   const weightedScore =
@@ -182,7 +189,10 @@ export function updateCircleScore(circleMetrics: CircleMetrics): void {
  * - Rejection is now handled on-chain via CircleStatusUpdated event
  * - avgSettlement > 600s → paused (recovers when ≤ 600s)
  */
-export function applyTrustFirewall(circleMetrics: CircleMetrics): void {
+export function applyTrustFirewall(
+  circleMetrics: CircleMetrics,
+  scoreState: CircleScoreState,
+): void {
   // Rejected is set by on-chain CircleStatusUpdated event — don't override
   if (circleMetrics.circleStatus == STATUS_REJECTED) {
     return;
@@ -190,16 +200,16 @@ export function applyTrustFirewall(circleMetrics: CircleMetrics): void {
 
   // Avg settlement > 600s → paused
   if (
-    circleMetrics.avgSettlementSeconds.gt(
+    scoreState.avgSettlementSeconds.gt(
       BigInt.fromI32(MAX_SETTLEMENT_FOR_PAUSE),
     ) &&
-    circleMetrics.avgSettlementSeconds.gt(BigInt.zero())
+    scoreState.avgSettlementSeconds.gt(BigInt.zero())
   ) {
     circleMetrics.circleStatus = STATUS_PAUSED;
   } else if (circleMetrics.circleStatus == STATUS_PAUSED) {
     // Recovered — check if circle meets graduation criteria
     if (
-      circleMetrics.lifetimeAcceptedOrders.ge(
+      scoreState.lifetimeAcceptedOrders.ge(
         BigInt.fromI32(BOOTSTRAP_ORDERS),
       ) ||
       circleMetrics.totalVolume.ge(BigInt.fromI64(BOOTSTRAP_USDC_VOLUME))
@@ -215,13 +225,16 @@ export function applyTrustFirewall(circleMetrics: CircleMetrics): void {
  * Check if a bootstrap circle should graduate to active
  * Graduates when: lifetime accepted orders >= 40 OR total volume >= 20K USDC
  */
-export function checkBootstrapGraduation(circleMetrics: CircleMetrics): void {
+export function checkBootstrapGraduation(
+  circleMetrics: CircleMetrics,
+  scoreState: CircleScoreState,
+): void {
   if (circleMetrics.circleStatus != STATUS_BOOTSTRAP) {
     return;
   }
 
   if (
-    circleMetrics.lifetimeAcceptedOrders.ge(BigInt.fromI32(BOOTSTRAP_ORDERS)) ||
+    scoreState.lifetimeAcceptedOrders.ge(BigInt.fromI32(BOOTSTRAP_ORDERS)) ||
     circleMetrics.totalVolume.ge(BigInt.fromI64(BOOTSTRAP_USDC_VOLUME))
   ) {
     circleMetrics.circleStatus = STATUS_ACTIVE;
@@ -232,19 +245,19 @@ export function checkBootstrapGraduation(circleMetrics: CircleMetrics): void {
  * Update settlement time with new order (SELL/PAY only, paidAt→completedAt)
  */
 export function updateSettlementTime(
-  circleMetrics: CircleMetrics,
+  scoreState: CircleScoreState,
   settlementSeconds: BigInt,
 ): void {
-  circleMetrics.cumulativeSettlementSeconds =
-    circleMetrics.cumulativeSettlementSeconds.plus(settlementSeconds);
+  scoreState.cumulativeSettlementSeconds =
+    scoreState.cumulativeSettlementSeconds.plus(settlementSeconds);
 
-  circleMetrics.totalCompletedOrders = circleMetrics.totalCompletedOrders.plus(
+  scoreState.completedSellPayOrders = scoreState.completedSellPayOrders.plus(
     BigInt.fromI32(1),
   );
 
-  circleMetrics.avgSettlementSeconds =
-    circleMetrics.cumulativeSettlementSeconds.div(
-      circleMetrics.totalCompletedOrders,
+  scoreState.avgSettlementSeconds =
+    scoreState.cumulativeSettlementSeconds.div(
+      scoreState.completedSellPayOrders,
     );
 }
 
@@ -263,17 +276,17 @@ export function isMerchantActive(
  * Update active merchants count based on active status transitions.
  */
 export function updateActiveMerchantsCount(
-  circleMetrics: CircleMetrics,
+  scoreState: CircleScoreState,
   wasActive: boolean,
   isActive: boolean,
 ): void {
   if (!wasActive && isActive) {
-    circleMetrics.activeMerchantsCount =
-      circleMetrics.activeMerchantsCount.plus(BigInt.fromI32(1));
+    scoreState.activeMerchantsCount =
+      scoreState.activeMerchantsCount.plus(BigInt.fromI32(1));
   } else if (wasActive && !isActive) {
-    if (circleMetrics.activeMerchantsCount.gt(BigInt.zero())) {
-      circleMetrics.activeMerchantsCount =
-        circleMetrics.activeMerchantsCount.minus(BigInt.fromI32(1));
+    if (scoreState.activeMerchantsCount.gt(BigInt.zero())) {
+      scoreState.activeMerchantsCount =
+        scoreState.activeMerchantsCount.minus(BigInt.fromI32(1));
     }
   }
 }
