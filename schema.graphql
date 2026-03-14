@@ -346,8 +346,13 @@ type CircleOrderMetricsByMonth @entity {
   month: String!
 
   # Order counts for this month
-  totalCompletedOrdersCount: BigInt!
-  totalCancelledOrdersCount: BigInt!
+  cancelledBuyOrdersCount: BigInt!
+  cancelledSellOrdersCount: BigInt!
+  cancelledPayOrdersCount: BigInt!
+
+  completedBuyOrdersCount: BigInt!
+  completedSellOrdersCount: BigInt!
+  completedPayOrdersCount: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
