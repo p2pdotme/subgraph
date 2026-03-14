@@ -86,6 +86,7 @@ export const syncOrder = (
   _order.userAddress = user;
   _order.usdcRecipientAddress = recipientAddr;
   _order.circleId = circleId;
+  _order.circle = changetype<Bytes>(Bytes.fromBigInt(circleId));
   _order.usdcAmount = amount;
   _order.fiatAmount = fiatAmount;
   _order.currency = currency;
