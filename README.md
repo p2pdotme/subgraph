@@ -278,7 +278,7 @@ erDiagram
 
 ## Circle Score & Order Routing
 
-The system assigns incoming orders to the best available circle using a **trust-weighted scoring** mechanism. Each circle earns a score from 0 to 100 based on its performance. Higher-scoring circles receive more orders.
+The event-indexer computes and stores a **trust-weighted score** (0–100) for each circle based on its performance. Circle selection happens client-side — this repo only handles score computation.
 
 ### Circle Lifecycle
 
@@ -313,16 +313,16 @@ Every circle goes through these statuses:
 
 ### Step 1: Trust Firewall (runs first on every score update)
 
-Before anything else, the system checks if a circle should be blocked or paused:
+Before anything else, the system checks circle status:
 
 ```
-if dispute_rate > 12%  →  status = rejected, score = 0   (permanent ban)
+if status == rejected  →  skip scoring entirely (score stays 0)
 if avg_settlement > 600s  →  status = paused              (reduced orders)
 ```
 
-- **Rejected** circles are permanently removed from order routing.
-- **Paused** circles still get a small chance at orders (via exploration), giving them an opportunity to improve settlement times and return to active.
-- If a paused circle brings its avg settlement back to ≤600s, it automatically becomes **active** again.
+- **Rejected** circles are permanently removed from order routing. Rejection is handled **on-chain** via `CircleStatusUpdated` event — the contract uses `disputeCounter >= disputeThreshold` (from `SlashConfig`). The indexer simply receives the event and sets `score = 0`.
+- **Paused** circles still get a chance at orders, giving them an opportunity to improve settlement times and return to active.
+- If a paused circle brings its avg settlement back to ≤600s, it automatically becomes **active** again (or **bootstrap** if it hasn't graduated yet).
 
 ### Step 2: Bootstrap Phase (new circles)
 
@@ -335,7 +335,9 @@ When a circle is first created, it enters **bootstrap** with a default score of 
 | Lifetime orders | ≥ 40 |
 | Lifetime USDC volume | ≥ 20,000 USDC |
 
-**Fast reject during bootstrap** — The system doesn't wait for 40 orders to decide a circle is bad. If the dispute rate exceeds 20% during bootstrap, the circle is immediately **rejected**.
+**Weight cap** — Bootstrap circles have their score capped at 25 (`BOOTSTRAP_MAX_WEIGHT`), regardless of the calculated score. This prevents unproven circles from dominating order routing.
+
+**Rejection** — There is no bootstrap-specific rejection logic. Rejection is always handled on-chain via `disputeCounter >= disputeThreshold`, with no bootstrap distinction. The indexer receives the `CircleStatusUpdated` event and sets `score = 0`.
 
 ### Step 3: Circle Score Calculation (0–100)
 
@@ -389,7 +391,7 @@ dispute = max(0, 100 - (dispute_rate × 1800))
 
 #### 3c. Merchants Score (20% weight)
 
-Rewards circles with more active merchants (merchants with staked amount > 0).
+Rewards circles with more active merchants. A merchant is "active" when: `stakedAmount > 0 AND isOnline AND !isBlacklisted`.
 
 ```
 merchants = min(100, active_merchants)
@@ -414,33 +416,9 @@ volume = min(100, total_volume_usdc / 10,000)
 | 500,000 | 50 |
 | ≥1,000,000 | 100 |
 
-### Step 4: Order Routing (Epsilon-Greedy)
+### Note: Order Routing
 
-Orders are assigned to circles using an **epsilon-greedy bandit** algorithm. This balances between picking the best circle (exploitation) and giving other circles a chance (exploration).
-
-```
-EPSILON = 0.25          →  25% of orders explore
-1 - EPSILON = 0.75      →  75% of orders exploit
-RECOVERY_SCALE = 0.3    →  paused circles get 30% of their score as weight
-```
-
-**How it works:**
-
-1. A random number is generated (0 to 1)
-2. **75% of the time (exploit):** Pick from **active circles only**, weighted by score. Higher-scoring circles get proportionally more orders.
-3. **25% of the time (explore):** Pick from **all eligible circles** (including paused). Paused circles' weights are scaled down by 0.3x, giving them a small but real chance to recover.
-
-**Example with 5 circles:**
-
-| Circle | Status | Score | Exploit Prob | Explore Prob | Overall Prob |
-|--------|--------|-------|-------------|-------------|-------------|
-| A | active | 90 | 40.9% | 34.0% | 39.2% |
-| B | active | 70 | 31.8% | 26.4% | 30.4% |
-| E | active | 60 | 27.3% | 22.6% | 26.1% |
-| C | paused | 50 | 0% | 9.4% | 2.35% |
-| D | paused | 40 | 0% | 7.5% | 1.9% |
-
-Active circles A, B, E receive ~95% of orders proportional to their scores. Paused circles C, D still get ~4% of orders combined, giving them a path to recovery.
+Order routing (epsilon-greedy circle selection) does **not** live in this repo. The event-indexer only computes and stores the circle score. Circle selection happens client-side.
 
 ### 30-Day Rolling Window
 
@@ -510,24 +488,6 @@ xychart-beta
     bar [29, 28, 8, 5, 21]
 ```
 
-#### Order Routing Outcome
-
-With both circles active and eligible, here's how orders would be distributed:
-
-```
-Total weight = 67 (Alpha) + 21 (Beta) = 88
-
-Circle Alpha probability = 67 / 88 = 76.1%
-Circle Beta probability  = 21 / 88 = 23.9%
-```
-
-```mermaid
-pie title Order Distribution (out of 100 orders)
-    "Circle Alpha (score 67)" : 76
-    "Circle Beta (score 21)" : 24
-```
-
 **What this means:**
-- Out of every 100 orders, Circle Alpha gets ~76 and Circle Beta gets ~24.
-- Circle Alpha dominates because it settles 2x faster (60s vs 120s), has 4x fewer disputes (1% vs 4%), has 3x more merchants, and 10x more volume.
-- Circle Beta can improve its share by: reducing settlement time, lowering disputes, onboarding more merchants, or increasing volume. The score recalculates on every completed order, so improvements are reflected immediately.
+- Circle Alpha scores 67 vs Circle Beta's 21 — Alpha dominates because it settles 2x faster (60s vs 120s), has 4x fewer disputes (1% vs 4%), has 3x more merchants, and 10x more volume.
+- Circle Beta can improve its score by: reducing settlement time, lowering disputes, onboarding more merchants, or increasing volume. The score recalculates on every completed order, so improvements are reflected immediately.
