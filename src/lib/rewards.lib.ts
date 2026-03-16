@@ -1,5 +1,10 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { CircleAdminRewards, MerchantRewards } from "../../generated/schema";
+import {
+  CircleAdminRewards,
+  CircleAdminRewardClaimLedger,
+  MerchantRewards,
+  MerchantRewardClaimLedger,
+} from "../../generated/schema";
 
 export function loadCircleAdminRewards(
   key: Bytes,
@@ -43,4 +48,44 @@ export function loadMerchantRewards(
   merchantRewards.transactionHash = event.transaction.hash;
 
   return merchantRewards;
+}
+
+export function loadCircleAdminRewardClaimLedger(
+  key: Bytes,
+  event: ethereum.Event,
+): CircleAdminRewardClaimLedger {
+  let circleAdminRewardClaimLedger = CircleAdminRewardClaimLedger.load(key);
+
+  if (!circleAdminRewardClaimLedger) {
+    circleAdminRewardClaimLedger = new CircleAdminRewardClaimLedger(key);
+    circleAdminRewardClaimLedger.admin = "";
+    circleAdminRewardClaimLedger.amount = BigInt.zero();
+    circleAdminRewardClaimLedger.claimedAt = BigInt.zero();
+  }
+
+  circleAdminRewardClaimLedger.blockNumber = event.block.number;
+  circleAdminRewardClaimLedger.blockTimestamp = event.block.timestamp;
+  circleAdminRewardClaimLedger.transactionHash = event.transaction.hash;
+
+  return circleAdminRewardClaimLedger;
+}
+
+export function loadMerchantRewardClaimLedger(
+  key: Bytes,
+  event: ethereum.Event,
+): MerchantRewardClaimLedger {
+  let merchantRewardClaimLedger = MerchantRewardClaimLedger.load(key);
+
+  if (!merchantRewardClaimLedger) {
+    merchantRewardClaimLedger = new MerchantRewardClaimLedger(key);
+    merchantRewardClaimLedger.merchant = "";
+    merchantRewardClaimLedger.amount = BigInt.zero();
+    merchantRewardClaimLedger.claimedAt = BigInt.zero();
+  }
+
+  merchantRewardClaimLedger.blockNumber = event.block.number;
+  merchantRewardClaimLedger.blockTimestamp = event.block.timestamp;
+  merchantRewardClaimLedger.transactionHash = event.transaction.hash;
+
+  return merchantRewardClaimLedger;
 }
