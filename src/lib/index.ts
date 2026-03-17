@@ -26,7 +26,12 @@ export {
   loadMerchantReferralClaimed,
   loadMerchantReferralRevenueClaimed,
 } from "./merchants.lib";
-export { loadCircleAdminRewards, loadMerchantRewards } from "./rewards.lib";
+export {
+  loadCircleAdminRewards,
+  loadMerchantRewards,
+  loadCircleAdminRewardClaimLedger,
+  loadMerchantRewardClaimLedger,
+} from "./rewards.lib";
 export { loadUser, loadSocialVerified, loadReputationChange, adjustUserMetricsByOrderType } from "./user.lib";
 export { loadCurrency } from "./currency.lib";
 export * from "./circle-score.lib";
