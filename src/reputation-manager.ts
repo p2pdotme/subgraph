@@ -37,17 +37,9 @@ import { loadUserRecommendation } from "./lib/user.lib";
 export function handleOnchainActivityRPUpdated(
   event: OnchainActivityRPUpdatedEvent,
 ): void {
-  let user = loadUser(event.params.user, event);
-
-  if (event.params.points.gt(BigInt.zero())) {
-    user.reputationPoint = user.reputationPoint.plus(event.params.points);
-  } else {
-    user.reputationPoint = user.reputationPoint.minus(
-      event.params.points.abs(),
-    );
-  }
-
-  user.save();
+  // No-op: reputationPoint is already correctly set by
+  // handleReputationPointsUpdated which fires from _updateUserRp()
+  // in the same transaction. Modifying RP here would double-count.
 }
 
 export function handleReputationPointsUpdated(
