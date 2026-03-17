@@ -427,7 +427,7 @@ type CurrencyMetricsByMonth @entity {
   id: Bytes!
 
   currency: Bytes!
-  month: String! # "M-YYYY" format
+  month: String! # "YYYY-MM" format
 
   # Completed order counts by type
   completedBuyOrdersCount: BigInt!
@@ -453,7 +453,7 @@ type CurrencyMetricsByDay @entity {
   id: Bytes!
 
   currency: Bytes!
-  day: String! # "D-M-YYYY" format
+  day: String! # "YYYY-MM-DD" format
 
   # Completed order counts by type
   completedBuyOrdersCount: BigInt!
