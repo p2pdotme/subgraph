@@ -1,5 +1,5 @@
-import { Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Currency } from "../../generated/schema";
+import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { Currency, CurrencyMetricsByMonth } from "../../generated/schema";
 
 export function loadCurrency(key: Bytes, event: ethereum.Event): Currency {
   let currency = Currency.load(key);
@@ -14,4 +14,29 @@ export function loadCurrency(key: Bytes, event: ethereum.Event): Currency {
   currency.transactionHash = event.transaction.hash;
 
   return currency;
+}
+
+export function loadCurrencyMetricsByMonth(
+  key: Bytes,
+  event: ethereum.Event,
+): CurrencyMetricsByMonth {
+  let metrics = CurrencyMetricsByMonth.load(key);
+  if (!metrics) {
+    metrics = new CurrencyMetricsByMonth(key);
+    metrics.currency = Bytes.empty();
+    metrics.month = "";
+    metrics.completedBuyOrdersCount = BigInt.zero();
+    metrics.completedSellOrdersCount = BigInt.zero();
+    metrics.completedPayOrdersCount = BigInt.zero();
+    metrics.cancelledBuyOrdersCount = BigInt.zero();
+    metrics.cancelledSellOrdersCount = BigInt.zero();
+    metrics.cancelledPayOrdersCount = BigInt.zero();
+    metrics.totalVolume = BigInt.zero();
+  }
+
+  metrics.blockNumber = event.block.number;
+  metrics.blockTimestamp = event.block.timestamp;
+  metrics.transactionHash = event.transaction.hash;
+
+  return metrics;
 }

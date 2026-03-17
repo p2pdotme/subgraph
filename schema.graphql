@@ -421,6 +421,32 @@ type CurrencyConfig @entity {
   transactionHash: Bytes!
 }
 
+# CURRENCY METRICS BY MONTH
+# Global per-currency monthly metrics aggregating order counts and USDC volume
+type CurrencyMetricsByMonth @entity {
+  id: Bytes!
+
+  currency: Bytes!
+  month: String! # "M-YYYY" format
+
+  # Completed order counts by type
+  completedBuyOrdersCount: BigInt!
+  completedSellOrdersCount: BigInt!
+  completedPayOrdersCount: BigInt!
+
+  # Cancelled order counts by type
+  cancelledBuyOrdersCount: BigInt!
+  cancelledSellOrdersCount: BigInt!
+  cancelledPayOrdersCount: BigInt!
+
+  # Volume (USDC, completed orders only)
+  totalVolume: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # PAYMENT CHANNEL MIGRATION
 # A record of payment channel migration requests
 type PaymentChannelMigration @entity {

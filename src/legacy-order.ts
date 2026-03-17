@@ -13,7 +13,7 @@ import {
   OrderDispute1 as LegacyOrderDisputeEvent,
   OrderDispute as LegacyOrderDisputeV2Event,
 } from "../generated/LegacyOrderProcessorFacet/LegacyOrderProcessorFacet";
-import { loadOrders, syncOrder, loadUser, adjustUserMetricsByOrderType } from "./lib";
+import { loadOrders, syncOrder, loadUser, adjustUserMetricsByOrderType, loadCurrencyMetricsByMonth } from "./lib";
 import {
   DISPUTE_STATUS_RAISED,
   DISPUTE_STATUS_SETTLED,
@@ -23,6 +23,7 @@ import {
   ORDER_TYPE_SELL,
   ORDER_TYPE_PAY,
 } from "./constants/status";
+import { getYearMonthFromTimestamp } from "./utils/date.utils";
 
 export function handleLegacyOrderPlaced(event: LegacyOrderPlacedEvent): void {
   syncOrder(
@@ -229,6 +230,32 @@ export function handleLegacyOrderCompleted(
   user.totalVolume = user.totalVolume.plus(event.params._order.amount);
 
   user.save();
+
+  // Update currency monthly metrics
+  const month = getYearMonthFromTimestamp(event.block.timestamp);
+  const currencyMetricsKey = Bytes.fromUTF8(
+    `${event.params._order.currency.toHexString()}-${month}`,
+  );
+  const currencyMetrics = loadCurrencyMetricsByMonth(
+    currencyMetricsKey,
+    event,
+  );
+  currencyMetrics.currency = event.params._order.currency;
+  currencyMetrics.month = month;
+  if (orderType === ORDER_TYPE_BUY) {
+    currencyMetrics.completedBuyOrdersCount =
+      currencyMetrics.completedBuyOrdersCount.plus(BigInt.fromI32(1));
+  } else if (orderType === ORDER_TYPE_SELL) {
+    currencyMetrics.completedSellOrdersCount =
+      currencyMetrics.completedSellOrdersCount.plus(BigInt.fromI32(1));
+  } else if (orderType === ORDER_TYPE_PAY) {
+    currencyMetrics.completedPayOrdersCount =
+      currencyMetrics.completedPayOrdersCount.plus(BigInt.fromI32(1));
+  }
+  currencyMetrics.totalVolume = currencyMetrics.totalVolume.plus(
+    event.params._order.amount,
+  );
+  currencyMetrics.save();
 }
 
 export function handleLegacyCancelledOrders(
@@ -284,6 +311,29 @@ export function handleLegacyCancelledOrders(
   }
 
   user.save();
+
+  // Update currency monthly metrics
+  const month = getYearMonthFromTimestamp(event.block.timestamp);
+  const currencyMetricsKey = Bytes.fromUTF8(
+    `${event.params._order.currency.toHexString()}-${month}`,
+  );
+  const currencyMetrics = loadCurrencyMetricsByMonth(
+    currencyMetricsKey,
+    event,
+  );
+  currencyMetrics.currency = event.params._order.currency;
+  currencyMetrics.month = month;
+  if (orderType === ORDER_TYPE_BUY) {
+    currencyMetrics.cancelledBuyOrdersCount =
+      currencyMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
+  } else if (orderType === ORDER_TYPE_SELL) {
+    currencyMetrics.cancelledSellOrdersCount =
+      currencyMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
+  } else if (orderType === ORDER_TYPE_PAY) {
+    currencyMetrics.cancelledPayOrdersCount =
+      currencyMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
+  }
+  currencyMetrics.save();
 }
 
 export function handleLegacyOrderCancelledBy(
@@ -409,11 +459,36 @@ export function handleLegacyOrderDisputeV2(
 
   order.save();
 
-  // Adjust User metrics when dispute is settled
+  // Adjust User and currency metrics when dispute is settled
   if (event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED) {
     const newStatus = event.params._order.status;
     const user = loadUser(event.params._order.user, event);
     const orderType = event.params._order.orderType;
+
+    // Determine original month bucket
+    const disputedOrder = loadOrders(
+      Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+      event,
+    );
+    let originalTimestamp: BigInt;
+    if (previousStatus === ORDER_STATUS_COMPLETED) {
+      originalTimestamp = disputedOrder.completedAt;
+    } else if (previousStatus === ORDER_STATUS_CANCELLED) {
+      originalTimestamp = disputedOrder.cancelledAt;
+    } else {
+      originalTimestamp = event.block.timestamp;
+    }
+    const month = getYearMonthFromTimestamp(originalTimestamp);
+
+    const currencyMetricsKey = Bytes.fromUTF8(
+      `${event.params._order.currency.toHexString()}-${month}`,
+    );
+    const currencyMetrics = loadCurrencyMetricsByMonth(
+      currencyMetricsKey,
+      event,
+    );
+    currencyMetrics.currency = event.params._order.currency;
+    currencyMetrics.month = month;
 
     if (
       previousStatus === ORDER_STATUS_COMPLETED &&
@@ -426,6 +501,27 @@ export function handleLegacyOrderDisputeV2(
         BigInt.fromI32(1),
       );
       user.totalVolume = user.totalVolume.minus(event.params._order.amount);
+
+      // Currency metrics: COMPLETED → CANCELLED
+      if (orderType === ORDER_TYPE_BUY) {
+        currencyMetrics.completedBuyOrdersCount =
+          currencyMetrics.completedBuyOrdersCount.minus(BigInt.fromI32(1));
+        currencyMetrics.cancelledBuyOrdersCount =
+          currencyMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_SELL) {
+        currencyMetrics.completedSellOrdersCount =
+          currencyMetrics.completedSellOrdersCount.minus(BigInt.fromI32(1));
+        currencyMetrics.cancelledSellOrdersCount =
+          currencyMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_PAY) {
+        currencyMetrics.completedPayOrdersCount =
+          currencyMetrics.completedPayOrdersCount.minus(BigInt.fromI32(1));
+        currencyMetrics.cancelledPayOrdersCount =
+          currencyMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
+      }
+      currencyMetrics.totalVolume = currencyMetrics.totalVolume.minus(
+        event.params._order.amount,
+      );
     } else if (
       previousStatus === ORDER_STATUS_CANCELLED &&
       newStatus === ORDER_STATUS_COMPLETED
@@ -437,6 +533,27 @@ export function handleLegacyOrderDisputeV2(
         BigInt.fromI32(-1),
       );
       user.totalVolume = user.totalVolume.plus(event.params._order.amount);
+
+      // Currency metrics: CANCELLED → COMPLETED
+      if (orderType === ORDER_TYPE_BUY) {
+        currencyMetrics.completedBuyOrdersCount =
+          currencyMetrics.completedBuyOrdersCount.plus(BigInt.fromI32(1));
+        currencyMetrics.cancelledBuyOrdersCount =
+          currencyMetrics.cancelledBuyOrdersCount.minus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_SELL) {
+        currencyMetrics.completedSellOrdersCount =
+          currencyMetrics.completedSellOrdersCount.plus(BigInt.fromI32(1));
+        currencyMetrics.cancelledSellOrdersCount =
+          currencyMetrics.cancelledSellOrdersCount.minus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_PAY) {
+        currencyMetrics.completedPayOrdersCount =
+          currencyMetrics.completedPayOrdersCount.plus(BigInt.fromI32(1));
+        currencyMetrics.cancelledPayOrdersCount =
+          currencyMetrics.cancelledPayOrdersCount.minus(BigInt.fromI32(1));
+      }
+      currencyMetrics.totalVolume = currencyMetrics.totalVolume.plus(
+        event.params._order.amount,
+      );
     } else if (
       previousStatus !== ORDER_STATUS_COMPLETED &&
       previousStatus !== ORDER_STATUS_CANCELLED
@@ -449,6 +566,21 @@ export function handleLegacyOrderDisputeV2(
           BigInt.fromI32(0),
         );
         user.totalVolume = user.totalVolume.plus(event.params._order.amount);
+
+        // Currency metrics: fresh → COMPLETED
+        if (orderType === ORDER_TYPE_BUY) {
+          currencyMetrics.completedBuyOrdersCount =
+            currencyMetrics.completedBuyOrdersCount.plus(BigInt.fromI32(1));
+        } else if (orderType === ORDER_TYPE_SELL) {
+          currencyMetrics.completedSellOrdersCount =
+            currencyMetrics.completedSellOrdersCount.plus(BigInt.fromI32(1));
+        } else if (orderType === ORDER_TYPE_PAY) {
+          currencyMetrics.completedPayOrdersCount =
+            currencyMetrics.completedPayOrdersCount.plus(BigInt.fromI32(1));
+        }
+        currencyMetrics.totalVolume = currencyMetrics.totalVolume.plus(
+          event.params._order.amount,
+        );
       } else if (newStatus === ORDER_STATUS_CANCELLED) {
         adjustUserMetricsByOrderType(
           user,
@@ -456,9 +588,22 @@ export function handleLegacyOrderDisputeV2(
           BigInt.fromI32(0),
           BigInt.fromI32(1),
         );
+
+        // Currency metrics: fresh → CANCELLED
+        if (orderType === ORDER_TYPE_BUY) {
+          currencyMetrics.cancelledBuyOrdersCount =
+            currencyMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
+        } else if (orderType === ORDER_TYPE_SELL) {
+          currencyMetrics.cancelledSellOrdersCount =
+            currencyMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
+        } else if (orderType === ORDER_TYPE_PAY) {
+          currencyMetrics.cancelledPayOrdersCount =
+            currencyMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
+        }
       }
     }
 
+    currencyMetrics.save();
     user.save();
   }
 }
