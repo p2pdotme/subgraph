@@ -427,6 +427,13 @@ export function handleLegacyAdditionalOrderDetails(
 export function handleLegacyOrderDispute(
   event: LegacyOrderDisputeEvent,
 ): void {
+  // Load order BEFORE syncOrder to capture previous status
+  let orderBeforeSync = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+    event,
+  );
+  const previousStatus = orderBeforeSync.status;
+
   syncOrder(
     event.params._order.id,
     event.params._order.orderType,
@@ -473,6 +480,40 @@ export function handleLegacyOrderDispute(
   }
 
   order.save();
+
+  // Adjust legacy stats on dispute settlement
+  if (event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED) {
+    const newStatus = event.params._order.status;
+    const legacyStats = loadLegacyStats(event.params._order.currency, event);
+    legacyStats.currency = event.params._order.currency;
+
+    if (
+      previousStatus === ORDER_STATUS_COMPLETED &&
+      newStatus === ORDER_STATUS_CANCELLED
+    ) {
+      legacyStats.completedOrdersCount = legacyStats.completedOrdersCount.minus(BigInt.fromI32(1));
+      legacyStats.cancelledOrdersCount = legacyStats.cancelledOrdersCount.plus(BigInt.fromI32(1));
+      legacyStats.totalVolume = legacyStats.totalVolume.minus(event.params._order.amount);
+    } else if (
+      previousStatus === ORDER_STATUS_CANCELLED &&
+      newStatus === ORDER_STATUS_COMPLETED
+    ) {
+      legacyStats.cancelledOrdersCount = legacyStats.cancelledOrdersCount.minus(BigInt.fromI32(1));
+      legacyStats.completedOrdersCount = legacyStats.completedOrdersCount.plus(BigInt.fromI32(1));
+      legacyStats.totalVolume = legacyStats.totalVolume.plus(event.params._order.amount);
+    } else if (
+      previousStatus !== ORDER_STATUS_COMPLETED &&
+      previousStatus !== ORDER_STATUS_CANCELLED
+    ) {
+      if (newStatus === ORDER_STATUS_COMPLETED) {
+        legacyStats.completedOrdersCount = legacyStats.completedOrdersCount.plus(BigInt.fromI32(1));
+        legacyStats.totalVolume = legacyStats.totalVolume.plus(event.params._order.amount);
+      } else if (newStatus === ORDER_STATUS_CANCELLED) {
+        legacyStats.cancelledOrdersCount = legacyStats.cancelledOrdersCount.plus(BigInt.fromI32(1));
+      }
+    }
+    legacyStats.save();
+  }
 }
 
 export function handleLegacyOrderDisputeV2(
