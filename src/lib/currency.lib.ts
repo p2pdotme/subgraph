@@ -1,5 +1,5 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Currency, CurrencyMetricsByMonth } from "../../generated/schema";
+import { Currency, CurrencyMetricsByMonth, CurrencyMetricsByDay } from "../../generated/schema";
 
 export function loadCurrency(key: Bytes, event: ethereum.Event): Currency {
   let currency = Currency.load(key);
@@ -25,6 +25,31 @@ export function loadCurrencyMetricsByMonth(
     metrics = new CurrencyMetricsByMonth(key);
     metrics.currency = Bytes.empty();
     metrics.month = "";
+    metrics.completedBuyOrdersCount = BigInt.zero();
+    metrics.completedSellOrdersCount = BigInt.zero();
+    metrics.completedPayOrdersCount = BigInt.zero();
+    metrics.cancelledBuyOrdersCount = BigInt.zero();
+    metrics.cancelledSellOrdersCount = BigInt.zero();
+    metrics.cancelledPayOrdersCount = BigInt.zero();
+    metrics.totalVolume = BigInt.zero();
+  }
+
+  metrics.blockNumber = event.block.number;
+  metrics.blockTimestamp = event.block.timestamp;
+  metrics.transactionHash = event.transaction.hash;
+
+  return metrics;
+}
+
+export function loadCurrencyMetricsByDay(
+  key: Bytes,
+  event: ethereum.Event,
+): CurrencyMetricsByDay {
+  let metrics = CurrencyMetricsByDay.load(key);
+  if (!metrics) {
+    metrics = new CurrencyMetricsByDay(key);
+    metrics.currency = Bytes.empty();
+    metrics.day = "";
     metrics.completedBuyOrdersCount = BigInt.zero();
     metrics.completedSellOrdersCount = BigInt.zero();
     metrics.completedPayOrdersCount = BigInt.zero();

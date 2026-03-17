@@ -13,7 +13,7 @@ import {
   OrderDispute1 as LegacyOrderDisputeEvent,
   OrderDispute as LegacyOrderDisputeV2Event,
 } from "../generated/LegacyOrderProcessorFacet/LegacyOrderProcessorFacet";
-import { loadOrders, syncOrder, loadUser, adjustUserMetricsByOrderType, loadCurrencyMetricsByMonth } from "./lib";
+import { loadOrders, syncOrder, loadUser, adjustUserMetricsByOrderType, loadCurrencyMetricsByMonth, loadCurrencyMetricsByDay } from "./lib";
 import {
   DISPUTE_STATUS_RAISED,
   DISPUTE_STATUS_SETTLED,
@@ -23,7 +23,7 @@ import {
   ORDER_TYPE_SELL,
   ORDER_TYPE_PAY,
 } from "./constants/status";
-import { getYearMonthFromTimestamp } from "./utils/date.utils";
+import { getYearMonthFromTimestamp, getDayFromTimestamp } from "./utils/date.utils";
 
 export function handleLegacyOrderPlaced(event: LegacyOrderPlacedEvent): void {
   syncOrder(
@@ -256,6 +256,32 @@ export function handleLegacyOrderCompleted(
     event.params._order.amount,
   );
   currencyMetrics.save();
+
+  // Update currency daily metrics
+  const day = getDayFromTimestamp(event.block.timestamp);
+  const currencyDailyKey = Bytes.fromUTF8(
+    `${event.params._order.currency.toHexString()}-${day}`,
+  );
+  const currencyDailyMetrics = loadCurrencyMetricsByDay(
+    currencyDailyKey,
+    event,
+  );
+  currencyDailyMetrics.currency = event.params._order.currency;
+  currencyDailyMetrics.day = day;
+  if (orderType === ORDER_TYPE_BUY) {
+    currencyDailyMetrics.completedBuyOrdersCount =
+      currencyDailyMetrics.completedBuyOrdersCount.plus(BigInt.fromI32(1));
+  } else if (orderType === ORDER_TYPE_SELL) {
+    currencyDailyMetrics.completedSellOrdersCount =
+      currencyDailyMetrics.completedSellOrdersCount.plus(BigInt.fromI32(1));
+  } else if (orderType === ORDER_TYPE_PAY) {
+    currencyDailyMetrics.completedPayOrdersCount =
+      currencyDailyMetrics.completedPayOrdersCount.plus(BigInt.fromI32(1));
+  }
+  currencyDailyMetrics.totalVolume = currencyDailyMetrics.totalVolume.plus(
+    event.params._order.amount,
+  );
+  currencyDailyMetrics.save();
 }
 
 export function handleLegacyCancelledOrders(
@@ -334,6 +360,29 @@ export function handleLegacyCancelledOrders(
       currencyMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
   }
   currencyMetrics.save();
+
+  // Update currency daily metrics
+  const day = getDayFromTimestamp(event.block.timestamp);
+  const currencyDailyKey = Bytes.fromUTF8(
+    `${event.params._order.currency.toHexString()}-${day}`,
+  );
+  const currencyDailyMetrics = loadCurrencyMetricsByDay(
+    currencyDailyKey,
+    event,
+  );
+  currencyDailyMetrics.currency = event.params._order.currency;
+  currencyDailyMetrics.day = day;
+  if (orderType === ORDER_TYPE_BUY) {
+    currencyDailyMetrics.cancelledBuyOrdersCount =
+      currencyDailyMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
+  } else if (orderType === ORDER_TYPE_SELL) {
+    currencyDailyMetrics.cancelledSellOrdersCount =
+      currencyDailyMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
+  } else if (orderType === ORDER_TYPE_PAY) {
+    currencyDailyMetrics.cancelledPayOrdersCount =
+      currencyDailyMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
+  }
+  currencyDailyMetrics.save();
 }
 
 export function handleLegacyOrderCancelledBy(
@@ -604,6 +653,102 @@ export function handleLegacyOrderDisputeV2(
     }
 
     currencyMetrics.save();
+
+    // Update currency daily metrics
+    const day = getDayFromTimestamp(originalTimestamp);
+    const currencyDailyKey = Bytes.fromUTF8(
+      `${event.params._order.currency.toHexString()}-${day}`,
+    );
+    const currencyDailyMetrics = loadCurrencyMetricsByDay(
+      currencyDailyKey,
+      event,
+    );
+    currencyDailyMetrics.currency = event.params._order.currency;
+    currencyDailyMetrics.day = day;
+
+    if (
+      previousStatus === ORDER_STATUS_COMPLETED &&
+      newStatus === ORDER_STATUS_CANCELLED
+    ) {
+      // Daily currency metrics: COMPLETED → CANCELLED
+      if (orderType === ORDER_TYPE_BUY) {
+        currencyDailyMetrics.completedBuyOrdersCount =
+          currencyDailyMetrics.completedBuyOrdersCount.minus(BigInt.fromI32(1));
+        currencyDailyMetrics.cancelledBuyOrdersCount =
+          currencyDailyMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_SELL) {
+        currencyDailyMetrics.completedSellOrdersCount =
+          currencyDailyMetrics.completedSellOrdersCount.minus(BigInt.fromI32(1));
+        currencyDailyMetrics.cancelledSellOrdersCount =
+          currencyDailyMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_PAY) {
+        currencyDailyMetrics.completedPayOrdersCount =
+          currencyDailyMetrics.completedPayOrdersCount.minus(BigInt.fromI32(1));
+        currencyDailyMetrics.cancelledPayOrdersCount =
+          currencyDailyMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
+      }
+      currencyDailyMetrics.totalVolume = currencyDailyMetrics.totalVolume.minus(
+        event.params._order.amount,
+      );
+    } else if (
+      previousStatus === ORDER_STATUS_CANCELLED &&
+      newStatus === ORDER_STATUS_COMPLETED
+    ) {
+      // Daily currency metrics: CANCELLED → COMPLETED
+      if (orderType === ORDER_TYPE_BUY) {
+        currencyDailyMetrics.completedBuyOrdersCount =
+          currencyDailyMetrics.completedBuyOrdersCount.plus(BigInt.fromI32(1));
+        currencyDailyMetrics.cancelledBuyOrdersCount =
+          currencyDailyMetrics.cancelledBuyOrdersCount.minus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_SELL) {
+        currencyDailyMetrics.completedSellOrdersCount =
+          currencyDailyMetrics.completedSellOrdersCount.plus(BigInt.fromI32(1));
+        currencyDailyMetrics.cancelledSellOrdersCount =
+          currencyDailyMetrics.cancelledSellOrdersCount.minus(BigInt.fromI32(1));
+      } else if (orderType === ORDER_TYPE_PAY) {
+        currencyDailyMetrics.completedPayOrdersCount =
+          currencyDailyMetrics.completedPayOrdersCount.plus(BigInt.fromI32(1));
+        currencyDailyMetrics.cancelledPayOrdersCount =
+          currencyDailyMetrics.cancelledPayOrdersCount.minus(BigInt.fromI32(1));
+      }
+      currencyDailyMetrics.totalVolume = currencyDailyMetrics.totalVolume.plus(
+        event.params._order.amount,
+      );
+    } else if (
+      previousStatus !== ORDER_STATUS_COMPLETED &&
+      previousStatus !== ORDER_STATUS_CANCELLED
+    ) {
+      if (newStatus === ORDER_STATUS_COMPLETED) {
+        // Daily currency metrics: fresh → COMPLETED
+        if (orderType === ORDER_TYPE_BUY) {
+          currencyDailyMetrics.completedBuyOrdersCount =
+            currencyDailyMetrics.completedBuyOrdersCount.plus(BigInt.fromI32(1));
+        } else if (orderType === ORDER_TYPE_SELL) {
+          currencyDailyMetrics.completedSellOrdersCount =
+            currencyDailyMetrics.completedSellOrdersCount.plus(BigInt.fromI32(1));
+        } else if (orderType === ORDER_TYPE_PAY) {
+          currencyDailyMetrics.completedPayOrdersCount =
+            currencyDailyMetrics.completedPayOrdersCount.plus(BigInt.fromI32(1));
+        }
+        currencyDailyMetrics.totalVolume = currencyDailyMetrics.totalVolume.plus(
+          event.params._order.amount,
+        );
+      } else if (newStatus === ORDER_STATUS_CANCELLED) {
+        // Daily currency metrics: fresh → CANCELLED
+        if (orderType === ORDER_TYPE_BUY) {
+          currencyDailyMetrics.cancelledBuyOrdersCount =
+            currencyDailyMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
+        } else if (orderType === ORDER_TYPE_SELL) {
+          currencyDailyMetrics.cancelledSellOrdersCount =
+            currencyDailyMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
+        } else if (orderType === ORDER_TYPE_PAY) {
+          currencyDailyMetrics.cancelledPayOrdersCount =
+            currencyDailyMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
+        }
+      }
+    }
+    currencyDailyMetrics.save();
+
     user.save();
   }
 }

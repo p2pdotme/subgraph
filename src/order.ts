@@ -22,6 +22,7 @@ import {
   loadOrders,
   loadMerchantOrderMetricsByMonth,
   loadCurrencyMetricsByMonth,
+  loadCurrencyMetricsByDay,
   syncOrder,
   loadUser,
   adjustUserMetricsByOrderType,
@@ -35,6 +36,7 @@ import {
   CircleMetrics,
   CircleOrderMetricsByMonth,
   CircleScoreState,
+  CurrencyMetricsByDay,
   CurrencyMetricsByMonth,
   MerchantOrderMetricsByMonth,
   User,
@@ -56,7 +58,7 @@ import {
   MerchantReAssignedNewOrder as MerchantReAssignedNewOrderEvent,
   OrderCancelledBy as OrderCancelledByEvent,
 } from "../generated/OrderFlowFacet/OrderFlowFacet";
-import { getYearMonthFromTimestamp } from "./utils/date.utils";
+import { getYearMonthFromTimestamp, getDayFromTimestamp } from "./utils/date.utils";
 import {
   loadCampaign,
   loadCampaignManagers,
@@ -114,6 +116,30 @@ function adjustCircleMetricsByOrderType(
 
 function adjustCurrencyMetricsByOrderType(
   metrics: CurrencyMetricsByMonth,
+  orderType: i32,
+  completedDelta: BigInt,
+  cancelledDelta: BigInt,
+): void {
+  if (orderType === ORDER_TYPE_BUY) {
+    metrics.completedBuyOrdersCount =
+      metrics.completedBuyOrdersCount.plus(completedDelta);
+    metrics.cancelledBuyOrdersCount =
+      metrics.cancelledBuyOrdersCount.plus(cancelledDelta);
+  } else if (orderType === ORDER_TYPE_SELL) {
+    metrics.completedSellOrdersCount =
+      metrics.completedSellOrdersCount.plus(completedDelta);
+    metrics.cancelledSellOrdersCount =
+      metrics.cancelledSellOrdersCount.plus(cancelledDelta);
+  } else if (orderType === ORDER_TYPE_PAY) {
+    metrics.completedPayOrdersCount =
+      metrics.completedPayOrdersCount.plus(completedDelta);
+    metrics.cancelledPayOrdersCount =
+      metrics.cancelledPayOrdersCount.plus(cancelledDelta);
+  }
+}
+
+function adjustCurrencyDailyMetricsByOrderType(
+  metrics: CurrencyMetricsByDay,
   orderType: i32,
   completedDelta: BigInt,
   cancelledDelta: BigInt,
@@ -324,6 +350,43 @@ export function handleOrderDisputeWithFaultType(
       }
     }
     currencyMetrics.save();
+
+    // Update currency daily metrics
+    const day = getDayFromTimestamp(originalTimestamp);
+    const currencyDailyKey = Bytes.fromUTF8(
+      `${event.params._order.currency.toHexString()}-${day}`,
+    );
+    const currencyDailyMetrics = loadCurrencyMetricsByDay(
+      currencyDailyKey,
+      event,
+    );
+    currencyDailyMetrics.currency = event.params._order.currency;
+    currencyDailyMetrics.day = day;
+
+    if (
+      previousStatus === ORDER_STATUS_COMPLETED &&
+      newStatus === ORDER_STATUS_CANCELLED
+    ) {
+      adjustCurrencyDailyMetricsByOrderType(currencyDailyMetrics, orderType, BigInt.fromI32(-1), BigInt.fromI32(1));
+      currencyDailyMetrics.totalVolume = currencyDailyMetrics.totalVolume.minus(event.params._order.amount);
+    } else if (
+      previousStatus === ORDER_STATUS_CANCELLED &&
+      newStatus === ORDER_STATUS_COMPLETED
+    ) {
+      adjustCurrencyDailyMetricsByOrderType(currencyDailyMetrics, orderType, BigInt.fromI32(1), BigInt.fromI32(-1));
+      currencyDailyMetrics.totalVolume = currencyDailyMetrics.totalVolume.plus(event.params._order.amount);
+    } else if (
+      previousStatus !== ORDER_STATUS_COMPLETED &&
+      previousStatus !== ORDER_STATUS_CANCELLED
+    ) {
+      if (newStatus === ORDER_STATUS_COMPLETED) {
+        adjustCurrencyDailyMetricsByOrderType(currencyDailyMetrics, orderType, BigInt.fromI32(1), BigInt.fromI32(0));
+        currencyDailyMetrics.totalVolume = currencyDailyMetrics.totalVolume.plus(event.params._order.amount);
+      } else if (newStatus === ORDER_STATUS_CANCELLED) {
+        adjustCurrencyDailyMetricsByOrderType(currencyDailyMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+      }
+    }
+    currencyDailyMetrics.save();
 
     user.save();
     orderMetrics.save();
@@ -543,6 +606,20 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     const orderType = event.params._order.orderType;
     adjustCurrencyMetricsByOrderType(currencyMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
     currencyMetrics.save();
+
+    // Update currency daily metrics
+    const day = getDayFromTimestamp(event.block.timestamp);
+    const currencyDailyKey = Bytes.fromUTF8(
+      `${event.params._order.currency.toHexString()}-${day}`,
+    );
+    const currencyDailyMetrics = loadCurrencyMetricsByDay(
+      currencyDailyKey,
+      event,
+    );
+    currencyDailyMetrics.currency = event.params._order.currency;
+    currencyDailyMetrics.day = day;
+    adjustCurrencyDailyMetricsByOrderType(currencyDailyMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+    currencyDailyMetrics.save();
   }
 }
 
@@ -963,6 +1040,21 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
   adjustCurrencyMetricsByOrderType(currencyMetrics, orderType, BigInt.fromI32(1), BigInt.fromI32(0));
   currencyMetrics.totalVolume = currencyMetrics.totalVolume.plus(event.params._order.amount);
   currencyMetrics.save();
+
+  // Update currency daily metrics
+  const day = getDayFromTimestamp(event.block.timestamp);
+  const currencyDailyKey = Bytes.fromUTF8(
+    `${event.params._order.currency.toHexString()}-${day}`,
+  );
+  const currencyDailyMetrics = loadCurrencyMetricsByDay(
+    currencyDailyKey,
+    event,
+  );
+  currencyDailyMetrics.currency = event.params._order.currency;
+  currencyDailyMetrics.day = day;
+  adjustCurrencyDailyMetricsByOrderType(currencyDailyMetrics, orderType, BigInt.fromI32(1), BigInt.fromI32(0));
+  currencyDailyMetrics.totalVolume = currencyDailyMetrics.totalVolume.plus(event.params._order.amount);
+  currencyDailyMetrics.save();
 
   // Update circle volume metrics
   let circleMetrics = loadCircleMetrics(circle, event);
