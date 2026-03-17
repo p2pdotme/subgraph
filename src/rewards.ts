@@ -7,7 +7,12 @@ import {
   MerchantRewardClaimed as MerchantRewardClaimedEvent,
   MerchantRewardAdjusted as MerchantRewardAdjustedEvent,
 } from "../generated/RewardsFacet/RewardsFacet";
-import { loadCircleAdminRewards, loadMerchantRewards } from "./lib";
+import {
+  loadCircleAdminRewards,
+  loadMerchantRewards,
+  loadCircleAdminRewardClaimLedger,
+  loadMerchantRewardClaimLedger,
+} from "./lib";
 
 export function handleCircleAdminRewardAllocated(
   event: CircleAdminRewardAllocatedEvent,
@@ -51,6 +56,15 @@ export function handleCircleAdminRewardClaimed(
     .plus(circleAdminRewards.lockedRewards);
 
   circleAdminRewards.save();
+
+  let ledgerEntry = loadCircleAdminRewardClaimLedger(
+    event.transaction.hash.concatI32(event.logIndex.toI32()),
+    event,
+  );
+  ledgerEntry.admin = event.params.admin.toHexString();
+  ledgerEntry.amount = event.params.amount;
+  ledgerEntry.claimedAt = event.block.timestamp;
+  ledgerEntry.save();
 }
 
 export function handleCircleAdminRewardAdjusted(
@@ -112,6 +126,15 @@ export function handleMerchantRewardClaimed(
     .plus(merchantRewards.lockedRewards);
 
   merchantRewards.save();
+
+  let ledgerEntry = loadMerchantRewardClaimLedger(
+    event.transaction.hash.concatI32(event.logIndex.toI32()),
+    event,
+  );
+  ledgerEntry.merchant = event.params.merchant.toHexString();
+  ledgerEntry.amount = event.params.amount;
+  ledgerEntry.claimedAt = event.block.timestamp;
+  ledgerEntry.save();
 }
 
 export function handleMerchantRewardAdjusted(
