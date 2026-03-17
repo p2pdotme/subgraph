@@ -13,7 +13,7 @@ import {
   OrderDispute1 as LegacyOrderDisputeEvent,
   OrderDispute as LegacyOrderDisputeV2Event,
 } from "../generated/LegacyOrderProcessorFacet/LegacyOrderProcessorFacet";
-import { loadOrders, syncOrder, loadUser, adjustUserMetricsByOrderType, loadCurrencyMetricsByMonth, loadCurrencyMetricsByDay } from "./lib";
+import { loadOrders, syncOrder, loadUser, adjustUserMetricsByOrderType, loadCurrencyMetricsByMonth, loadCurrencyMetricsByDay, loadLegacyStats } from "./lib";
 import {
   DISPUTE_STATUS_RAISED,
   DISPUTE_STATUS_SETTLED,
@@ -282,6 +282,13 @@ export function handleLegacyOrderCompleted(
     event.params._order.amount,
   );
   currencyDailyMetrics.save();
+
+  // Update legacy stats
+  const legacyStats = loadLegacyStats(event.params._order.currency, event);
+  legacyStats.currency = event.params._order.currency;
+  legacyStats.completedOrdersCount = legacyStats.completedOrdersCount.plus(BigInt.fromI32(1));
+  legacyStats.totalVolume = legacyStats.totalVolume.plus(event.params._order.amount);
+  legacyStats.save();
 }
 
 export function handleLegacyCancelledOrders(
@@ -383,6 +390,12 @@ export function handleLegacyCancelledOrders(
       currencyDailyMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
   }
   currencyDailyMetrics.save();
+
+  // Update legacy stats
+  const legacyStats = loadLegacyStats(event.params._order.currency, event);
+  legacyStats.currency = event.params._order.currency;
+  legacyStats.cancelledOrdersCount = legacyStats.cancelledOrdersCount.plus(BigInt.fromI32(1));
+  legacyStats.save();
 }
 
 export function handleLegacyOrderCancelledBy(
@@ -446,6 +459,12 @@ export function handleLegacyOrderDispute(
 
   if (event.params._order.disputeInfo.status === DISPUTE_STATUS_RAISED) {
     order.disputePlacedAt = event.block.timestamp;
+
+    // Update legacy stats dispute count
+    const legacyStats = loadLegacyStats(event.params._order.currency, event);
+    legacyStats.currency = event.params._order.currency;
+    legacyStats.disputeCount = legacyStats.disputeCount.plus(BigInt.fromI32(1));
+    legacyStats.save();
   } else if (
     event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED
   ) {
@@ -499,6 +518,12 @@ export function handleLegacyOrderDisputeV2(
 
   if (event.params._order.disputeInfo.status === DISPUTE_STATUS_RAISED) {
     order.disputePlacedAt = event.block.timestamp;
+
+    // Update legacy stats dispute count
+    const legacyStats = loadLegacyStats(event.params._order.currency, event);
+    legacyStats.currency = event.params._order.currency;
+    legacyStats.disputeCount = legacyStats.disputeCount.plus(BigInt.fromI32(1));
+    legacyStats.save();
   } else if (
     event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED
   ) {

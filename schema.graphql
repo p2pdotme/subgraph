@@ -473,6 +473,23 @@ type CurrencyMetricsByDay @entity {
   transactionHash: Bytes!
 }
 
+# LEGACY STATS
+# Aggregated legacy order stats per currency
+type LegacyStats @entity {
+  id: Bytes!
+
+  currency: Bytes!
+
+  completedOrdersCount: BigInt!
+  cancelledOrdersCount: BigInt!
+  disputeCount: BigInt!
+  totalVolume: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # PAYMENT CHANNEL MIGRATION
 # A record of payment channel migration requests
 type PaymentChannelMigration @entity {
