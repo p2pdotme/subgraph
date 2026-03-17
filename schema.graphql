@@ -287,6 +287,19 @@ type CircleAdminRewards @entity {
   transactionHash: Bytes!
 }
 
+# CIRCLE ADMIN REWARD CLAIM LEDGER
+# Individual record for each admin reward claim
+type CircleAdminRewardClaimLedger @entity(immutable: true) {
+  id: Bytes!
+  admin: String!
+  amount: BigInt!
+  claimedAt: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # MERCHANT REWARDS
 # A rewards for a merchant
 type MerchantRewards @entity {
@@ -297,6 +310,19 @@ type MerchantRewards @entity {
   earnedRewards: BigInt!
   withdrawnRewards: BigInt!
   claimableRewards: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT REWARD CLAIM LEDGER
+# Individual record for each merchant reward claim
+type MerchantRewardClaimLedger @entity(immutable: true) {
+  id: Bytes!
+  merchant: String!
+  amount: BigInt!
+  claimedAt: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
