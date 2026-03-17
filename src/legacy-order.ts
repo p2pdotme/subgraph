@@ -774,6 +774,37 @@ export function handleLegacyOrderDisputeV2(
     }
     currencyDailyMetrics.save();
 
+    // Update legacy stats on dispute settlement
+    const legacyStats = loadLegacyStats(event.params._order.currency, event);
+    legacyStats.currency = event.params._order.currency;
+
+    if (
+      previousStatus === ORDER_STATUS_COMPLETED &&
+      newStatus === ORDER_STATUS_CANCELLED
+    ) {
+      legacyStats.completedOrdersCount = legacyStats.completedOrdersCount.minus(BigInt.fromI32(1));
+      legacyStats.cancelledOrdersCount = legacyStats.cancelledOrdersCount.plus(BigInt.fromI32(1));
+      legacyStats.totalVolume = legacyStats.totalVolume.minus(event.params._order.amount);
+    } else if (
+      previousStatus === ORDER_STATUS_CANCELLED &&
+      newStatus === ORDER_STATUS_COMPLETED
+    ) {
+      legacyStats.cancelledOrdersCount = legacyStats.cancelledOrdersCount.minus(BigInt.fromI32(1));
+      legacyStats.completedOrdersCount = legacyStats.completedOrdersCount.plus(BigInt.fromI32(1));
+      legacyStats.totalVolume = legacyStats.totalVolume.plus(event.params._order.amount);
+    } else if (
+      previousStatus !== ORDER_STATUS_COMPLETED &&
+      previousStatus !== ORDER_STATUS_CANCELLED
+    ) {
+      if (newStatus === ORDER_STATUS_COMPLETED) {
+        legacyStats.completedOrdersCount = legacyStats.completedOrdersCount.plus(BigInt.fromI32(1));
+        legacyStats.totalVolume = legacyStats.totalVolume.plus(event.params._order.amount);
+      } else if (newStatus === ORDER_STATUS_CANCELLED) {
+        legacyStats.cancelledOrdersCount = legacyStats.cancelledOrdersCount.plus(BigInt.fromI32(1));
+      }
+    }
+    legacyStats.save();
+
     user.save();
   }
 }
