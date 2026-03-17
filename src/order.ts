@@ -21,6 +21,7 @@ import {
   loadCircleOrderMetricsByMonth,
   loadOrders,
   loadMerchantOrderMetricsByMonth,
+  updateCurrencyMetrics,
   syncOrder,
   loadUser,
   adjustUserMetricsByOrderType,
@@ -109,6 +110,7 @@ function adjustCircleMetricsByOrderType(
       metrics.cancelledPayOrdersCount.plus(cancelledDelta);
   }
 }
+
 
 export function handleOrderDisputeWithFaultType(
   event: OrderDisputeWithFaultTypeEvent,
@@ -263,6 +265,28 @@ export function handleOrderDisputeWithFaultType(
         adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
       }
     }
+    // Update currency metrics (monthly + daily)
+    if (
+      previousStatus === ORDER_STATUS_COMPLETED &&
+      newStatus === ORDER_STATUS_CANCELLED
+    ) {
+      updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(-1), BigInt.fromI32(1), BigInt.fromI32(0).minus(event.params._order.amount), originalTimestamp, event);
+    } else if (
+      previousStatus === ORDER_STATUS_CANCELLED &&
+      newStatus === ORDER_STATUS_COMPLETED
+    ) {
+      updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(1), BigInt.fromI32(-1), event.params._order.amount, originalTimestamp, event);
+    } else if (
+      previousStatus !== ORDER_STATUS_COMPLETED &&
+      previousStatus !== ORDER_STATUS_CANCELLED
+    ) {
+      if (newStatus === ORDER_STATUS_COMPLETED) {
+        updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(1), BigInt.fromI32(0), event.params._order.amount, originalTimestamp, event);
+      } else if (newStatus === ORDER_STATUS_CANCELLED) {
+        updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(0), BigInt.fromI32(1), BigInt.fromI32(0), originalTimestamp, event);
+      }
+    }
+
     user.save();
     orderMetrics.save();
     circleOrderMetrics.save();
@@ -464,6 +488,17 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     }
     circleOrderMetrics.save();
   }
+
+  // Update currency metrics (monthly + daily, regardless of merchant assignment)
+  updateCurrencyMetrics(
+    event.params._order.currency,
+    event.params._order.orderType,
+    BigInt.fromI32(0),
+    BigInt.fromI32(1),
+    BigInt.fromI32(0),
+    event.block.timestamp,
+    event,
+  );
 }
 
 export function handleOrderPlaced(event: OrderPlacedEvent): void {
@@ -869,6 +904,17 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
       circleOrderMetrics.completedPayOrdersCount.plus(BigInt.fromI32(1));
   }
   circleOrderMetrics.save();
+
+  // Update currency metrics (monthly + daily)
+  updateCurrencyMetrics(
+    event.params._order.currency,
+    orderType,
+    BigInt.fromI32(1),
+    BigInt.fromI32(0),
+    event.params._order.amount,
+    event.block.timestamp,
+    event,
+  );
 
   // Update circle volume metrics
   let circleMetrics = loadCircleMetrics(circle, event);
