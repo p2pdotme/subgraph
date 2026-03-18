@@ -20,6 +20,7 @@ import {
   loadFCMToken,
   updateActiveMerchantsCount,
   isMerchantActive,
+  loadOrders,
 } from "./lib";
 import {
   OnlineOfflineToggled as OnlineOfflineToggledEvent,
@@ -28,6 +29,9 @@ import {
   Merchant as MerchantEvent,
   MerchantVolume as MerchantVolumeEvent,
   FCMToken as FCMTokenEvent,
+  MerchantRewardAllocatedForOrder as MerchantRewardAllocatedForOrderEvent,
+  CircleAdminRewardAllocatedForOrder as CircleAdminRewardAllocatedForOrderEvent,
+  CircleUSDCStakeDelegationRewardAllocatedForOrder as CircleUSDCStakeDelegationRewardAllocatedForOrderEvent,
 } from "../generated/MerchantRegistryFacet/MerchantRegistryFacet";
 import { getYearMonthFromTimestamp } from "./utils/date.utils";
 
@@ -462,4 +466,37 @@ export function handleFCMToken(event: FCMTokenEvent): void {
   fcmToken.tokens = event.params.tokens;
   fcmToken.merchant = merchant.id;
   fcmToken.save();
+}
+
+export function handleMerchantRewardAllocatedForOrder(
+  event: MerchantRewardAllocatedForOrderEvent,
+): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.merchantRewardAmount = event.params.amount;
+  order.save();
+}
+
+export function handleCircleAdminRewardAllocatedForOrder(
+  event: CircleAdminRewardAllocatedForOrderEvent,
+): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.circleAdminRewardAmount = event.params.amount;
+  order.save();
+}
+
+export function handleCircleUSDCStakeDelegationRewardAllocatedForOrder(
+  event: CircleUSDCStakeDelegationRewardAllocatedForOrderEvent,
+): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.circleUSDCStakeDelegationRewardAmount = event.params.amount;
+  order.save();
 }

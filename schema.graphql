@@ -242,6 +242,11 @@ type Orders @entity(immutable: false) {
   actualUsdcAmount: BigInt!
   actualFiatAmount: BigInt!
 
+  # REWARD DETAILS
+  merchantRewardAmount: BigInt!
+  circleAdminRewardAmount: BigInt!
+  circleUSDCStakeDelegationRewardAmount: BigInt!
+
   # DISPUTE DETAILS
   disputeStatus: Int!
   disputeRedactTransId: BigInt!
