@@ -36,6 +36,9 @@ export function loadOrders(key: Bytes, event: ethereum.Event): Orders {
     order.tipsPaid = BigInt.fromI32(0);
     order.actualUsdcAmount = BigInt.fromI32(0);
     order.actualFiatAmount = BigInt.fromI32(0);
+    order.merchantRewardAmount = BigInt.fromI32(0);
+    order.circleAdminRewardAmount = BigInt.fromI32(0);
+    order.circleUSDCStakeDelegationRewardAmount = BigInt.fromI32(0);
     order.disputeStatus = -1;
     order.disputeRedactTransId = BigInt.fromI32(0);
     order.disputeAccountNumber = BigInt.fromI32(0);
