@@ -78,6 +78,18 @@
       "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
       "startBlock": 29875200
     },
+    "SetterFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 29875200
+    },
+    "LegacyOrderProcessorFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 29875200
+    },
+    "LegacyOrderFlowFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 29875200
+    },
     "ReputationManager": {
       "address": "0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D",
       "startBlock": 20273700

@@ -15,6 +15,11 @@ import {
 } from "../generated/LegacyOrderProcessorFacet/LegacyOrderProcessorFacet";
 import { loadOrders, syncOrder, loadUser, adjustUserMetricsByOrderType, loadLegacyStats, updateCurrencyMetrics } from "./lib";
 import {
+  loadCampaign,
+  loadCampaignManagers,
+  loadCampaignRewardRedeemed,
+} from "./lib/campaign.lib";
+import {
   DISPUTE_STATUS_RAISED,
   DISPUTE_STATUS_SETTLED,
   ORDER_STATUS_COMPLETED,
@@ -204,6 +209,35 @@ export function handleLegacyOrderCompleted(
 
   // Update User metrics
   let user = loadUser(event.params._order.user, event);
+
+  // UPDATE CAMPAIGN VOLUME
+  let campaignClaims = user.campaignClaims;
+  if (campaignClaims !== null && campaignClaims.length > 0) {
+    for (let i = 0; i < campaignClaims.length; i++) {
+      let campaignClaim = loadCampaignRewardRedeemed(campaignClaims[i], event);
+      if (campaignClaim !== null) {
+        let campaign = loadCampaign(
+          Bytes.fromByteArray(Bytes.fromBigInt(campaignClaim.campaignId)),
+          event,
+        );
+        campaign.totalVolume = campaign.totalVolume.plus(
+          event.params._order.amount,
+        );
+        campaign.save();
+
+        let campaignManagersKey = Bytes.fromUTF8(
+          campaignClaim.campaignId.toString() +
+            "-" +
+            campaignClaim.manager.toHex(),
+        );
+        let campaignManagers = loadCampaignManagers(campaignManagersKey, event);
+        campaignManagers.totalVolume = campaignManagers.totalVolume.plus(
+          event.params._order.amount,
+        );
+        campaignManagers.save();
+      }
+    }
+  }
 
   const orderType = event.params._order.orderType;
   if (orderType === ORDER_TYPE_BUY) {
