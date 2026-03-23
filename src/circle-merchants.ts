@@ -85,6 +85,7 @@ export function handleOnlineOfflineToggled(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   const wasActive = isMerchantActive(
     merchant.stakedAmount,
@@ -120,6 +121,7 @@ export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   const wasActive = isMerchantActive(
     merchant.stakedAmount,
@@ -152,6 +154,7 @@ export function handleMerchantOngoingOrder(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
   merchant.isOngoingOrder = event.params.isOngoing;
   merchant.save();
 }
@@ -162,6 +165,7 @@ export function handleMerchant(event: MerchantEvent): void {
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   // ADD/UPDATE MERCHANT PAYMENT CHANNELS
   for (let i = 0; i < event.params.merchantConfig.paymentChannels.length; i++) {
@@ -196,6 +200,7 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   // LOAD PAYMENT CHANNEL
   const pcKey = Bytes.fromUTF8(
@@ -309,6 +314,7 @@ export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   merchant.isUnstakeRequested = true;
   merchant.unstakeRequestedAt = event.block.timestamp;
@@ -343,6 +349,7 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   const previousStakedAmount = merchant.stakedAmount;
 
@@ -391,6 +398,7 @@ export function handleMerchantStaked(event: MerchantStakedEvent): void {
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   const previousStakedAmount = merchant.stakedAmount;
 
@@ -425,6 +433,7 @@ export function handleMerchantWithoutFundsTracker(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   // Update telegram ID from merchant config
   merchant.telegramId = event.params.merchantConfig.telegramId;
