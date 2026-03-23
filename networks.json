@@ -1,44 +1,48 @@
 {
   "base-sepolia": {
     "CircleFacet": {
-      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
-      "startBlock": 38525395
+      "address": "0x5450A144d3CCB0c48170e70950B41944b6516Da6",
+      "startBlock": 39242909
     },
     "USDCStakeDelegationFacet": {
-      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
-      "startBlock": 38525395
+      "address": "0x5450A144d3CCB0c48170e70950B41944b6516Da6",
+      "startBlock": 39242909
     },
     "OrderFlowHelper": {
-      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
-      "startBlock": 38525395
+      "address": "0x5450A144d3CCB0c48170e70950B41944b6516Da6",
+      "startBlock": 39242909
     },
     "OrderProcessorFacet": {
-      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
-      "startBlock": 38525395
+      "address": "0x5450A144d3CCB0c48170e70950B41944b6516Da6",
+      "startBlock": 39242909
     },
     "OrderFlowFacet": {
-      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
-      "startBlock": 38525395
+      "address": "0x5450A144d3CCB0c48170e70950B41944b6516Da6",
+      "startBlock": 39242909
     },
     "MerchantOnboardFacet": {
-      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
-      "startBlock": 38525395
+      "address": "0x5450A144d3CCB0c48170e70950B41944b6516Da6",
+      "startBlock": 39242909
     },
     "MerchantRegistryFacet": {
-      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
-      "startBlock": 38525395
+      "address": "0x5450A144d3CCB0c48170e70950B41944b6516Da6",
+      "startBlock": 39242909
     },
     "RewardsFacet": {
-      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
-      "startBlock": 38525395
+      "address": "0x5450A144d3CCB0c48170e70950B41944b6516Da6",
+      "startBlock": 39242909
     },
     "CountryFacet": {
-      "address": "0x3E4Ed83029a2fDf5A7751A73D39169d5F977b8F0",
-      "startBlock": 38525395
+      "address": "0x5450A144d3CCB0c48170e70950B41944b6516Da6",
+      "startBlock": 39242909
     },
     "ReputationManager": {
-      "address": "0x59687fD7c3Be0d61A476e6E718503F3Ab56Ab1E3",
-      "startBlock": 38525395
+      "address": "0x465eF37f6BE7c2841977ad3d667A8A4A696aB2FE",
+      "startBlock": 39242909
+    },
+    "CapabilityFacet": {
+      "address": "0x5450A144d3CCB0c48170e70950B41944b6516Da6",
+      "startBlock": 39242909
     }
   },
   "base": {
@@ -93,6 +97,10 @@
     "ReputationManager": {
       "address": "0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D",
       "startBlock": 20273700
+    },
+    "CapabilityFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 29875200
     }
   }
 }

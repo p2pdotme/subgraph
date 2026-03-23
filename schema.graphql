@@ -768,3 +768,16 @@ type MerchantWithdrawFeePercentage @entity {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
+
+# CIRCLE PERMISSION
+# Tracks granted permissions per circle+account with an array of selectors
+type CirclePermission @entity {
+  id: Bytes! # circleId-account
+  circleId: BigInt!
+  account: Bytes!
+  selectors: [Bytes!]!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
