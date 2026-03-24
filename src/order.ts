@@ -1,4 +1,4 @@
-import { BigInt, Bytes } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
 import {
   OrderCompleted as OrderCompletedEvent,
   BuyOrderPaid as BuyOrderPaidEvent,
@@ -548,6 +548,7 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
 export function handleMerchantAssignedNewOrder(
   event: MerchantAssignedNewOrderEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   // Synchronize order data with the latest contract state
   syncOrder(
     event.params._order.id,
@@ -606,6 +607,7 @@ export function handleMerchantAssignedNewOrder(
 export function handleMerchantReAssignedNewOrder(
   event: MerchantReAssignedNewOrderEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   // Synchronize order data with the latest contract state
   syncOrder(
     event.params._order.id,
