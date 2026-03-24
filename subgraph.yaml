@@ -373,7 +373,7 @@ dataSources:
     name: CapabilityFacet
     network: base
     source:
-      address: "0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D"
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: CapabilityFacet
       startBlock: 29875200
     mapping:
