@@ -49,6 +49,10 @@ export function loadCircleMetrics(
     circleMetrics.hasMinOrdersForScore = false;
     circleMetrics.lastScoreUpdateTimestamp = BigInt.zero();
     circleMetrics.scoreState = key;
+
+    // Ensure the CircleScoreState entity exists so the non-null relation is satisfied
+    const scoreState = loadCircleScoreState(key, event);
+    scoreState.save();
   }
 
   circleMetrics.blockNumber = event.block.number;

@@ -1,4 +1,4 @@
-import { BigInt, Bytes } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
 import {
   ExitRequested as ExitRequestedEvent,
   ExitProceedsWithdrawn as ExitProceedsWithdrawnEvent,
@@ -121,6 +121,7 @@ export function handleUsdcStakedForDelegationInCircle(
 export function handleUsdcDelegatedToMerchantInCircle(
   event: UsdcDelegatedToMerchantInCircleEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   // UPDATE CIRCLE MERCHANT
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
@@ -161,6 +162,7 @@ export function handleUsdcDelegatedToMerchantInCircle(
 export function handleUsdcUndelegatedFromMerchantInCircle(
   event: UsdcUndelegatedFromMerchantInCircleEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   // UPDATE CIRCLE MERCHANT
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
