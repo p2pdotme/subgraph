@@ -1,4 +1,4 @@
-import { BigInt, Bytes } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
 import {
   MerchantRegisteredToCircle as MerchantRegisteredToCircleEvent,
   PaymentChannelMigrationRequest as PaymentChannelMigrationRequestEvent,
@@ -38,6 +38,7 @@ import { getYearMonthFromTimestamp } from "./utils/date.utils";
 export function handleMerchantRegisteredToCircle(
   event: MerchantRegisteredToCircleEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(circleKey, event);
   const merchant = loadCircleMerchant(
@@ -79,10 +80,12 @@ export function handleMerchantRegisteredToCircle(
 export function handleOnlineOfflineToggled(
   event: OnlineOfflineToggledEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   const wasActive = isMerchantActive(
     merchant.stakedAmount,
@@ -113,10 +116,12 @@ export function handleOnlineOfflineToggled(
 }
 
 export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   const wasActive = isMerchantActive(
     merchant.stakedAmount,
@@ -144,19 +149,23 @@ export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
 export function handleMerchantOngoingOrder(
   event: MerchantOngoingOrderEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
   merchant.isOngoingOrder = event.params.isOngoing;
   merchant.save();
 }
 
 export function handleMerchant(event: MerchantEvent): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   let merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   // ADD/UPDATE MERCHANT PAYMENT CHANNELS
   for (let i = 0; i < event.params.merchantConfig.paymentChannels.length; i++) {
@@ -185,11 +194,13 @@ export function handleMerchant(event: MerchantEvent): void {
 }
 
 export function handleMerchantVolume(event: MerchantVolumeEvent): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   // LOAD MERCHANT
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   // LOAD PAYMENT CHANNEL
   const pcKey = Bytes.fromUTF8(
@@ -224,11 +235,16 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
 export function handlePaymentChannelMigrationRequest(
   event: PaymentChannelMigrationRequestEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   // LOAD MERCHANT
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+
+  if (merchant.circleId.equals(BigInt.zero())) {
+    return;
+  }
 
   // CREATE CONSISTENT MIGRATION ID (without timestamp)
   // Using merchant address + fromAccountNo + toAccountNo as unique identifier
@@ -293,10 +309,12 @@ export function handlePaymentChannelMigrationRequest(
 // UNSTAKE REQUEST HANDLERS
 
 export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   merchant.isUnstakeRequested = true;
   merchant.unstakeRequestedAt = event.block.timestamp;
@@ -308,10 +326,15 @@ export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
 export function handleUnstakeRequestCancelled(
   event: UnstakeRequestCancelledEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+
+  if (merchant.circleId.equals(BigInt.zero())) {
+    return;
+  }
 
   merchant.isUnstakeRequested = false;
   merchant.unstakeRequestedAt = BigInt.zero();
@@ -321,10 +344,12 @@ export function handleUnstakeRequestCancelled(
 }
 
 export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   const previousStakedAmount = merchant.stakedAmount;
 
@@ -349,7 +374,6 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
     paymentChannel.save();
   }
 
-
   // Update active merchants count based on stake transition
   const wasActive = isMerchantActive(
     previousStakedAmount,
@@ -366,14 +390,15 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
   scoreState.save();
-
 }
 
 export function handleMerchantStaked(event: MerchantStakedEvent): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   const previousStakedAmount = merchant.stakedAmount;
 
@@ -403,10 +428,12 @@ export function handleMerchantStaked(event: MerchantStakedEvent): void {
 export function handleMerchantWithoutFundsTracker(
   event: MerchantWithoutFundsTrackerEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  if (merchant.circleId.equals(BigInt.zero())) return;
 
   // Update telegram ID from merchant config
   merchant.telegramId = event.params.merchantConfig.telegramId;
@@ -417,6 +444,7 @@ export function handleMerchantWithoutFundsTracker(
 export function handleMonthlyVolumeUnlimitedFlagUpdated(
   event: MonthlyVolumeUnlimitedFlagUpdatedEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const merchantEntity = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
@@ -450,6 +478,7 @@ export function handleMonthlyVolumeUnlimitedFlagUpdated(
 }
 
 export function handleFCMToken(event: FCMTokenEvent): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
