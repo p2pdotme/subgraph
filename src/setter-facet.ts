@@ -1,4 +1,4 @@
-import { BigInt, Bytes } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
 import {
   // CircleCreatedUpdate as CircleCreatedUpdateEvent,
   CircleMerchantDetailsAndConfigUpdate as CircleMerchantDetailsAndConfigUpdateEvent,
@@ -43,6 +43,7 @@ import {
 export function handleCircleMerchantDetailsAndConfigUpdate(
   event: CircleMerchantDetailsAndConfigUpdateEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const key = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(key, event);
 
@@ -92,6 +93,7 @@ export function handleCircleMerchantDetailsAndConfigUpdate(
 export function handleMerchantPaymentChannelUpdate(
   event: MerchantPaymentChannelUpdateEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
@@ -177,6 +179,7 @@ export function handlePaymentChannelConfigUpdate(
 export function handleMerchantClaimableRewardsUpdate(
   event: MerchantClaimableRewardsUpdateEvent,
 ): void {
+  if (event.params.merchant.equals(Address.zero())) return;
   const merchantRewards = loadMerchantRewards(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
