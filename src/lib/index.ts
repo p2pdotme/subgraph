@@ -23,6 +23,7 @@ export {
   loadFCMToken,
   loadMerchantWithdrawFeePercentage,
   loadMerchantDelegationRecord,
+  loadMerchantStakeHistory,
   loadMerchantReferralClaimed,
   loadMerchantReferralRevenueClaimed,
 } from "./merchants.lib";
