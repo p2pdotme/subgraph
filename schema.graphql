@@ -166,7 +166,6 @@ type CircleMerchant @entity {
     @derivedFrom(field: "merchant")
   paymentChannelMigrations: [PaymentChannelMigration!]
     @derivedFrom(field: "merchant")
-  delegationRecords: [MerchantDelegationRecord!] @derivedFrom(field: "merchant")
   stakeHistory: [MerchantStakeHistory!] @derivedFrom(field: "merchant")
   fcmTokens: [FCMToken!] @derivedFrom(field: "merchant")
 
@@ -396,28 +395,6 @@ type CircleOrderMetricsByMonth @entity {
   completedBuyOrdersCount: BigInt!
   completedSellOrdersCount: BigInt!
   completedPayOrdersCount: BigInt!
-
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-# MERCHANT DELEGATION RECORD
-# A record of delegation activity for a merchant
-type MerchantDelegationRecord @entity {
-  id: Bytes!
-
-  merchant: CircleMerchant!
-  circle: Circle!
-
-  # Type of delegation: DELEGATED, UNDELEGATED
-  type: String!
-
-  # Amount delegated/undelegated
-  amount: BigInt!
-
-  # Running balance after this record
-  balanceAfter: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

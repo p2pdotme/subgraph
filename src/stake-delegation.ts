@@ -13,7 +13,6 @@ import {
   loadCircleUsdcStakeRecords,
   loadCircleUsdcUnstakeRecords,
   loadStaker,
-  loadMerchantDelegationRecord,
   loadMerchantStakeHistory,
 } from "./lib";
 import {
@@ -139,25 +138,10 @@ export function handleUsdcDelegatedToMerchantInCircle(
   merchant.stakedAmount = merchant.stakedAmount.plus(event.params.amount);
   merchant.save();
 
-  // CREATE DELEGATION RECORD
+  // Record stake history
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(circleKey, event);
 
-  const delegationRecordKey = Bytes.fromUTF8(
-    `${event.params.merchant.toHexString()}-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
-  );
-  const delegationRecord = loadMerchantDelegationRecord(
-    delegationRecordKey,
-    event,
-  );
-  delegationRecord.merchant = merchant.id;
-  delegationRecord.circle = circle.id;
-  delegationRecord.type = "DELEGATED";
-  delegationRecord.amount = event.params.amount;
-  delegationRecord.balanceAfter = merchant.delegatedStakedAmount;
-  delegationRecord.save();
-
-  // Record stake history
   const stakeHistoryKey = Bytes.fromUTF8(
     `${event.params.merchant.toHexString()}-DELEGATED-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
   );
@@ -192,25 +176,10 @@ export function handleUsdcUndelegatedFromMerchantInCircle(
   merchant.stakedAmount = merchant.stakedAmount.minus(event.params.amount);
   merchant.save();
 
-  // CREATE DELEGATION RECORD (UNDELEGATED/DECREASED)
+  // Record stake history
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(circleKey, event);
 
-  const delegationRecordKey = Bytes.fromUTF8(
-    `${event.params.merchant.toHexString()}-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
-  );
-  const delegationRecord = loadMerchantDelegationRecord(
-    delegationRecordKey,
-    event,
-  );
-  delegationRecord.merchant = merchant.id;
-  delegationRecord.circle = circle.id;
-  delegationRecord.type = "UNDELEGATED";
-  delegationRecord.amount = event.params.amount;
-  delegationRecord.balanceAfter = merchant.delegatedStakedAmount;
-  delegationRecord.save();
-
-  // Record stake history
   const stakeHistoryKey = Bytes.fromUTF8(
     `${event.params.merchant.toHexString()}-UNDELEGATED-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
   );

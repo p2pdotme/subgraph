@@ -22,7 +22,6 @@ export {
   loadPaymentChannelMigration,
   loadFCMToken,
   loadMerchantWithdrawFeePercentage,
-  loadMerchantDelegationRecord,
   loadMerchantStakeHistory,
   loadMerchantReferralClaimed,
   loadMerchantReferralRevenueClaimed,
