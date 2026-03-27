@@ -18,6 +18,7 @@ import {
   loadMerchantVolumeByMonth,
   loadPaymentChannelMigration,
   loadFCMToken,
+  loadMerchantStakeHistory,
   updateActiveMerchantsCount,
   isMerchantActive,
   loadOrders,
@@ -34,6 +35,12 @@ import {
   CircleUSDCStakeDelegationRewardAllocatedForOrder as CircleUSDCStakeDelegationRewardAllocatedForOrderEvent,
 } from "../generated/MerchantRegistryFacet/MerchantRegistryFacet";
 import { getYearMonthFromTimestamp } from "./utils/date.utils";
+import {
+  STAKE_HISTORY_TYPE_STAKED,
+  STAKE_HISTORY_TYPE_UNSTAKE_REQUESTED,
+  STAKE_HISTORY_TYPE_UNSTAKE_REJECTED,
+  STAKE_HISTORY_TYPE_UNSTAKE_APPROVED,
+} from "./constants";
 
 export function handleMerchantRegisteredToCircle(
   event: MerchantRegisteredToCircleEvent,
@@ -75,6 +82,18 @@ export function handleMerchantRegisteredToCircle(
 
   circleMetrics.save();
   scoreState.save();
+
+  // Record stake history
+  const stakeHistoryKey = Bytes.fromUTF8(
+    `${event.params.merchant.toHexString()}-STAKED-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
+  );
+  const stakeHistory = loadMerchantStakeHistory(stakeHistoryKey, event);
+  stakeHistory.merchant = merchant.id;
+  stakeHistory.circle = merchant.circle;
+  stakeHistory.type = STAKE_HISTORY_TYPE_STAKED;
+  stakeHistory.balanceBefore = BigInt.zero();
+  stakeHistory.balanceAfter = event.params.stakeAmount;
+  stakeHistory.save();
 }
 
 export function handleOnlineOfflineToggled(
@@ -131,7 +150,6 @@ export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
 
   merchant.isBlacklisted = event.params.isBlacklist;
 
-  merchant.paymentChannels
   merchant.save();
 
   const isActive = isMerchantActive(
@@ -321,6 +339,18 @@ export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
   merchant.unstakeAmount = event.params.unstakeAmount;
 
   merchant.save();
+
+  // Record unstake request history
+  const historyKey = Bytes.fromUTF8(
+    `${event.params.merchant.toHexString()}-UNSTAKE_REQUESTED-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
+  );
+  const history = loadMerchantStakeHistory(historyKey, event);
+  history.merchant = merchant.id;
+  history.circle = merchant.circle;
+  history.type = STAKE_HISTORY_TYPE_UNSTAKE_REQUESTED;
+  history.balanceBefore = merchant.stakedAmount;
+  history.balanceAfter = merchant.stakedAmount;
+  history.save();
 }
 
 export function handleUnstakeRequestCancelled(
@@ -341,6 +371,18 @@ export function handleUnstakeRequestCancelled(
   merchant.unstakeAmount = BigInt.zero();
 
   merchant.save();
+
+  // Record unstake cancellation history
+  const historyKey = Bytes.fromUTF8(
+    `${event.params.merchant.toHexString()}-UNSTAKE_CANCELLED-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
+  );
+  const history = loadMerchantStakeHistory(historyKey, event);
+  history.merchant = merchant.id;
+  history.circle = merchant.circle;
+  history.type = STAKE_HISTORY_TYPE_UNSTAKE_REJECTED;
+  history.balanceBefore = merchant.stakedAmount;
+  history.balanceAfter = merchant.stakedAmount;
+  history.save();
 }
 
 export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
@@ -362,6 +404,18 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   merchant.stakedAmount = event.params.merchantDetails.stake;
 
   merchant.save();
+
+  // Record unstake approved history
+  const historyKey = Bytes.fromUTF8(
+    `${event.params.merchant.toHexString()}-UNSTAKE_APPROVED-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
+  );
+  const history = loadMerchantStakeHistory(historyKey, event);
+  history.merchant = merchant.id;
+  history.circle = merchant.circle;
+  history.type = STAKE_HISTORY_TYPE_UNSTAKE_APPROVED;
+  history.balanceBefore = previousStakedAmount;
+  history.balanceAfter = event.params.merchantDetails.stake;
+  history.save();
 
   // SET FIAT BALANCE 0
   for (let i = 0; i < event.params.merchantConfig.paymentChannels.length; i++) {
@@ -406,6 +460,18 @@ export function handleMerchantStaked(event: MerchantStakedEvent): void {
   merchant.stakedAmount = event.params.merchantDetails.stake;
 
   merchant.save();
+
+  // Record stake history
+  const stakeHistoryKey = Bytes.fromUTF8(
+    `${event.params.merchant.toHexString()}-STAKED-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
+  );
+  const stakeHistory = loadMerchantStakeHistory(stakeHistoryKey, event);
+  stakeHistory.merchant = merchant.id;
+  stakeHistory.circle = merchant.circle;
+  stakeHistory.type = STAKE_HISTORY_TYPE_STAKED;
+  stakeHistory.balanceBefore = previousStakedAmount;
+  stakeHistory.balanceAfter = event.params.merchantDetails.stake;
+  stakeHistory.save();
 
   // Update active merchants count based on stake transition
   const wasActive = isMerchantActive(
