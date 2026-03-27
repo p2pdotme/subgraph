@@ -6,7 +6,7 @@ import {
   MerchantVolumeByMonth,
   MerchantOrderMetricsByMonth,
   PaymentChannelMigration,
-  MerchantDelegationRecord,
+  MerchantStakeHistory,
   MerchantReferralClaimed,
   MerchantReferralRevenueClaimed,
   FCMToken as FCMTokenEntity,
@@ -156,15 +156,15 @@ export function loadMerchantOrderMetricsByMonth(
   return metrics;
 }
 
-export function loadMerchantDelegationRecord(
+export function loadMerchantStakeHistory(
   key: Bytes,
   event: ethereum.Event,
-): MerchantDelegationRecord {
-  let record = MerchantDelegationRecord.load(key);
+): MerchantStakeHistory {
+  let record = MerchantStakeHistory.load(key);
   if (!record) {
-    record = new MerchantDelegationRecord(key);
+    record = new MerchantStakeHistory(key);
     record.type = "";
-    record.amount = BigInt.zero();
+    record.balanceBefore = BigInt.zero();
     record.balanceAfter = BigInt.zero();
   }
 
