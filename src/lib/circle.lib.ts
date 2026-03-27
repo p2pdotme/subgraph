@@ -151,6 +151,7 @@ export function loadCirclePermission(
     permission.circleId = BigInt.zero();
     permission.account = Bytes.empty();
     permission.selectors = [];
+    permission.name = "";
   }
 
   permission.blockNumber = event.block.number;
