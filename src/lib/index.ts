@@ -11,6 +11,7 @@ export {
   getDayNumber,
   getDailyMetricsKey,
   loadCircleOrderMetricsByMonth,
+  loadCirclePermission,
 } from "./circle.lib";
 export { loadOrders, syncOrder } from "./order.lib";
 export {
