@@ -776,6 +776,7 @@ type CirclePermission @entity {
   circleId: BigInt!
   account: Bytes!
   selectors: [Bytes!]!
+  name: String!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

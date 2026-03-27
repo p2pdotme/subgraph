@@ -33,6 +33,8 @@ export function handlePermissionGranted(event: PermissionGrantedEvent): void {
   permission.circleId = event.params.circleId;
   permission.account = event.params.account;
 
+  permission.name = event.params.name;
+
   const selector = changetype<Bytes>(event.params.selector);
   const current = permission.selectors;
   if (!containsSelector(current, selector)) {
