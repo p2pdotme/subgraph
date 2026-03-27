@@ -4,6 +4,7 @@ import {
   CircleDailyMetrics,
   CircleMetrics,
   CircleOrderMetricsByMonth,
+  CirclePermission,
   CircleScoreState,
 } from "../../generated/schema";
 import { STATUS_BOOTSTRAP, SECONDS_PER_DAY } from "../constants/circle-score";
@@ -138,4 +139,24 @@ export function loadCircleOrderMetricsByMonth(
   metrics.transactionHash = event.transaction.hash;
 
   return metrics;
+}
+
+export function loadCirclePermission(
+  key: Bytes,
+  event: ethereum.Event,
+): CirclePermission {
+  let permission = CirclePermission.load(key);
+  if (!permission) {
+    permission = new CirclePermission(key);
+    permission.circleId = BigInt.zero();
+    permission.account = Bytes.empty();
+    permission.selectors = [];
+    permission.name = "";
+  }
+
+  permission.blockNumber = event.block.number;
+  permission.blockTimestamp = event.block.timestamp;
+  permission.transactionHash = event.transaction.hash;
+
+  return permission;
 }
