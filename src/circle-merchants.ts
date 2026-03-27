@@ -150,7 +150,6 @@ export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
 
   merchant.isBlacklisted = event.params.isBlacklist;
 
-  merchant.paymentChannels;
   merchant.save();
 
   const isActive = isMerchantActive(

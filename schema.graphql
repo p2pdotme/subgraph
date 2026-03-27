@@ -403,7 +403,7 @@ type CircleOrderMetricsByMonth @entity {
 
 # MERCHANT STAKE HISTORY
 # A record of a merchant's stake and unstake activity
-type MerchantStakeHistory @entity {
+type MerchantStakeHistory @entity(immutable: true) {
   id: Bytes!
 
   merchant: CircleMerchant!
