@@ -136,7 +136,7 @@ dataSources:
           handler: handleMerchantReAssignedNewOrder
         - event: SellOrderUpiSet(indexed uint256,indexed address,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256,uint256))
           handler: handleSellOrderUpiSet
-        - event: OrderCancelledBy(indexed uint256,address)
+        - event: OrderCancelledBy(indexed uint256,indexed address)
           handler: handleOrderCancelledBy
       file: ./src/order.ts
   - kind: ethereum
