@@ -138,6 +138,8 @@ dataSources:
           handler: handleSellOrderUpiSet
         - event: OrderCancelledBy(indexed uint256,address)
           handler: handleOrderCancelledBy
+        - event: OrderCancelledBy(indexed uint256,indexed address)
+          handler: handleOrderCancelledByV2
       file: ./src/order.ts
   - kind: ethereum
     name: MerchantOnboardFacet
