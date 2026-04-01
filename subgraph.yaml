@@ -138,6 +138,8 @@ dataSources:
           handler: handleSellOrderUpiSet
         - event: OrderCancelledBy(indexed uint256,address)
           handler: handleOrderCancelledBy
+        - event: OrderCancelledBy(indexed uint256,indexed address)
+          handler: handleOrderCancelledByV2
       file: ./src/order.ts
   - kind: ethereum
     name: MerchantOnboardFacet
@@ -385,6 +387,8 @@ dataSources:
         - name: CapabilityFacet
           file: ./abis/CapabilityFacet.json
       eventHandlers:
+        - event: AccountNameUpdated(indexed uint256,indexed address,string)
+          handler: handleAccountNameUpdated
         - event: PermissionGranted(indexed uint256,indexed address,indexed bytes4,string)
           handler: handlePermissionGranted
         - event: PermissionRevoked(indexed uint256,indexed address,indexed bytes4)
