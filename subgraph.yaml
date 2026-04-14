@@ -394,6 +394,30 @@ dataSources:
         - event: PermissionRevoked(indexed uint256,indexed address,indexed bytes4)
           handler: handlePermissionRevoked
       file: ./src/capability.ts
+  - kind: ethereum
+    name: InsuranceClaimFacet
+    network: base-sepolia
+    source:
+      address: "0x4A7bbc0De58aaCC83e593FB040EAF236549ce565"
+      abi: InsuranceClaimFacet
+      startBlock: 40157867
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - InsuranceClaim
+      abis:
+        - name: InsuranceClaimFacet
+          file: ./abis/InsuranceClaimFacet.json
+      eventHandlers:
+        - event: ClaimSubmitted(indexed uint256,indexed uint256,indexed address,(uint256,uint256,address,uint8,uint8,uint256,uint256,uint256,uint256,bytes32,uint256,uint256,uint256,address,bool,bool))
+          handler: handleClaimSubmitted
+        - event: ClaimApproved(indexed uint256,indexed uint256,indexed address)
+          handler: handleClaimApproved
+        - event: ClaimRejected(indexed uint256,indexed uint256,indexed address)
+          handler: handleClaimRejected
+      file: ./src/insurance-claim.ts
   # LEGACY (Pre-COT) Order Data Sources
   - kind: ethereum
     name: LegacyOrderFlowFacet
