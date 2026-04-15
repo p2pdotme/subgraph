@@ -417,6 +417,8 @@ dataSources:
           handler: handleClaimApproved
         - event: ClaimRejected(indexed uint256,indexed uint256,indexed address)
           handler: handleClaimRejected
+        - event: SuperAdminLargeClaimApproved(indexed uint256,indexed address)
+          handler: handleSuperAdminLargeClaimApproved
       file: ./src/insurance-claim.ts
   # LEGACY (Pre-COT) Order Data Sources
   - kind: ethereum

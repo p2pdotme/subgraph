@@ -3,6 +3,7 @@ import {
   ClaimSubmitted as ClaimSubmittedEvent,
   ClaimApproved as ClaimApprovedEvent,
   ClaimRejected as ClaimRejectedEvent,
+  SuperAdminLargeClaimApproved as SuperAdminLargeClaimApprovedEvent,
 } from "../generated/InsuranceClaimFacet/InsuranceClaimFacet";
 import { loadInsuranceClaim } from "./lib";
 
@@ -66,6 +67,19 @@ export function handleClaimRejected(event: ClaimRejectedEvent): void {
   entity.status = 3;
   entity.resolver = event.params.resolver;
   entity.reviewedAt = event.block.timestamp;
+
+  entity.save();
+}
+
+export function handleSuperAdminLargeClaimApproved(
+  event: SuperAdminLargeClaimApprovedEvent,
+): void {
+  const entity = loadInsuranceClaim(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.claimId)),
+    event,
+  );
+
+  entity.superAdminApproved = true;
 
   entity.save();
 }
