@@ -413,10 +413,12 @@ dataSources:
       eventHandlers:
         - event: ClaimSubmitted(indexed uint256,indexed uint256,indexed address,(uint256,uint256,address,uint8,uint8,uint256,uint256,uint256,uint256,bytes32,uint256,uint256,uint256,address,bool,bool))
           handler: handleClaimSubmitted
-        - event: ClaimApproved(indexed uint256,indexed uint256,indexed address)
+        - event: ClaimApproved(indexed uint256,indexed uint256,indexed address,uint256)
           handler: handleClaimApproved
         - event: ClaimRejected(indexed uint256,indexed uint256,indexed address)
           handler: handleClaimRejected
+        - event: ClaimWithdrawn(indexed uint256,indexed uint256,indexed address)
+          handler: handleClaimWithdrawn
         - event: SuperAdminLargeClaimApproved(indexed uint256,indexed address)
           handler: handleSuperAdminLargeClaimApproved
       file: ./src/insurance-claim.ts
