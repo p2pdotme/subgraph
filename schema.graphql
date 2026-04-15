@@ -821,6 +821,7 @@ type InsuranceClaim @entity(immutable: false) {
 
   requiresSuperAdminApproval: Boolean!
   superAdminApproved: Boolean!
+  payoutEligibleAt: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

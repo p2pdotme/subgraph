@@ -53,6 +53,7 @@ export function handleClaimApproved(event: ClaimApprovedEvent): void {
   entity.status = 2;
   entity.resolver = event.params.resolver;
   entity.reviewedAt = event.block.timestamp;
+  entity.payoutEligibleAt = event.params.payoutEligibleAt;
 
   entity.save();
 }

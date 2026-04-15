@@ -26,6 +26,7 @@ export function loadInsuranceClaim(
     claim.resolver = Bytes.empty();
     claim.requiresSuperAdminApproval = false;
     claim.superAdminApproved = false;
+    claim.payoutEligibleAt = BigInt.zero();
   }
 
   claim.blockNumber = event.block.number;
