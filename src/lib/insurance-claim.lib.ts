@@ -27,6 +27,10 @@ export function loadInsuranceClaim(
     claim.requiresSuperAdminApproval = false;
     claim.superAdminApproved = false;
     claim.payoutEligibleAt = BigInt.zero();
+    claim.settledUsdcAmount = BigInt.zero();
+    claim.fromCAIP = BigInt.zero();
+    claim.fromCALR = BigInt.zero();
+    claim.fromPIP = BigInt.zero();
   }
 
   claim.blockNumber = event.block.number;
