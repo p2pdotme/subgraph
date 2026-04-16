@@ -786,6 +786,32 @@ type CirclePermission @entity {
   transactionHash: Bytes!
 }
 
+# PIP REFILL REQUEST
+# A request by a circle admin to refill the Protocol Insurance Pool for their circle
+type PIPRefillRequest @entity(immutable: false) {
+  id: Bytes! # circleId as bytes (one active request per circle at a time)
+
+  circleId: BigInt!
+  circle: Circle!
+
+  # Admin who submitted the request
+  requestedBy: Bytes!
+  requestedAmount: BigInt!
+
+  # RefillStatus: 0=PENDING, 1=APPROVED, 2=CANCELLED
+  status: Int!
+
+  requestedAt: BigInt!
+  resolvedAt: BigInt!
+
+  # Actual amount approved (set on PIPRefillApproved, may differ from requestedAmount)
+  approvedAmount: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # INSURANCE CLAIM
 # A claim submitted by a merchant against the insurance pool
 type InsuranceClaim @entity(immutable: false) {
