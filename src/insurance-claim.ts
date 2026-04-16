@@ -1,4 +1,4 @@
-import { BigInt, Bytes } from "@graphprotocol/graph-ts";
+import { Bytes } from "@graphprotocol/graph-ts";
 import {
   ClaimSubmitted as ClaimSubmittedEvent,
   ClaimApproved as ClaimApprovedEvent,
@@ -82,6 +82,7 @@ export function handleClaimWithdrawn(event: ClaimWithdrawnEvent): void {
 
   // ClaimStatus.WITHDRAWN = 5
   entity.status = 5;
+  entity.reviewedAt = event.block.timestamp;
 
   entity.save();
 }
@@ -94,6 +95,7 @@ export function handleClaimSettled(event: ClaimSettledEvent): void {
 
   // ClaimStatus.SETTLED = 4
   entity.status = 4;
+  entity.settledAt = event.block.timestamp;
   entity.settledUsdcAmount = event.params.usdcAmount;
   entity.fromCAIP = event.params.fromCAIP;
   entity.fromCALR = event.params.fromCALR;

@@ -823,6 +823,8 @@ type InsuranceClaim @entity(immutable: false) {
   superAdminApproved: Boolean!
   payoutEligibleAt: BigInt!
 
+  settledAt: BigInt!
+
   # Settlement breakdown
   settledUsdcAmount: BigInt!
   fromCAIP: BigInt!
