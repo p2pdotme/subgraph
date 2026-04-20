@@ -5,6 +5,26 @@ schema:
   file: ./schema.graphql
 dataSources:
   - kind: ethereum
+    name: GovernorFacet
+    network: base-sepolia
+    source:
+      address: "0xb971b51f6D2539b9aa25C4aCB498581A4CB0Dce1"
+      abi: GovernorFacet
+      startBlock: 40455452
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Proposal
+      abis:
+        - name: GovernorFacet
+          file: ./abis/GovernorFacet.json
+      eventHandlers:
+        - event: ProposalCreated(indexed uint256,indexed address,address[],uint256[],bytes[],string,uint256,uint256)
+          handler: handleProposalCreated
+      file: ./src/governor-facet.ts
+  - kind: ethereum
     name: CircleFacet
     network: base
     source:

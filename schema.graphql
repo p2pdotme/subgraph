@@ -769,6 +769,24 @@ type MerchantWithdrawFeePercentage @entity {
   transactionHash: Bytes!
 }
 
+# PROPOSAL
+# A governance proposal created via GovernorFacet
+type Proposal @entity {
+  id: Bytes! # proposalId as bytes
+  proposalId: BigInt!
+  proposer: Bytes!
+  targets: [Bytes!]!
+  values: [BigInt!]!
+  calldatas: [Bytes!]!
+  description: String!
+  startTimestamp: BigInt!
+  endTimestamp: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # CIRCLE PERMISSION
 # Tracks granted permissions per circle+account with an array of selectors
 type CirclePermission @entity {
