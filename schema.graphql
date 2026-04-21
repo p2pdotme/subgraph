@@ -771,6 +771,7 @@ type MerchantWithdrawFeePercentage @entity {
 
 # PROPOSAL
 # A governance proposal created via GovernorFacet
+# status: Active | Queued | Executed | Canceled
 type Proposal @entity {
   id: Bytes! # proposalId as bytes
   proposalId: BigInt!
@@ -781,6 +782,24 @@ type Proposal @entity {
   description: String!
   startTimestamp: BigInt!
   endTimestamp: BigInt!
+  status: String!
+  eta: BigInt # set when queued into timelock
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# VOTE
+# A vote cast on a governance proposal
+# support: 0 = Against, 1 = For, 2 = Abstain
+type Vote @entity {
+  id: Bytes! # txHash + logIndex
+  proposalId: BigInt!
+  voter: Bytes!
+  support: Int!
+  votes: BigInt!
+  reason: String # null unless VoteCastWithReason
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

@@ -23,6 +23,16 @@ dataSources:
       eventHandlers:
         - event: ProposalCreated(indexed uint256,indexed address,address[],uint256[],bytes[],string,uint256,uint256)
           handler: handleProposalCreated
+        - event: ProposalQueued(indexed uint256,uint256)
+          handler: handleProposalQueued
+        - event: ProposalExecuted(indexed uint256)
+          handler: handleProposalExecuted
+        - event: ProposalCanceled(indexed uint256)
+          handler: handleProposalCanceled
+        - event: VoteCast(indexed address,indexed uint256,uint8,uint256)
+          handler: handleVoteCast
+        - event: VoteCastWithReason(indexed address,indexed uint256,uint8,uint256,string)
+          handler: handleVoteCastWithReason
       file: ./src/governor-facet.ts
   - kind: ethereum
     name: CircleFacet
