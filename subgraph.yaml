@@ -411,7 +411,7 @@ dataSources:
         - name: InsuranceClaimFacet
           file: ./abis/InsuranceClaimFacet.json
       eventHandlers:
-        - event: ClaimSubmitted(indexed uint256,indexed uint256,indexed address,(uint256,uint256,address,uint8,uint8,uint256,uint256,uint256,uint256,bytes32,uint256,uint256,uint256,address,bool,bool))
+        - event: ClaimSubmitted(indexed uint256,indexed uint256,indexed address,(uint256,uint256,address,uint8,uint8,uint256,uint256,uint256,uint256,bytes32,uint256,uint256,uint256,address,bool,bool,bool,uint8))
           handler: handleClaimSubmitted
         - event: ClaimApproved(indexed uint256,indexed uint256,indexed address,uint256)
           handler: handleClaimApproved
@@ -447,6 +447,8 @@ dataSources:
           handler: handlePIPRefillCancelled
         - event: PIPRefillApproved(indexed uint256,uint256)
           handler: handlePIPRefillApproved
+        - event: PIPRefillRejected(indexed uint256,indexed address,uint256)
+          handler: handlePIPRefillRejected
       file: ./src/insurance-pool.ts
   # LEGACY (Pre-COT) Order Data Sources
   - kind: ethereum

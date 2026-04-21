@@ -3,6 +3,7 @@ import {
   PIPRefillRequested as PIPRefillRequestedEvent,
   PIPRefillCancelled as PIPRefillCancelledEvent,
   PIPRefillApproved as PIPRefillApprovedEvent,
+  PIPRefillRejected as PIPRefillRejectedEvent,
 } from "../generated/InsurancePoolFacet/InsurancePoolFacet";
 import { PIPRefillRequest } from "../generated/schema";
 import { loadPIPRefillRequest } from "./lib";
@@ -67,6 +68,18 @@ export function handlePIPRefillApproved(
   // RefillStatus.APPROVED = 1
   entity.status = 1;
   entity.approvedAmount = event.params.amount;
+  entity.resolvedAt = event.block.timestamp;
+
+  entity.save();
+}
+
+export function handlePIPRefillRejected(
+  event: PIPRefillRejectedEvent,
+): void {
+  const entity = loadPIPRefillRequest(event.params.circleId, event);
+
+  // RefillStatus.REJECTED = 3
+  entity.status = 3;
   entity.resolvedAt = event.block.timestamp;
 
   entity.save();
