@@ -17,6 +17,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - Proposal
+        - Vote
       abis:
         - name: GovernorFacet
           file: ./abis/GovernorFacet.json
