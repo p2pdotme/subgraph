@@ -771,7 +771,7 @@ type MerchantWithdrawFeePercentage @entity {
 
 # PROPOSAL
 # A governance proposal created via GovernorFacet
-# status: Active | Queued | Executed | Canceled
+# status: Pending | Active | Succeeded | Defeated | Queued | Executed | Canceled | Expired
 type Proposal @entity {
   id: Bytes! # proposalId as bytes
   proposalId: BigInt!
@@ -780,13 +780,26 @@ type Proposal @entity {
   values: [BigInt!]!
   calldatas: [Bytes!]!
   description: String!
-  startTimestamp: BigInt!
-  endTimestamp: BigInt!
+
+  # Voting window (computed at creation: votingStartsAt = createdAt + votingDelay)
+  votingStartsAt: BigInt!
+  votingEndsAt: BigInt!
+
+  # Vote tallies (updated on each VoteCast / VoteCastWithReason)
+  forVotes: BigInt!
+  againstVotes: BigInt!
+  abstainVotes: BigInt!
+
   status: String!
-  eta: BigInt # set when queued into timelock
+  timelockEta: BigInt # timestamp after which execution is allowed (set when queued)
+
+  # Lifecycle timestamps
+  proposalCreatedAt: BigInt!  # block.timestamp of ProposalCreated
+  queuedAt: BigInt            # block.timestamp of ProposalQueued
+  executedAt: BigInt          # block.timestamp of ProposalExecuted
+  canceledAt: BigInt          # block.timestamp of ProposalCanceled
 
   blockNumber: BigInt!
-  blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
 

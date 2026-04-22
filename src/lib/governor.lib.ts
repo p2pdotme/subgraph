@@ -11,14 +11,20 @@ export function loadProposal(key: Bytes, event: ethereum.Event): Proposal {
     proposal.values = [];
     proposal.calldatas = [];
     proposal.description = "";
-    proposal.startTimestamp = BigInt.zero();
-    proposal.endTimestamp = BigInt.zero();
-    proposal.status = "Active";
-    proposal.eta = null;
+    proposal.votingStartsAt = BigInt.zero();
+    proposal.votingEndsAt = BigInt.zero();
+    proposal.forVotes = BigInt.zero();
+    proposal.againstVotes = BigInt.zero();
+    proposal.abstainVotes = BigInt.zero();
+    proposal.status = "Pending";
+    proposal.timelockEta = null;
+    proposal.proposalCreatedAt = event.block.timestamp;
+    proposal.queuedAt = null;
+    proposal.executedAt = null;
+    proposal.canceledAt = null;
   }
 
   proposal.blockNumber = event.block.number;
-  proposal.blockTimestamp = event.block.timestamp;
   proposal.transactionHash = event.transaction.hash;
 
   return proposal;
