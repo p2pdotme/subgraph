@@ -16,7 +16,7 @@ services:
     environment:
       postgres_host: postgres
       postgres_user: graph-node
-      postgres_pass: let-me-in
+      postgres_pass: ${POSTGRES_PASSWORD:-graph-node}
       postgres_db: graph-node
       ipfs: "ipfs:5001"
       ethereum: "mainnet:http://host.docker.internal:8545"
@@ -39,7 +39,7 @@ services:
       ]
     environment:
       POSTGRES_USER: graph-node
-      POSTGRES_PASSWORD: let-me-in
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-graph-node}
       POSTGRES_DB: graph-node
       # FIXME: remove this env. var. which we shouldn't need. Introduced by
       # <https://github.com/graphprotocol/graph-node/pull/3511>, maybe as a
