@@ -4,8 +4,9 @@ import {
   PIPRefillCancelled as PIPRefillCancelledEvent,
   PIPRefillApproved as PIPRefillApprovedEvent,
   PIPRefillRejected as PIPRefillRejectedEvent,
+  CurrencyApproverUpdated as CurrencyApproverUpdatedEvent,
 } from "../generated/InsurancePoolFacet/InsurancePoolFacet";
-import { PIPRefillRequest } from "../generated/schema";
+import { InsuranceApprover, PIPRefillRequest } from "../generated/schema";
 import { loadPIPRefillRequest } from "./lib";
 
 export function handlePIPRefillRequested(
@@ -81,6 +82,29 @@ export function handlePIPRefillRejected(
   // RefillStatus.REJECTED = 3
   entity.status = 3;
   entity.resolvedAt = event.block.timestamp;
+
+  entity.save();
+}
+
+export function handleCurrencyApproverUpdated(
+  event: CurrencyApproverUpdatedEvent,
+): void {
+  const id = event.params.currency.concat(
+    Bytes.fromHexString(event.params.approver.toHexString()),
+  );
+
+  let entity = InsuranceApprover.load(id);
+  if (!entity) {
+    entity = new InsuranceApprover(id);
+    entity.currency = event.params.currency;
+    entity.approver = event.params.approver;
+  }
+
+  entity.allowed = event.params.allowed;
+  entity.admin = event.params.admin;
+  entity.blockNumber = event.block.number;
+  entity.blockTimestamp = event.block.timestamp;
+  entity.transactionHash = event.transaction.hash;
 
   entity.save();
 }

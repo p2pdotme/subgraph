@@ -24,8 +24,12 @@ export function loadInsuranceClaim(
     claim.submittedAt = BigInt.zero();
     claim.reviewedAt = BigInt.zero();
     claim.resolver = Bytes.empty();
+    claim.beneficiary = Bytes.empty();
     claim.requiresSuperAdminApproval = false;
     claim.superAdminApproved = false;
+    claim.isCustomClaim = false;
+    claim.amendCount = 0;
+    claim.metadataURI = "";
     claim.payoutEligibleAt = BigInt.zero();
     claim.settledAt = BigInt.zero();
     claim.settledUsdcAmount = BigInt.zero();

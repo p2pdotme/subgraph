@@ -821,6 +821,7 @@ type InsuranceClaim @entity(immutable: false) {
   circleId: BigInt!
   circle: Circle!
   claimant: Bytes!
+  beneficiary: Bytes!
 
   # ClaimType: 0=ABSCONDING, 1=MERCHANT_FAULT, 2=NON_MERCHANT_FAULT
   claimType: Int!
@@ -847,6 +848,9 @@ type InsuranceClaim @entity(immutable: false) {
 
   requiresSuperAdminApproval: Boolean!
   superAdminApproved: Boolean!
+  isCustomClaim: Boolean!
+  amendCount: Int!
+  metadataURI: String!
   payoutEligibleAt: BigInt!
 
   settledAt: BigInt!
@@ -856,6 +860,21 @@ type InsuranceClaim @entity(immutable: false) {
   fromCAIP: BigInt!
   fromCALR: BigInt!
   fromPIP: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# INSURANCE APPROVER
+# Tracks which addresses are approved to handle claims for a given currency
+type InsuranceApprover @entity {
+  id: Bytes! # currency + approver
+
+  currency: Bytes!
+  approver: Bytes!
+  allowed: Boolean!
+  admin: Bytes!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

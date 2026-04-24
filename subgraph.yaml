@@ -411,7 +411,7 @@ dataSources:
         - name: InsuranceClaimFacet
           file: ./abis/InsuranceClaimFacet.json
       eventHandlers:
-        - event: ClaimSubmitted(indexed uint256,indexed uint256,indexed address,(uint256,uint256,address,uint8,uint8,uint256,uint256,uint256,uint256,bytes32,uint256,uint256,uint256,address,bool,bool,bool,uint8))
+        - event: ClaimSubmitted(indexed uint256,indexed uint256,indexed address,(uint256,uint256,address,address,uint8,uint8,uint256,uint256,uint256,uint256,bytes32,uint256,uint256,uint256,address,bool,bool,bool,uint8,string))
           handler: handleClaimSubmitted
         - event: ClaimApproved(indexed uint256,indexed uint256,indexed address,uint256)
           handler: handleClaimApproved
@@ -419,7 +419,7 @@ dataSources:
           handler: handleClaimRejected
         - event: ClaimWithdrawn(indexed uint256,indexed uint256,indexed address)
           handler: handleClaimWithdrawn
-        - event: ClaimSettled(indexed uint256,indexed uint256,uint256,uint256,uint256,uint256)
+        - event: ClaimSettled(indexed uint256,indexed uint256,uint256,uint256,uint256)
           handler: handleClaimSettled
         - event: SuperAdminLargeClaimApproved(indexed uint256,indexed address)
           handler: handleSuperAdminLargeClaimApproved
@@ -437,6 +437,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - PIPRefillRequest
+        - InsuranceApprover
       abis:
         - name: InsurancePoolFacet
           file: ./abis/InsurancePoolFacet.json
@@ -449,6 +450,8 @@ dataSources:
           handler: handlePIPRefillApproved
         - event: PIPRefillRejected(indexed uint256,indexed address,uint256)
           handler: handlePIPRefillRejected
+        - event: CurrencyApproverUpdated(indexed bytes32,indexed address,bool,indexed address)
+          handler: handleCurrencyApproverUpdated
       file: ./src/insurance-pool.ts
   # LEGACY (Pre-COT) Order Data Sources
   - kind: ethereum

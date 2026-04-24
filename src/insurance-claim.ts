@@ -21,6 +21,7 @@ export function handleClaimSubmitted(event: ClaimSubmittedEvent): void {
   entity.circleId = event.params.circleId;
   entity.circle = Bytes.fromByteArray(Bytes.fromBigInt(event.params.circleId));
   entity.claimant = event.params.claimant;
+  entity.beneficiary = claim.beneficiary;
 
   entity.claimType = claim.claimType;
   entity.status = claim.status;
@@ -41,6 +42,9 @@ export function handleClaimSubmitted(event: ClaimSubmittedEvent): void {
 
   entity.requiresSuperAdminApproval = claim.requiresSuperAdminApproval;
   entity.superAdminApproved = claim.superAdminApproved;
+  entity.isCustomClaim = claim.isCustomClaim;
+  entity.amendCount = claim.amendCount;
+  entity.metadataURI = claim.metadataURI;
 
   entity.save();
 }
@@ -99,7 +103,6 @@ export function handleClaimSettled(event: ClaimSettledEvent): void {
   entity.settledUsdcAmount = event.params.usdcAmount;
   entity.fromCAIP = event.params.fromCAIP;
   entity.fromCALR = event.params.fromCALR;
-  entity.fromPIP = event.params.fromPIP;
 
   entity.save();
 }
