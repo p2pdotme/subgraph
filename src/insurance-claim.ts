@@ -45,6 +45,8 @@ export function handleClaimSubmitted(event: ClaimSubmittedEvent): void {
   entity.isCustomClaim = claim.isCustomClaim;
   entity.amendCount = claim.amendCount;
   entity.metadataURI = claim.metadataURI;
+  entity.circleAdminAtSubmit = claim.circleAdminAtSubmit;
+  entity.beneficiaryIsMerchant = claim.beneficiaryIsMerchant;
 
   entity.save();
 }

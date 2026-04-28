@@ -30,6 +30,8 @@ export function loadInsuranceClaim(
     claim.isCustomClaim = false;
     claim.amendCount = 0;
     claim.metadataURI = "";
+    claim.circleAdminAtSubmit = Bytes.empty();
+    claim.beneficiaryIsMerchant = false;
     claim.payoutEligibleAt = BigInt.zero();
     claim.settledAt = BigInt.zero();
     claim.settledUsdcAmount = BigInt.zero();

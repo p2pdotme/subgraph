@@ -851,6 +851,8 @@ type InsuranceClaim @entity(immutable: false) {
   isCustomClaim: Boolean!
   amendCount: Int!
   metadataURI: String!
+  circleAdminAtSubmit: Bytes!
+  beneficiaryIsMerchant: Boolean!
   payoutEligibleAt: BigInt!
 
   settledAt: BigInt!
