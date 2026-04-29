@@ -842,20 +842,20 @@ type InsuranceClaim @entity(immutable: false) {
   currency: Bytes!
   submittedAt: BigInt!
   reviewedAt: BigInt!
+  settledAt: BigInt!
 
-  # Address that approved or rejected the claim
-  resolver: Bytes!
-
+  amendCount: Int!
   requiresSuperAdminApproval: Boolean!
   superAdminApproved: Boolean!
   isCustomClaim: Boolean!
-  amendCount: Int!
-  metadataURI: String!
-  circleAdminAtSubmit: Bytes!
   beneficiaryIsMerchant: Boolean!
-  payoutEligibleAt: BigInt!
 
-  settledAt: BigInt!
+  # Address that approved or rejected the claim
+  resolver: Bytes!
+  circleAdminAtSubmit: Bytes!
+  metadataURI: String!
+
+  payoutEligibleAt: BigInt!
 
   # Settlement breakdown
   settledUsdcAmount: BigInt!
