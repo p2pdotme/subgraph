@@ -6,7 +6,7 @@ schema:
 dataSources:
   - kind: ethereum
     name: GovernorFacet
-    network: base-sepolia
+    network: base
     source:
       address: "0xb971b51f6D2539b9aa25C4aCB498581A4CB0Dce1"
       abi: GovernorFacet
