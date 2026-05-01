@@ -37,3 +37,5 @@ export { loadUser, loadSocialVerified, loadReputationChange, adjustUserMetricsBy
 export { loadCurrency, loadCurrencyMetricsByMonth, loadCurrencyMetricsByDay, loadLegacyStats, updateCurrencyMetrics } from "./currency.lib";
 export * from "./circle-score.lib";
 export { loadProposal, loadVote } from "./governor.lib";
+export { loadInsuranceClaim } from "./insurance-claim.lib";
+export { loadPIPRefillRequest } from "./insurance-pool.lib";

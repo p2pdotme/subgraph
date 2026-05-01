@@ -256,6 +256,9 @@ type Orders @entity(immutable: false) {
   disputePlacedAt: BigInt!
   disputeSettledAt: BigInt!
 
+  # INSURANCE CLAIMS
+  claimSubmissions: [InsuranceClaim!] @derivedFrom(field: "order")
+
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -827,6 +830,103 @@ type CirclePermission @entity {
   account: Bytes!
   selectors: [Bytes!]!
   name: String!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# PIP REFILL REQUEST
+# A request by a circle admin to refill the Protocol Insurance Pool for their circle
+type PIPRefillRequest @entity(immutable: false) {
+  id: Bytes! # circleId as bytes (one active request per circle at a time)
+
+  circleId: BigInt!
+  circle: Circle!
+
+  # Admin who submitted the request
+  requestedBy: Bytes!
+  requestedAmount: BigInt!
+
+  # RefillStatus: 0=PENDING, 1=APPROVED, 2=CANCELLED, 3=REJECTED
+  status: Int!
+
+  requestedAt: BigInt!
+  resolvedAt: BigInt!
+
+  # Actual amount approved (set on PIPRefillApproved, may differ from requestedAmount)
+  approvedAmount: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# INSURANCE CLAIM
+# A claim submitted by a merchant against the insurance pool
+type InsuranceClaim @entity(immutable: false) {
+  id: Bytes! # claimId as bytes
+
+  claimId: BigInt!
+  circleId: BigInt!
+  circle: Circle!
+  claimant: Bytes!
+  beneficiary: Bytes!
+
+  # ClaimType: 0=ABSCONDING, 1=MERCHANT_FAULT, 2=NON_MERCHANT_FAULT
+  claimType: Int!
+
+  # ClaimStatus: 0=DEFAULT, 1=SUBMITTED, 2=APPROVED, 3=REJECTED, 4=SETTLED, 5=WITHDRAWN
+  status: Int!
+
+  fiatAmount: BigInt!
+  usdcAmount: BigInt!
+  accountNo: BigInt!
+
+  orderId: BigInt!
+  order: Orders!
+
+  # Claimant merchant
+  merchant: CircleMerchant
+
+  currency: Bytes!
+  submittedAt: BigInt!
+  reviewedAt: BigInt!
+  settledAt: BigInt!
+
+  amendCount: Int!
+  requiresSuperAdminApproval: Boolean!
+  superAdminApproved: Boolean!
+  isCustomClaim: Boolean!
+  beneficiaryIsMerchant: Boolean!
+
+  # Address that approved or rejected the claim
+  resolver: Bytes!
+  circleAdminAtSubmit: Bytes!
+  metadataURI: String!
+
+  payoutEligibleAt: BigInt!
+
+  # Settlement breakdown
+  settledUsdcAmount: BigInt!
+  fromCAIP: BigInt!
+  fromCALR: BigInt!
+  fromPIP: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# INSURANCE APPROVER
+# Tracks which addresses are approved to handle claims for a given currency
+type InsuranceApprover @entity {
+  id: Bytes! # currency + approver
+
+  currency: Bytes!
+  approver: Bytes!
+  allowed: Boolean!
+  admin: Bytes!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
