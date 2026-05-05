@@ -1,5 +1,6 @@
 import { Bytes } from "@graphprotocol/graph-ts";
 import {
+  AccountNameUpdated as AccountNameUpdatedEvent,
   PermissionGranted as PermissionGrantedEvent,
   PermissionRevoked as PermissionRevokedEvent,
 } from "../generated/CapabilityFacet/CapabilityFacet";
@@ -22,6 +23,21 @@ function removeSelector(selectors: Bytes[], selector: Bytes): Bytes[] {
     }
   }
   return result;
+}
+
+export function handleAccountNameUpdated(
+  event: AccountNameUpdatedEvent,
+): void {
+  const key = Bytes.fromHexString(
+    `${event.params.circleId.toString()}-${event.params.account.toHexString()}`,
+  );
+
+  const permission = loadCirclePermission(key, event);
+  permission.circleId = event.params.circleId;
+  permission.account = event.params.account;
+  permission.name = event.params.name;
+
+  permission.save();
 }
 
 export function handlePermissionGranted(event: PermissionGrantedEvent): void {

@@ -54,6 +54,7 @@ import {
   MerchantAssignedNewOrder as MerchantAssignedNewOrderEvent,
   MerchantReAssignedNewOrder as MerchantReAssignedNewOrderEvent,
   OrderCancelledBy as OrderCancelledByEvent,
+  OrderCancelledBy1 as OrderCancelledByV2Event,
 } from "../generated/OrderFlowFacet/OrderFlowFacet";
 import { getYearMonthFromTimestamp } from "./utils/date.utils";
 import {
@@ -1032,6 +1033,16 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
 }
 
 export function handleOrderCancelledBy(event: OrderCancelledByEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.cancelledBy = event.params.cancelledBy;
+  order.cancelledAt = event.block.timestamp;
+  order.save();
+}
+
+export function handleOrderCancelledByV2(event: OrderCancelledByV2Event): void {
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
     event,
