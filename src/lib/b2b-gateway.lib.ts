@@ -16,6 +16,7 @@ export function loadIntegrator(
     integrator.totalVolume = BigInt.fromI32(0);
     integrator.activeOrderCount = BigInt.fromI32(0);
     integrator.cancelledOrderCount = BigInt.fromI32(0);
+    integrator.callbackFailureCount = BigInt.fromI32(0);
   }
 
   integrator.blockNumber = event.block.number;

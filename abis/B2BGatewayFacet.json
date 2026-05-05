@@ -43,6 +43,11 @@
   },
   {
     "inputs": [],
+    "name": "B2BProxyImplLocked",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "B2BProxyIntegratorReadFailed",
     "type": "error"
   },
@@ -101,6 +106,31 @@
     "inputs": [],
     "name": "ZeroAddress",
     "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "orderId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "integrator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "reason",
+        "type": "bytes"
+      }
+    ],
+    "name": "B2BIntegratorCallbackFailed",
+    "type": "event"
   },
   {
     "anonymous": false,
