@@ -453,6 +453,41 @@ dataSources:
         - event: CurrencyApproverUpdated(indexed bytes32,indexed address,bool,indexed address)
           handler: handleCurrencyApproverUpdated
       file: ./src/insurance-pool.ts
+  # B2B GATEWAY
+  - kind: ethereum
+    name: B2BGatewayFacet
+    network: base
+    source:
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      abi: B2BGatewayFacet
+      startBlock: 29875200
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Integrator
+        - B2BOrder
+        - B2BIntegratorCallbackFailure
+      abis:
+        - name: B2BGatewayFacet
+          file: ./abis/B2BGatewayFacet.json
+      eventHandlers:
+        - event: IntegratorRegistered(indexed address,bool,address)
+          handler: handleIntegratorRegistered
+        - event: IntegratorDeactivated(indexed address)
+          handler: handleIntegratorDeactivated
+        - event: B2BOrderPlaced(indexed uint256,indexed address,indexed address,uint256)
+          handler: handleB2BOrderPlaced
+        - event: B2BSellOrderPlaced(indexed uint256,indexed address,indexed address,uint256)
+          handler: handleB2BSellOrderPlaced
+        - event: B2BOrderCompleted(indexed uint256,indexed address,uint256)
+          handler: handleB2BOrderCompleted
+        - event: B2BOrderCancelled(indexed uint256,indexed address,uint256)
+          handler: handleB2BOrderCancelled
+        - event: B2BIntegratorCallbackFailed(indexed uint256,indexed address,bytes)
+          handler: handleB2BIntegratorCallbackFailed
+      file: ./src/b2b-gateway.ts
   # LEGACY (Pre-COT) Order Data Sources
   - kind: ethereum
     name: LegacyOrderFlowFacet

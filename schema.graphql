@@ -794,7 +794,13 @@ type Integrator @entity {
   activeOrderCount: BigInt!
   # Lifetime cancelled BUY orders (analytics-only).
   cancelledOrderCount: BigInt!
+  # Lifetime count of integrator-side onOrderComplete reverts. Protocol-side
+  # completion (USDC routing, status=COMPLETED) finalized regardless — this is
+  # a tally of downstream notification failures that need ops reconciliation.
+  callbackFailureCount: BigInt!
   orders: [B2BOrder!] @derivedFrom(field: "integrator")
+  callbackFailures: [B2BIntegratorCallbackFailure!]
+    @derivedFrom(field: "integrator")
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -804,7 +810,7 @@ type Integrator @entity {
 # B2B ORDER
 # Links a protocol order to its integrator. Joinable by id with the canonical
 # `Orders` entity for full lifecycle (status, timestamps, merchant, etc.).
-type B2BOrder @entity {
+type B2BOrder @entity(immutable: false) {
   id: Bytes! # orderId as bytes (matches Orders.id)
   orderId: BigInt!
   integrator: Integrator!
@@ -812,6 +818,28 @@ type B2BOrder @entity {
   amount: BigInt!
   # Mirrors OrderProcessorStorage.OrderType: 0=BUY, 1=SELL. PAY is never B2B.
   orderType: Int!
+  # True if integrator's onOrderComplete callback reverted at completion.
+  # Protocol-side state still finalised; off-chain ops must reconcile.
+  callbackFailed: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# B2B INTEGRATOR CALLBACK FAILURE
+# Audit log for B2BIntegratorCallbackFailed events. Emitted when an integrator's
+# onOrderComplete hook reverts during onB2BOrderComplete. The protocol-side
+# completion has already finalised; this entity exists so ops/integrator can
+# reconcile downstream state off-chain.
+type B2BIntegratorCallbackFailure @entity(immutable: true) {
+  id: Bytes! # txHash + logIndex
+  orderId: BigInt!
+  order: B2BOrder!
+  integrator: Integrator!
+  # Raw revert data returned by the integrator (4-byte selector + abi-encoded args
+  # for custom errors, or string-encoded reason for `revert("...")`).
+  reason: Bytes!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
