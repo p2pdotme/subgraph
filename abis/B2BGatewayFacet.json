@@ -1,0 +1,499 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "target",
+        "type": "address"
+      }
+    ],
+    "name": "AddressEmptyCode",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "AddressInsufficientBalance",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "B2BCallerNotContract",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "B2BIntegratorInactive",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "B2BIntegratorRejectedOrder",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "B2BProxyAddressMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "B2BProxyIntegratorReadFailed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "B2BProxyOwnerReadFailed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "B2BProxyOwnerZero",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "FailedInnerCall",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidInput",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidOrderId",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotSelf",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotSuperAdmin",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuard",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "SafeERC20FailedOperation",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ZeroAddress",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "orderId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "integrator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "B2BOrderCancelled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "orderId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "integrator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "B2BOrderCompleted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "orderId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "integrator",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "B2BOrderPlaced",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "orderId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "integrator",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "B2BSellOrderPlaced",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "integrator",
+        "type": "address"
+      }
+    ],
+    "name": "IntegratorDeactivated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "integrator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "usdcThroughIntegrator",
+        "type": "bool"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "proxyImpl",
+        "type": "address"
+      }
+    ],
+    "name": "IntegratorRegistered",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "integrator",
+        "type": "address"
+      }
+    ],
+    "name": "deactivateIntegrator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "integrator",
+        "type": "address"
+      }
+    ],
+    "name": "getIntegratorConfig",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "bool",
+            "name": "isActive",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "usdcThroughIntegrator",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "activeOrderCount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "proxyImpl",
+            "type": "address"
+          }
+        ],
+        "internalType": "struct B2BGatewayStorage.IntegratorConfig",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "orderId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getOrderIntegrator",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "integrator",
+        "type": "address"
+      }
+    ],
+    "name": "isActiveIntegrator",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "orderId",
+        "type": "uint256"
+      }
+    ],
+    "name": "onB2BOrderCancelled",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "orderId",
+        "type": "uint256"
+      }
+    ],
+    "name": "onB2BOrderComplete",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "currency",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "recipientAddr",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "pubKey",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "circleId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "preferredPaymentChannelConfigId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "fiatAmountLimit",
+        "type": "uint256"
+      }
+    ],
+    "name": "placeB2BOrder",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "orderId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "currency",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "string",
+        "name": "userPubKey",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "circleId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "preferredPaymentChannelConfigId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "fiatAmountLimit",
+        "type": "uint256"
+      }
+    ],
+    "name": "placeB2BSellOrder",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "orderId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "integrator",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "usdcThroughIntegrator",
+        "type": "bool"
+      },
+      {
+        "internalType": "address",
+        "name": "proxyImpl",
+        "type": "address"
+      }
+    ],
+    "name": "registerIntegrator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
