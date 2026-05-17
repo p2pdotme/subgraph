@@ -12,6 +12,7 @@ export {
   getDailyMetricsKey,
   loadCircleOrderMetricsByMonth,
   loadCirclePermission,
+  loadCommunityAdmin,
 } from "./circle.lib";
 export { loadOrders, syncOrder } from "./order.lib";
 export {

@@ -383,6 +383,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - CirclePermission
+        - CommunityAdmin
       abis:
         - name: CapabilityFacet
           file: ./abis/CapabilityFacet.json
@@ -393,6 +394,10 @@ dataSources:
           handler: handlePermissionGranted
         - event: PermissionRevoked(indexed uint256,indexed address,indexed bytes4)
           handler: handlePermissionRevoked
+        - event: CommunityAdminAdded(indexed address,indexed address)
+          handler: handleCommunityAdminAdded
+        - event: CommunityAdminRemoved(indexed address,indexed address)
+          handler: handleCommunityAdminRemoved
       file: ./src/capability.ts
   - kind: ethereum
     name: InsuranceClaimFacet
