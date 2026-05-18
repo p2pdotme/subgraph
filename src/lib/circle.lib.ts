@@ -6,6 +6,7 @@ import {
   CircleOrderMetricsByMonth,
   CirclePermission,
   CircleScoreState,
+  CommunityAdmin,
 } from "../../generated/schema";
 import { STATUS_BOOTSTRAP, SECONDS_PER_DAY } from "../constants/circle-score";
 
@@ -159,4 +160,23 @@ export function loadCirclePermission(
   permission.transactionHash = event.transaction.hash;
 
   return permission;
+}
+
+export function loadCommunityAdmin(
+  key: Bytes,
+  event: ethereum.Event,
+): CommunityAdmin {
+  let admin = CommunityAdmin.load(key);
+  if (!admin) {
+    admin = new CommunityAdmin(key);
+    admin.updater = Bytes.empty();
+    admin.account = Bytes.empty();
+    admin.isActive = false;
+  }
+
+  admin.blockNumber = event.block.number;
+  admin.blockTimestamp = event.block.timestamp;
+  admin.transactionHash = event.transaction.hash;
+
+  return admin;
 }
