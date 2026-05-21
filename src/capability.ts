@@ -1,10 +1,12 @@
 import { Bytes } from "@graphprotocol/graph-ts";
 import {
   AccountNameUpdated as AccountNameUpdatedEvent,
+  CommunityAdminAdded as CommunityAdminAddedEvent,
+  CommunityAdminRemoved as CommunityAdminRemovedEvent,
   PermissionGranted as PermissionGrantedEvent,
   PermissionRevoked as PermissionRevokedEvent,
 } from "../generated/CapabilityFacet/CapabilityFacet";
-import { loadCirclePermission } from "./lib";
+import { loadCirclePermission, loadCommunityAdmin } from "./lib";
 
 function containsSelector(selectors: Bytes[], selector: Bytes): boolean {
   for (let i = 0; i < selectors.length; i++) {
@@ -60,6 +62,26 @@ export function handlePermissionGranted(event: PermissionGrantedEvent): void {
   }
 
   permission.save();
+}
+
+export function handleCommunityAdminAdded(
+  event: CommunityAdminAddedEvent,
+): void {
+  const admin = loadCommunityAdmin(event.params.account, event);
+  admin.updater = event.params.updater;
+  admin.account = event.params.account;
+  admin.isActive = true;
+  admin.save();
+}
+
+export function handleCommunityAdminRemoved(
+  event: CommunityAdminRemovedEvent,
+): void {
+  const admin = loadCommunityAdmin(event.params.account, event);
+  admin.updater = event.params.updater;
+  admin.account = event.params.account;
+  admin.isActive = false;
+  admin.save();
 }
 
 export function handlePermissionRevoked(event: PermissionRevokedEvent): void {
