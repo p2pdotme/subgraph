@@ -37,5 +37,6 @@ export {
 export { loadUser, loadSocialVerified, loadReputationChange, adjustUserMetricsByOrderType } from "./user.lib";
 export { loadCurrency, loadCurrencyMetricsByMonth, loadCurrencyMetricsByDay, loadLegacyStats, updateCurrencyMetrics } from "./currency.lib";
 export * from "./circle-score.lib";
+export { loadIntegrator } from "./b2b-gateway.lib";
 export { loadInsuranceClaim } from "./insurance-claim.lib";
 export { loadPIPRefillRequest } from "./insurance-pool.lib";

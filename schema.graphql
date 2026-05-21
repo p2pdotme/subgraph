@@ -772,6 +772,80 @@ type MerchantWithdrawFeePercentage @entity {
   transactionHash: Bytes!
 }
 
+# ─── B2B GATEWAY ──────────────────────────────────────────────────
+
+# INTEGRATOR
+# A whitelisted B2B integrator contract
+type Integrator @entity {
+  id: Bytes! # integrator address
+  address: Bytes!
+  isActive: Boolean!
+  usdcThroughIntegrator: Boolean!
+  # UserProxy implementation pinned at registerIntegrator time. Used by the
+  # gateway to authorize CREATE2-derived proxy callers in _resolveIntegrator.
+  proxyImpl: Bytes!
+  # Aggregated lifetime USDC volume placed via this integrator (BUY + SELL).
+  # Derived from B2BOrderPlaced / B2BSellOrderPlaced events — the contract no
+  # longer stores this on-chain.
+  totalVolume: BigInt!
+  # Currently open BUY orders (incremented on B2BOrderPlaced, decremented on
+  # B2BOrderCompleted / B2BOrderCancelled). SELL orders are not tracked here
+  # — the gateway does not bookkeep them.
+  activeOrderCount: BigInt!
+  # Lifetime cancelled BUY orders (analytics-only).
+  cancelledOrderCount: BigInt!
+  # Lifetime count of integrator-side onOrderComplete reverts. Protocol-side
+  # completion (USDC routing, status=COMPLETED) finalized regardless — this is
+  # a tally of downstream notification failures that need ops reconciliation.
+  callbackFailureCount: BigInt!
+  orders: [B2BOrder!] @derivedFrom(field: "integrator")
+  callbackFailures: [B2BIntegratorCallbackFailure!]
+    @derivedFrom(field: "integrator")
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# B2B ORDER
+# Links a protocol order to its integrator. Joinable by id with the canonical
+# `Orders` entity for full lifecycle (status, timestamps, merchant, etc.).
+type B2BOrder @entity(immutable: false) {
+  id: Bytes! # orderId as bytes (matches Orders.id)
+  orderId: BigInt!
+  integrator: Integrator!
+  user: Bytes!
+  amount: BigInt!
+  # Mirrors OrderProcessorStorage.OrderType: 0=BUY, 1=SELL. PAY is never B2B.
+  orderType: Int!
+  # True if integrator's onOrderComplete callback reverted at completion.
+  # Protocol-side state still finalised; off-chain ops must reconcile.
+  callbackFailed: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# B2B INTEGRATOR CALLBACK FAILURE
+# Audit log for B2BIntegratorCallbackFailed events. Emitted when an integrator's
+# onOrderComplete hook reverts during onB2BOrderComplete. The protocol-side
+# completion has already finalised; this entity exists so ops/integrator can
+# reconcile downstream state off-chain.
+type B2BIntegratorCallbackFailure @entity(immutable: true) {
+  id: Bytes! # txHash + logIndex
+  orderId: BigInt!
+  order: B2BOrder!
+  integrator: Integrator!
+  # Raw revert data returned by the integrator (4-byte selector + abi-encoded args
+  # for custom errors, or string-encoded reason for `revert("...")`).
+  reason: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # COMMUNITY ADMIN
 # Tracks addresses granted community admin status
 type CommunityAdmin @entity {
