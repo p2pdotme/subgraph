@@ -2,6 +2,8 @@ import { BigInt, Bytes } from "@graphprotocol/graph-ts";
 import {
   CircleCreated as CircleCreatedEvent,
   CircleAdminUpdated as CircleAdminUpdatedEvent,
+  CircleCommunityUrlUpdated as CircleCommunityUrlUpdatedEvent,
+  CircleAdminCommunityUrlUpdated as CircleAdminCommunityUrlUpdatedEvent,
   // CircleProtocolTokenStaked as CircleProtocolTokenStakedEvent,
 } from "../generated/CircleFacet/CircleFacet";
 import { loadCircle, loadCircleMetrics } from "./lib";
@@ -39,6 +41,28 @@ export function handleCircleAdminUpdated(
   const circle = loadCircle(key, event);
 
   circle.admin = event.params.newAdmin.toHexString();
+
+  circle.save();
+}
+
+export function handleCircleCommunityUrlUpdated(
+  event: CircleCommunityUrlUpdatedEvent
+): void {
+  const key = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
+  const circle = loadCircle(key, event);
+
+  circle.communityLink = event.params.newCommunityUrl;
+
+  circle.save();
+}
+
+export function handleCircleAdminCommunityUrlUpdated(
+  event: CircleAdminCommunityUrlUpdatedEvent
+): void {
+  const key = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
+  const circle = loadCircle(key, event);
+
+  circle.adminLink = event.params.newAdminCommunityUrl;
 
   circle.save();
 }
