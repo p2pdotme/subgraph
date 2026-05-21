@@ -772,6 +772,56 @@ type MerchantWithdrawFeePercentage @entity {
   transactionHash: Bytes!
 }
 
+# PROPOSAL
+# A governance proposal created via GovernorFacet
+# status: Pending | Active | Succeeded | Defeated | Queued | Executed | Canceled | Expired
+type Proposal @entity {
+  id: Bytes! # proposalId as bytes
+  proposalId: BigInt!
+  proposer: Bytes!
+  targets: [Bytes!]!
+  values: [BigInt!]!
+  calldatas: [Bytes!]!
+  description: String!
+
+  # Voting window (computed at creation: votingStartsAt = createdAt + votingDelay)
+  votingStartsAt: BigInt!
+  votingEndsAt: BigInt!
+
+  # Vote tallies (updated on each VoteCast / VoteCastWithReason)
+  forVotes: BigInt!
+  againstVotes: BigInt!
+  abstainVotes: BigInt!
+
+  status: String!
+  timelockEta: BigInt # timestamp after which execution is allowed (set when queued)
+
+  # Lifecycle timestamps
+  proposalCreatedAt: BigInt!  # block.timestamp of ProposalCreated
+  queuedAt: BigInt            # block.timestamp of ProposalQueued
+  executedAt: BigInt          # block.timestamp of ProposalExecuted
+  canceledAt: BigInt          # block.timestamp of ProposalCanceled
+
+  blockNumber: BigInt!
+  transactionHash: Bytes!
+}
+
+# VOTE
+# A vote cast on a governance proposal
+# support: 0 = Against, 1 = For, 2 = Abstain
+type Vote @entity {
+  id: Bytes! # txHash + logIndex
+  proposalId: BigInt!
+  voter: Bytes!
+  support: Int!
+  votes: BigInt!
+  reason: String # null unless VoteCastWithReason
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # ─── B2B GATEWAY ──────────────────────────────────────────────────
 
 # INTEGRATOR
