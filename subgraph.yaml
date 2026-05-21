@@ -25,6 +25,10 @@ dataSources:
           handler: handleCircleCreated
         - event: CircleAdminUpdated(indexed uint256,indexed address,indexed address)
           handler: handleCircleAdminUpdated
+        - event: CircleCommunityUrlUpdated(indexed uint256,string)
+          handler: handleCircleCommunityUrlUpdated
+        - event: CircleAdminCommunityUrlUpdated(indexed uint256,string)
+          handler: handleCircleAdminCommunityUrlUpdated
         # - event: CircleProtocolTokenStaked(indexed uint256,indexed address,uint256)
         #   handler: handleCircleProtocolTokenStaked
       file: ./src/circle-facet.ts
