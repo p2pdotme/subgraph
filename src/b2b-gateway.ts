@@ -81,11 +81,9 @@ export function handleB2BSellOrderPlaced(event: B2BSellOrderPlacedEvent): void {
 export function handleB2BOrderCompleted(event: B2BOrderCompletedEvent): void {
   // Only fired for BUY orders by B2BGatewayFacet.onB2BOrderComplete.
   let integrator = loadIntegrator(event.params.integrator, event);
-  if (integrator.activeOrderCount.gt(BigInt.fromI32(0))) {
-    integrator.activeOrderCount = integrator.activeOrderCount.minus(
-      BigInt.fromI32(1),
-    );
-  }
+  integrator.activeOrderCount = integrator.activeOrderCount.minus(
+    BigInt.fromI32(1),
+  );
   integrator.save();
 }
 
@@ -93,11 +91,9 @@ export function handleB2BOrderCancelled(event: B2BOrderCancelledEvent): void {
   // Only fired for BUY orders by B2BGatewayFacet.onB2BOrderCancelled
   // (wired from OrderFlowFacet._cancelOrder for BUY-type B2B orders).
   let integrator = loadIntegrator(event.params.integrator, event);
-  if (integrator.activeOrderCount.gt(BigInt.fromI32(0))) {
-    integrator.activeOrderCount = integrator.activeOrderCount.minus(
-      BigInt.fromI32(1),
-    );
-  }
+  integrator.activeOrderCount = integrator.activeOrderCount.minus(
+    BigInt.fromI32(1),
+  );
   integrator.cancelledOrderCount = integrator.cancelledOrderCount.plus(
     BigInt.fromI32(1),
   );
@@ -107,17 +103,16 @@ export function handleB2BOrderCancelled(event: B2BOrderCancelledEvent): void {
 export function handleB2BIntegratorCallbackFailed(
   event: B2BIntegratorCallbackFailedEvent,
 ): void {
-  // Protocol-side completion has finalised — this only logs that the
-  // integrator's onOrderComplete revert. Activity is co-emitted with
-  // B2BOrderCompleted in the same tx, so handleB2BOrderCompleted has already
-  // decremented activeOrderCount. We just record the failure for ops review.
+  // Protocol-side completion has finalised; this event only signals that the
+  // integrator's onOrderComplete callback reverted. Record the failure for
+  // ops review and flag the B2BOrder so consumers can filter without joining
+  // the failure log. activeOrderCount is owned by handleB2BOrderCompleted.
   let integrator = loadIntegrator(event.params.integrator, event);
   integrator.callbackFailureCount = integrator.callbackFailureCount.plus(
     BigInt.fromI32(1),
   );
   integrator.save();
 
-  // Flag the B2BOrder so consumers can filter without joining the failure log.
   let orderKey = Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId));
   let b2bOrder = B2BOrder.load(orderKey);
   if (b2bOrder) {
