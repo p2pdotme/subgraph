@@ -383,6 +383,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - CirclePermission
+        - CommunityAdmin
       abis:
         - name: CapabilityFacet
           file: ./abis/CapabilityFacet.json
@@ -393,14 +394,18 @@ dataSources:
           handler: handlePermissionGranted
         - event: PermissionRevoked(indexed uint256,indexed address,indexed bytes4)
           handler: handlePermissionRevoked
+        - event: CommunityAdminAdded(indexed address,indexed address)
+          handler: handleCommunityAdminAdded
+        - event: CommunityAdminRemoved(indexed address,indexed address)
+          handler: handleCommunityAdminRemoved
       file: ./src/capability.ts
   - kind: ethereum
     name: InsuranceClaimFacet
     network: base
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0x17192bd2E8893E4eA0Ab5DB67AdbF38aE42e9931"
       abi: InsuranceClaimFacet
-      startBlock: 29875200
+      startBlock: 45338444
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -428,9 +433,9 @@ dataSources:
     name: InsurancePoolFacet
     network: base
     source:
-      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      address: "0x17192bd2E8893E4eA0Ab5DB67AdbF38aE42e9931"
       abi: InsurancePoolFacet
-      startBlock: 29875200
+      startBlock: 45338444
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

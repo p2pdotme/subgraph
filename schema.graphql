@@ -846,6 +846,20 @@ type B2BIntegratorCallbackFailure @entity(immutable: true) {
   transactionHash: Bytes!
 }
 
+# COMMUNITY ADMIN
+# Tracks addresses granted community admin status
+type CommunityAdmin @entity {
+  id: Bytes! # account address
+
+  updater: Bytes!
+  account: Bytes!
+  isActive: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # CIRCLE PERMISSION
 # Tracks granted permissions per circle+account with an array of selectors
 type CirclePermission @entity {
