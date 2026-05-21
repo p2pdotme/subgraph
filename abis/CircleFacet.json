@@ -142,6 +142,44 @@
       "inputs": [
         {
           "indexed": true,
+          "internalType": "uint256",
+          "name": "circleId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "newCommunityUrl",
+          "type": "string"
+        }
+      ],
+      "name": "CircleCommunityUrlUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "circleId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "newAdminCommunityUrl",
+          "type": "string"
+        }
+      ],
+      "name": "CircleAdminCommunityUrlUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
           "internalType": "address",
           "name": "merchant",
           "type": "address"
