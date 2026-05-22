@@ -8,9 +8,9 @@ dataSources:
     name: GovernorFacet
     network: base
     source:
-      address: "0xb971b51f6D2539b9aa25C4aCB498581A4CB0Dce1"
+      address: "0x0daE40ECA6C5BF01860Ba6E9397BdD088f7D9fba"
       abi: GovernorFacet
-      startBlock: 40455452
+      startBlock: 46279933
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
