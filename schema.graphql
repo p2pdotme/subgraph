@@ -1,5 +1,5 @@
 # CIRCLE
-type Circle @entity {
+type Circle @entity(immutable: false) {
   id: Bytes!
 
   circleId: BigInt!
@@ -21,7 +21,7 @@ type Circle @entity {
 
 # STAKER
 # An individual who stakes in any circle
-type Staker @entity {
+type Staker @entity(immutable: false) {
   id: Bytes!
 
   staker: String!
@@ -38,7 +38,7 @@ type Staker @entity {
 
 # CIRCLE STAKE RECORDS
 # A record of a staker's stake in a circle
-type CircleUsdcStakeRecords @entity {
+type CircleUsdcStakeRecords @entity(immutable: false) {
   id: Bytes!
 
   circle: Circle!
@@ -57,7 +57,7 @@ type CircleUsdcStakeRecords @entity {
 
 # CIRCLE UNSTAKE RECORDS
 # A record of a staker's unstake in a circle
-type CircleUsdcUnstakeRecords @entity {
+type CircleUsdcUnstakeRecords @entity(immutable: false) {
   id: Bytes!
 
   circle: Circle!
@@ -75,7 +75,7 @@ type CircleUsdcUnstakeRecords @entity {
 
 # CIRCLE METRICS
 # Metrics for a circle
-type CircleMetrics @entity {
+type CircleMetrics @entity(immutable: false) {
   id: Bytes!
 
   circle: Circle @relation(name: "metrics")
@@ -114,7 +114,7 @@ type CircleMetrics @entity {
 
 # CIRCLE SCORE STATE
 # Internal state used to calculate circle score. Separated from CircleMetrics
-type CircleScoreState @entity {
+type CircleScoreState @entity(immutable: false) {
   id: Bytes! # same as circle id
   # 30d rolling metrics (recomputed from CircleDailyMetrics)
   avgSettlementSeconds: BigInt! # paidAt → completedAt (SELL/PAY only)
@@ -133,7 +133,7 @@ type CircleScoreState @entity {
 
 # CIRCLE MERCHANT
 # A merchant who is registered in a circle
-type CircleMerchant @entity {
+type CircleMerchant @entity(immutable: false) {
   id: Bytes!
   merchant: String!
   telegramId: String!
@@ -176,7 +176,7 @@ type CircleMerchant @entity {
 
 # MERCHANT PAYMENT CHANNELS
 # A payment channel of a merchant
-type MerchantPaymentChannels @entity {
+type MerchantPaymentChannels @entity(immutable: false) {
   id: Bytes!
   merchant: CircleMerchant!
 
@@ -266,7 +266,7 @@ type Orders @entity(immutable: false) {
 
 # ASSIGNED MERCHANTS
 # A merchant who is assigned to an order
-type AssignedMerchants @entity {
+type AssignedMerchants @entity(immutable: false) {
   id: Bytes!
 
   assignedMerchant: String!
@@ -281,7 +281,7 @@ type AssignedMerchants @entity {
 
 # CIRCLE ADMIN REWARDS
 # A rewards for a circle admin
-type CircleAdminRewards @entity {
+type CircleAdminRewards @entity(immutable: false) {
   id: Bytes!
   admin: String!
 
@@ -310,7 +310,7 @@ type CircleAdminRewardClaimLedger @entity(immutable: true) {
 
 # MERCHANT REWARDS
 # A rewards for a merchant
-type MerchantRewards @entity {
+type MerchantRewards @entity(immutable: false) {
   id: Bytes!
   merchant: String!
 
@@ -339,7 +339,7 @@ type MerchantRewardClaimLedger @entity(immutable: true) {
 
 # MERCHANT VOLUME BY MONTH
 # A volume for a merchant by month
-type MerchantVolumeByMonth @entity {
+type MerchantVolumeByMonth @entity(immutable: false) {
   id: Bytes!
 
   merchant: CircleMerchant!
@@ -356,7 +356,7 @@ type MerchantVolumeByMonth @entity {
 
 # MERCHANT ORDER METRICS BY MONTH
 # Order metrics for a merchant by year-month
-type MerchantOrderMetricsByMonth @entity {
+type MerchantOrderMetricsByMonth @entity(immutable: false) {
   id: Bytes!
 
   merchant: CircleMerchant!
@@ -382,7 +382,7 @@ type MerchantOrderMetricsByMonth @entity {
 
 # CIRCLE ORDER METRICS BY MONTH
 # Order metrics for a circle by year-month
-type CircleOrderMetricsByMonth @entity {
+type CircleOrderMetricsByMonth @entity(immutable: false) {
   id: Bytes!
 
   circle: Circle!
@@ -428,7 +428,7 @@ type MerchantStakeHistory @entity(immutable: true) {
 
 # PAYMENT CHANNEL CONFIG
 # Configuration for a payment channel (e.g., UPI, IMPS, Pix, etc.)
-type PaymentChannelConfig @entity {
+type PaymentChannelConfig @entity(immutable: false) {
   id: Bytes!
 
   paymentChannelId: BigInt!
@@ -444,7 +444,7 @@ type PaymentChannelConfig @entity {
 
 # CURRENCY CONFIG
 # Monthly volume limit configuration per currency
-type CurrencyConfig @entity {
+type CurrencyConfig @entity(immutable: false) {
   id: Bytes!
 
   currency: Bytes!
@@ -457,7 +457,7 @@ type CurrencyConfig @entity {
 
 # CURRENCY METRICS BY MONTH
 # Global per-currency monthly metrics aggregating order counts and USDC volume
-type CurrencyMetricsByMonth @entity {
+type CurrencyMetricsByMonth @entity(immutable: false) {
   id: Bytes!
 
   currency: Bytes!
@@ -483,7 +483,7 @@ type CurrencyMetricsByMonth @entity {
 
 # CURRENCY METRICS BY DAY
 # Global per-currency daily metrics aggregating order counts and USDC volume
-type CurrencyMetricsByDay @entity {
+type CurrencyMetricsByDay @entity(immutable: false) {
   id: Bytes!
 
   currency: Bytes!
@@ -509,7 +509,7 @@ type CurrencyMetricsByDay @entity {
 
 # LEGACY STATS
 # Aggregated legacy order stats per currency
-type LegacyStats @entity {
+type LegacyStats @entity(immutable: false) {
   id: Bytes!
 
   currency: Bytes!
@@ -526,7 +526,7 @@ type LegacyStats @entity {
 
 # PAYMENT CHANNEL MIGRATION
 # A record of payment channel migration requests
-type PaymentChannelMigration @entity {
+type PaymentChannelMigration @entity(immutable: false) {
   id: Bytes!
 
   merchant: CircleMerchant!
@@ -553,7 +553,7 @@ type PaymentChannelMigration @entity {
 
 # USER
 # A user who is registered in a circle
-type User @entity {
+type User @entity(immutable: false) {
   id: Bytes!
 
   address: Bytes!
@@ -590,7 +590,7 @@ type User @entity {
 
 # SOCIAL VERIFIED
 # A social verified record for a user
-type SocialVerified @entity {
+type SocialVerified @entity(immutable: false) {
   id: Bytes!
   socialName: String!
   verified: Boolean!
@@ -604,7 +604,7 @@ type SocialVerified @entity {
 
 # REPUTATION CHANGE
 # A record of admin-initiated reputation point changes
-type ReputationChange @entity {
+type ReputationChange @entity(immutable: false) {
   id: Bytes!
   admin: Bytes!
   user: Bytes!
@@ -617,7 +617,7 @@ type ReputationChange @entity {
 
 # CURRENCY
 # A record of currencies
-type Currency @entity {
+type Currency @entity(immutable: false) {
   id: Bytes!
   currency: Bytes!
   isActive: Boolean!
@@ -629,7 +629,7 @@ type Currency @entity {
 
 # MERCHANT REFERRAL CLAIMED
 # A record of a merchant referral claim
-type MerchantReferralClaimed @entity {
+type MerchantReferralClaimed @entity(immutable: false) {
   id: Bytes!
   recommender: Bytes!
   recipient: Bytes!
@@ -641,7 +641,7 @@ type MerchantReferralClaimed @entity {
 
 # MERCHANT REFERRAL REVENUE CLAIMED
 # A record of a merchant referral revenue claim
-type MerchantReferralRevenueClaimed @entity {
+type MerchantReferralRevenueClaimed @entity(immutable: false) {
   id: Bytes!
   merchant: CircleMerchant!
   yearMonthKey: BigInt!
@@ -654,7 +654,7 @@ type MerchantReferralRevenueClaimed @entity {
 
 # CAMPAIGN
 # A campaign
-type Campaign @entity {
+type Campaign @entity(immutable: false) {
   id: Bytes!
   campaignId: BigInt!
   isActive: Boolean!
@@ -674,7 +674,7 @@ type Campaign @entity {
 
 # CAMPAIGN MANAGERS
 # A manager for a campaign
-type CampaignManagers @entity {
+type CampaignManagers @entity(immutable: false) {
   id: Bytes!
 
   campaign: Campaign
@@ -699,7 +699,7 @@ type CampaignManagers @entity {
 
 # CAMPAIGN REWARD REDEEMED
 # A record of a reward redeemed for a campaign
-type CampaignRewardRedeemed @entity {
+type CampaignRewardRedeemed @entity(immutable: false) {
   id: Bytes!
 
   user: User!
@@ -717,7 +717,7 @@ type CampaignRewardRedeemed @entity {
 
 # USER RECOMMENDATION
 # User recommendations to other users
-type UserRecommendation @entity {
+type UserRecommendation @entity(immutable: false) {
   id: Bytes!
   recommender: Bytes!
   recipient: Bytes!
@@ -730,7 +730,7 @@ type UserRecommendation @entity {
 
 # CIRCLE DAILY METRICS
 # Rolling 30d window buckets for circle score calculation
-type CircleDailyMetrics @entity {
+type CircleDailyMetrics @entity(immutable: false) {
   id: Bytes! # circleId-dayNumber
   circle: Circle!
   dayNumber: BigInt! # timestamp / 86400
@@ -747,7 +747,7 @@ type CircleDailyMetrics @entity {
 
 # FCM TOKEN
 # A FCM token for a merchant
-type FCMToken @entity {
+type FCMToken @entity(immutable: false) {
   id: Bytes!
   address: Bytes!
   tokens: [String!]
@@ -761,7 +761,7 @@ type FCMToken @entity {
 
 # MERCHANT WITHDRAW FEE PERCENTAGE
 # A withdraw fee percentage for a merchant
-type MerchantWithdrawFeePercentage @entity {
+type MerchantWithdrawFeePercentage @entity(immutable: false) {
   id: Bytes!
   currency: Bytes!
   feePercentage: BigInt!
@@ -775,7 +775,7 @@ type MerchantWithdrawFeePercentage @entity {
 # PROPOSAL
 # A governance proposal created via GovernorFacet
 # status: Pending | Active | Succeeded | Defeated | Queued | Executed | Canceled | Expired
-type Proposal @entity {
+type Proposal @entity(immutable: false) {
   id: Bytes! # proposalId as bytes
   proposalId: BigInt!
   proposer: Bytes!
@@ -809,7 +809,7 @@ type Proposal @entity {
 # VOTE
 # A vote cast on a governance proposal
 # support: 0 = Against, 1 = For, 2 = Abstain
-type Vote @entity {
+type Vote @entity(immutable: true) {
   id: Bytes! # txHash + logIndex
   proposalId: BigInt!
   voter: Bytes!
@@ -826,7 +826,7 @@ type Vote @entity {
 
 # INTEGRATOR
 # A whitelisted B2B integrator contract
-type Integrator @entity {
+type Integrator @entity(immutable: false) {
   id: Bytes! # integrator address
   address: Bytes!
   isActive: Boolean!
@@ -898,7 +898,7 @@ type B2BIntegratorCallbackFailure @entity(immutable: true) {
 
 # COMMUNITY ADMIN
 # Tracks addresses granted community admin status
-type CommunityAdmin @entity {
+type CommunityAdmin @entity(immutable: false) {
   id: Bytes! # account address
 
   updater: Bytes!
@@ -912,7 +912,7 @@ type CommunityAdmin @entity {
 
 # CIRCLE PERMISSION
 # Tracks granted permissions per circle+account with an array of selectors
-type CirclePermission @entity {
+type CirclePermission @entity(immutable: false) {
   id: Bytes! # circleId-account
   circleId: BigInt!
   account: Bytes!
@@ -1008,7 +1008,7 @@ type InsuranceClaim @entity(immutable: false) {
 
 # INSURANCE APPROVER
 # Tracks which addresses are approved to handle claims for a given currency
-type InsuranceApprover @entity {
+type InsuranceApprover @entity(immutable: false) {
   id: Bytes! # currency + approver
 
   currency: Bytes!
