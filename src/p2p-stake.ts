@@ -49,7 +49,7 @@ export function handleP2PStakeToppedUp(event: P2PStakeToppedUpEvent): void {
   const stake = loadUserP2PStake(event.params.user, event);
 
   stake.stakedAmount = event.params.newTotal;
-  // Status remains ACTIVE per the facet's _topUp precondition; set defensively.
+  // The contract guarantees status == ACTIVE for top-ups; reasserted defensively.
   stake.status = P2P_STAKE_STATUS_ACTIVE;
   stake.lastActionAt = event.block.timestamp;
   stake.save();
