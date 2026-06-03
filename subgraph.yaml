@@ -370,11 +370,11 @@ dataSources:
       file: ./src/reputation-manager.ts
   - kind: ethereum
     name: P2PStakeBoostFacet
-    network: base-sepolia
+    network: base
     source:
-      address: "0x3AFB0B105A4d74E8373508f31A875D3a51f2399C"
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
       abi: P2PStakeBoostFacet
-      startBlock: 42303969
+      startBlock: 20273700
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
