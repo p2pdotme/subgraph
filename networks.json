@@ -113,6 +113,10 @@
     "GovernorFacet": {
       "address": "0x0daE40ECA6C5BF01860Ba6E9397BdD088f7D9fba",
       "startBlock": 46279933
+    },
+    "P2PStakeBoostFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 29875200
     }
   }
 }
