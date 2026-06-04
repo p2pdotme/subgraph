@@ -368,6 +368,37 @@ dataSources:
         - event: UserVoted(indexed address,indexed address)
           handler: handleUserVoted
       file: ./src/reputation-manager.ts
+  - kind: ethereum
+    name: P2PStakeBoostFacet
+    network: base
+    source:
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      abi: P2PStakeBoostFacet
+      startBlock: 20273700
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - UserP2PStake
+        - UserP2PStakeActivity
+      abis:
+        - name: P2PStakeBoostFacet
+          file: ./abis/P2PStakeBoostFacet.json
+      eventHandlers:
+        - event: P2PStaked(indexed address,uint256,uint256)
+          handler: handleP2PStaked
+        - event: P2PStakeToppedUp(indexed address,uint256,uint256)
+          handler: handleP2PStakeToppedUp
+        - event: P2PUnstakeRequested(indexed address,uint256,uint256)
+          handler: handleP2PUnstakeRequested
+        - event: P2PUnstakeClaimed(indexed address,uint256)
+          handler: handleP2PUnstakeClaimed
+        - event: P2PStakeCooldownExtended(indexed address,uint256)
+          handler: handleP2PStakeCooldownExtended
+        - event: P2PStakeSeized(indexed address,uint256,indexed address)
+          handler: handleP2PStakeSeized
+      file: ./src/p2p-stake.ts
   # UPGRADE EMIT EVENTS -> Sync up with older data
   - kind: ethereum
     name: SetterFacet
