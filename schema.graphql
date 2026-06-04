@@ -1006,6 +1006,61 @@ type InsuranceClaim @entity(immutable: false) {
   transactionHash: Bytes!
 }
 
+# USER P2P STAKE
+# Aggregated per-user P2P stake state, updated by every P2PStakeBoostFacet event.
+# Status reflects the on-chain state machine: NONE | ACTIVE | COOLDOWN | SEIZED.
+type UserP2PStake @entity(immutable: false) {
+  id: Bytes! # user address as bytes
+  user: Bytes!
+
+  # Current on-chain state
+  stakedAmount: BigInt! # current locked tokens (0 in NONE/SEIZED)
+  status: String! # NONE | ACTIVE | COOLDOWN | SEIZED
+  cooldownEnd: BigInt! # 0 when not in COOLDOWN
+
+  totalSeized: BigInt! # sum of all P2PStakeSeized amounts
+
+  firstStakedAt: BigInt! # block.timestamp of first P2PStaked (0 until first stake)
+  lastActionAt: BigInt! # block.timestamp of most recent event
+
+  # Last seizure metadata (only populated once a seize occurs)
+  fraudReserve: Bytes # address that received the seized stake
+
+  activities: [UserP2PStakeActivity!]! @derivedFrom(field: "stake")
+
+  # Updated on every event for this user; reflect the most recent event, not creation.
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# USER P2P STAKE ACTIVITY
+# Immutable timeline of every P2PStakeBoostFacet event for a user.
+# activityType: STAKED | TOPPED_UP | UNSTAKE_REQUESTED | UNSTAKE_CLAIMED | COOLDOWN_EXTENDED | SEIZED
+type UserP2PStakeActivity @entity(immutable: true) {
+  id: Bytes! # txHash + logIndex
+  stake: UserP2PStake!
+  user: Bytes!
+  userAddress: String!
+  activityType: String!
+
+  # Event payload (zero when not applicable to the activity type)
+  amount: BigInt! # event `amount` field
+  newTotal: BigInt! # event `newTotal` field (STAKED / TOPPED_UP)
+  cooldownEnd: BigInt! # event `cooldownEnd` / `newCooldownEnd` (UNSTAKE_REQUESTED / COOLDOWN_EXTENDED)
+  fraudReserve: Bytes # SEIZED only
+
+  # Post-action snapshot of user's staked balance and status (for easy timeline queries)
+  stakedAmountAfter: BigInt!
+  statusAfter: String!
+
+  timestamp: BigInt! # block.timestamp at emission
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # INSURANCE APPROVER
 # Tracks which addresses are approved to handle claims for a given currency
 type InsuranceApprover @entity(immutable: false) {
