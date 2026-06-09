@@ -392,6 +392,8 @@ dataSources:
           handler: handleP2PStakeToppedUp
         - event: P2PUnstakeRequested(indexed address,uint256,uint256)
           handler: handleP2PUnstakeRequested
+        - event: P2PUnstakeCancelled(indexed address,uint256)
+          handler: handleP2PUnstakeCancelled
         - event: P2PUnstakeClaimed(indexed address,uint256)
           handler: handleP2PUnstakeClaimed
         - event: P2PStakeCooldownExtended(indexed address,uint256)

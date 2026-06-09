@@ -2,6 +2,7 @@ import {
   P2PStaked as P2PStakedEvent,
   P2PStakeToppedUp as P2PStakeToppedUpEvent,
   P2PUnstakeRequested as P2PUnstakeRequestedEvent,
+  P2PUnstakeCancelled as P2PUnstakeCancelledEvent,
   P2PUnstakeClaimed as P2PUnstakeClaimedEvent,
   P2PStakeCooldownExtended as P2PStakeCooldownExtendedEvent,
   P2PStakeSeized as P2PStakeSeizedEvent,
@@ -15,6 +16,7 @@ import {
   P2P_ACTIVITY_STAKED,
   P2P_ACTIVITY_TOPPED_UP,
   P2P_ACTIVITY_UNSTAKE_REQUESTED,
+  P2P_ACTIVITY_UNSTAKE_CANCELLED,
   P2P_ACTIVITY_UNSTAKE_CLAIMED,
   P2P_ACTIVITY_COOLDOWN_EXTENDED,
   P2P_ACTIVITY_SEIZED,
@@ -83,6 +85,28 @@ export function handleP2PUnstakeRequested(
   activity.activityType = P2P_ACTIVITY_UNSTAKE_REQUESTED;
   activity.amount = event.params.amount;
   activity.cooldownEnd = event.params.cooldownEnd;
+  activity.stakedAmountAfter = stake.stakedAmount;
+  activity.statusAfter = stake.status;
+  activity.save();
+}
+
+export function handleP2PUnstakeCancelled(
+  event: P2PUnstakeCancelledEvent,
+): void {
+  const stake = loadUserP2PStake(event.params.user, event);
+
+  // Cancellation reverts COOLDOWN -> ACTIVE; stakedAmount is unchanged on-chain.
+  stake.status = P2P_STAKE_STATUS_ACTIVE;
+  stake.cooldownEnd = BigInt.zero();
+  stake.lastActionAt = event.block.timestamp;
+  stake.save();
+
+  const activity = newUserP2PStakeActivity(event);
+  activity.stake = stake.id;
+  activity.user = stake.user;
+  activity.userAddress = event.params.user.toHexString();
+  activity.activityType = P2P_ACTIVITY_UNSTAKE_CANCELLED;
+  activity.amount = event.params.amount;
   activity.stakedAmountAfter = stake.stakedAmount;
   activity.statusAfter = stake.status;
   activity.save();
