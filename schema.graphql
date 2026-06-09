@@ -1036,7 +1036,7 @@ type UserP2PStake @entity(immutable: false) {
 
 # USER P2P STAKE ACTIVITY
 # Immutable timeline of every P2PStakeBoostFacet event for a user.
-# activityType: STAKED | TOPPED_UP | UNSTAKE_REQUESTED | UNSTAKE_CLAIMED | COOLDOWN_EXTENDED | SEIZED
+# activityType: STAKED | TOPPED_UP | UNSTAKE_REQUESTED | UNSTAKE_CANCELLED | UNSTAKE_CLAIMED | COOLDOWN_EXTENDED | SEIZED
 type UserP2PStakeActivity @entity(immutable: true) {
   id: Bytes! # txHash + logIndex
   stake: UserP2PStake!

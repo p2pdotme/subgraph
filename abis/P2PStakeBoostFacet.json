@@ -259,6 +259,25 @@
           "type": "uint256"
         }
       ],
+      "name": "P2PUnstakeCancelled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
       "name": "P2PUnstakeClaimed",
       "type": "event"
     },
