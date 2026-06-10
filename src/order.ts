@@ -8,6 +8,7 @@ import {
 import {
   OrderDispute as OrderDisputeWithFaultTypeEvent,
   CircleStatusUpdated as CircleStatusUpdatedEvent,
+  OrderAppealed as OrderAppealedEvent,
 } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
 import {
   loadAssignedMerchants,
@@ -388,6 +389,16 @@ export function handleOrderDisputeWithFaultType(
 
   circleMetrics.save();
   scoreState.save();
+}
+
+export function handleOrderAppealed(event: OrderAppealedEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.appealedAt = event.params.appealedAt;
+  order.appealedByMerchantAddress = event.params.merchant;
+  order.save();
 }
 
 export function handleCancelledOrders(event: CancelledOrdersEvent): void {
