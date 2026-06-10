@@ -143,6 +143,8 @@ dataSources:
           handler: handleOrderDisputeWithFaultType
         - event: CircleStatusUpdated(indexed address,indexed uint256,uint8)
           handler: handleCircleStatusUpdated
+        - event: OrderAppealed(indexed uint256,indexed address,uint128)
+          handler: handleOrderAppealed
       file: ./src/order.ts
   - kind: ethereum
     name: OrderFlowFacet
