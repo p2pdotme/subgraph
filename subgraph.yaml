@@ -526,6 +526,31 @@ dataSources:
         - event: CurrencyApproverUpdated(indexed bytes32,indexed address,bool,indexed address)
           handler: handleCurrencyApproverUpdated
       file: ./src/insurance-pool.ts
+  - kind: ethereum
+    name: InsuranceSinkFacet
+    network: base
+    source:
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      abi: InsuranceSinkFacet
+      startBlock: 45338444
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - MerchantPaymentChannels
+        - InsuranceDebtActivity
+      abis:
+        - name: InsuranceSinkFacet
+          file: ./abis/InsuranceSinkFacet.json
+      eventHandlers:
+        - event: InsuranceDebtAccrued(indexed uint256,indexed address,uint256,uint256)
+          handler: handleInsuranceDebtAccrued
+        - event: InsuranceDebtRepaid(indexed address,indexed uint256,uint256,uint256)
+          handler: handleInsuranceDebtRepaid
+        - event: InsuranceDebtRepaidDirect(indexed address,indexed uint256,uint256,uint256)
+          handler: handleInsuranceDebtRepaidDirect
+      file: ./src/insurance-sink.ts
   # B2B GATEWAY
   - kind: ethereum
     name: B2BGatewayFacet

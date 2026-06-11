@@ -1,0 +1,108 @@
+import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import {
+  InsuranceDebtAccrued as InsuranceDebtAccruedEvent,
+  InsuranceDebtRepaid as InsuranceDebtRepaidEvent,
+  InsuranceDebtRepaidDirect as InsuranceDebtRepaidDirectEvent,
+} from "../generated/InsuranceSinkFacet/InsuranceSinkFacet";
+import { InsuranceDebtActivity } from "../generated/schema";
+import { loadMerchantPaymentChannels } from "./lib";
+
+function pcKeyFor(merchant: Bytes, accountNo: BigInt): Bytes {
+  return Bytes.fromUTF8(`${merchant.toHexString()}-${accountNo.toString()}`);
+}
+
+function newDebtActivity(
+  event: ethereum.Event,
+  activityType: string,
+): InsuranceDebtActivity {
+  const key = event.transaction.hash.concatI32(event.logIndex.toI32());
+  const activity = new InsuranceDebtActivity(key);
+  activity.activityType = activityType;
+  activity.claimId = null;
+  activity.amountFiat = BigInt.zero();
+  activity.surplusToFreeFiat = BigInt.zero();
+  activity.usdcPaid = BigInt.zero();
+  activity.debtAfter = BigInt.zero();
+  activity.timestamp = event.block.timestamp;
+  activity.blockNumber = event.block.number;
+  activity.blockTimestamp = event.block.timestamp;
+  activity.transactionHash = event.transaction.hash;
+  return activity;
+}
+
+export function handleInsuranceDebtAccrued(
+  event: InsuranceDebtAccruedEvent,
+): void {
+  const merchant = event.params.merchant;
+  const accountNo = event.params.accountNo;
+  const pcKey = pcKeyFor(merchant, accountNo);
+
+  const paymentChannel = loadMerchantPaymentChannels(pcKey, event);
+  paymentChannel.merchant = merchant;
+  paymentChannel.accountNo = accountNo;
+  paymentChannel.insuranceDebt = paymentChannel.insuranceDebt.plus(
+    event.params.residualFiat,
+  );
+  paymentChannel.save();
+
+  const activity = newDebtActivity(event, "ACCRUED");
+  activity.paymentChannel = pcKey;
+  activity.merchant = merchant;
+  activity.accountNo = accountNo;
+  activity.claimId = event.params.claimId;
+  activity.amountFiat = event.params.residualFiat;
+  activity.debtAfter = paymentChannel.insuranceDebt;
+  activity.save();
+}
+
+export function handleInsuranceDebtRepaid(
+  event: InsuranceDebtRepaidEvent,
+): void {
+  const merchant = event.params.merchant;
+  const accountNo = event.params.accountNo;
+  const pcKey = pcKeyFor(merchant, accountNo);
+
+  const paymentChannel = loadMerchantPaymentChannels(pcKey, event);
+  paymentChannel.merchant = merchant;
+  paymentChannel.accountNo = accountNo;
+  const repaid = event.params.repaidFiat;
+  paymentChannel.insuranceDebt = paymentChannel.insuranceDebt.ge(repaid)
+    ? paymentChannel.insuranceDebt.minus(repaid)
+    : BigInt.zero();
+  paymentChannel.save();
+
+  const activity = newDebtActivity(event, "REPAID");
+  activity.paymentChannel = pcKey;
+  activity.merchant = merchant;
+  activity.accountNo = accountNo;
+  activity.amountFiat = repaid;
+  activity.surplusToFreeFiat = event.params.surplusToFreeFiat;
+  activity.debtAfter = paymentChannel.insuranceDebt;
+  activity.save();
+}
+
+export function handleInsuranceDebtRepaidDirect(
+  event: InsuranceDebtRepaidDirectEvent,
+): void {
+  const merchant = event.params.merchant;
+  const accountNo = event.params.accountNo;
+  const pcKey = pcKeyFor(merchant, accountNo);
+
+  const paymentChannel = loadMerchantPaymentChannels(pcKey, event);
+  paymentChannel.merchant = merchant;
+  paymentChannel.accountNo = accountNo;
+  const repaid = event.params.repaidFiat;
+  paymentChannel.insuranceDebt = paymentChannel.insuranceDebt.ge(repaid)
+    ? paymentChannel.insuranceDebt.minus(repaid)
+    : BigInt.zero();
+  paymentChannel.save();
+
+  const activity = newDebtActivity(event, "REPAID_DIRECT");
+  activity.paymentChannel = pcKey;
+  activity.merchant = merchant;
+  activity.accountNo = accountNo;
+  activity.amountFiat = repaid;
+  activity.usdcPaid = event.params.usdcPaid;
+  activity.debtAfter = paymentChannel.insuranceDebt;
+  activity.save();
+}
