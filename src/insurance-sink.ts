@@ -11,6 +11,13 @@ function pcKeyFor(merchant: Bytes, accountNo: BigInt): Bytes {
   return Bytes.fromUTF8(`${merchant.toHexString()}-${accountNo.toString()}`);
 }
 
+// insuranceDebt is nullable for grafting: a payment channel copied from a
+// pre-upgrade base deployment has no value until its first debt event. Treat
+// the absence as a zero balance.
+function currentDebt(value: BigInt | null): BigInt {
+  return value === null ? BigInt.zero() : value;
+}
+
 function newDebtActivity(
   event: ethereum.Event,
   activityType: string,
@@ -40,9 +47,10 @@ export function handleInsuranceDebtAccrued(
   const paymentChannel = loadMerchantPaymentChannels(pcKey, event);
   paymentChannel.merchant = merchant;
   paymentChannel.accountNo = accountNo;
-  paymentChannel.insuranceDebt = paymentChannel.insuranceDebt.plus(
+  const accrued = currentDebt(paymentChannel.insuranceDebt).plus(
     event.params.residualFiat,
   );
+  paymentChannel.insuranceDebt = accrued;
   paymentChannel.save();
 
   const activity = newDebtActivity(event, "ACCRUED");
@@ -51,7 +59,7 @@ export function handleInsuranceDebtAccrued(
   activity.accountNo = accountNo;
   activity.claimId = event.params.claimId;
   activity.amountFiat = event.params.residualFiat;
-  activity.debtAfter = paymentChannel.insuranceDebt;
+  activity.debtAfter = accrued;
   activity.save();
 }
 
@@ -66,9 +74,11 @@ export function handleInsuranceDebtRepaid(
   paymentChannel.merchant = merchant;
   paymentChannel.accountNo = accountNo;
   const repaid = event.params.repaidFiat;
-  paymentChannel.insuranceDebt = paymentChannel.insuranceDebt.ge(repaid)
-    ? paymentChannel.insuranceDebt.minus(repaid)
+  const debtBefore = currentDebt(paymentChannel.insuranceDebt);
+  const remaining = debtBefore.ge(repaid)
+    ? debtBefore.minus(repaid)
     : BigInt.zero();
+  paymentChannel.insuranceDebt = remaining;
   paymentChannel.save();
 
   const activity = newDebtActivity(event, "REPAID");
@@ -77,7 +87,7 @@ export function handleInsuranceDebtRepaid(
   activity.accountNo = accountNo;
   activity.amountFiat = repaid;
   activity.surplusToFreeFiat = event.params.surplusToFreeFiat;
-  activity.debtAfter = paymentChannel.insuranceDebt;
+  activity.debtAfter = remaining;
   activity.save();
 }
 
@@ -92,9 +102,11 @@ export function handleInsuranceDebtRepaidDirect(
   paymentChannel.merchant = merchant;
   paymentChannel.accountNo = accountNo;
   const repaid = event.params.repaidFiat;
-  paymentChannel.insuranceDebt = paymentChannel.insuranceDebt.ge(repaid)
-    ? paymentChannel.insuranceDebt.minus(repaid)
+  const debtBefore = currentDebt(paymentChannel.insuranceDebt);
+  const remaining = debtBefore.ge(repaid)
+    ? debtBefore.minus(repaid)
     : BigInt.zero();
+  paymentChannel.insuranceDebt = remaining;
   paymentChannel.save();
 
   const activity = newDebtActivity(event, "REPAID_DIRECT");
@@ -103,6 +115,6 @@ export function handleInsuranceDebtRepaidDirect(
   activity.accountNo = accountNo;
   activity.amountFiat = repaid;
   activity.usdcPaid = event.params.usdcPaid;
-  activity.debtAfter = paymentChannel.insuranceDebt;
+  activity.debtAfter = remaining;
   activity.save();
 }
