@@ -192,7 +192,9 @@ type MerchantPaymentChannels @entity(immutable: false) {
   # in fiat units (same denomination as fiatBalance). Accrues when an insurance
   # write-off exceeds fiatBalance; repaid organically by buy-order completions
   # or directly via repayInsuranceDebt.
-  insuranceDebt: BigInt!
+  # Nullable to support grafting: rows copied from a pre-upgrade base deployment
+  # carry null until their next debt event (treated as zero by handlers).
+  insuranceDebt: BigInt
 
   # Current volume tracking for availability calculations
   dailyVolume: BigInt!
