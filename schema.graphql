@@ -967,7 +967,7 @@ type InsuranceClaim @entity(immutable: false) {
   claimant: Bytes!
   beneficiary: Bytes!
 
-  # ClaimType: 0=ABSCONDING, 1=MERCHANT_FAULT, 2=NON_MERCHANT_FAULT
+  # ClaimType: 0=MERCHANT_ABSCONDING, 1=MERCHANT_FAULT_FUND_LOSS, 2=USER_LOSS, 3=MERCHANT_REIMBURSEMENT
   claimType: Int!
 
   # ClaimStatus: 0=DEFAULT, 1=SUBMITTED, 2=APPROVED, 3=REJECTED, 4=SETTLED, 5=WITHDRAWN
