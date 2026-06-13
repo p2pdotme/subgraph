@@ -74,10 +74,13 @@ export function loadCircleScoreState(
     scoreState.avgSettlementSeconds = BigInt.zero();
     scoreState.disputeRate = BigInt.zero();
     scoreState.rolling30dVolume = BigInt.zero();
+    scoreState.rolling30dCompletedOrders = BigInt.zero();
+    scoreState.rolling30dAcceptedOrders = BigInt.zero();
     scoreState.lifetimeAcceptedOrders = BigInt.zero();
     scoreState.cumulativeSettlementSeconds = BigInt.zero();
     scoreState.completedSellPayOrders = BigInt.zero();
     scoreState.activeMerchantsCount = BigInt.zero();
+    scoreState.availableMerchantsCount = BigInt.zero();
     scoreState.merchantFaultDisputesCount = BigInt.zero();
   }
 
