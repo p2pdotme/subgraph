@@ -188,6 +188,12 @@ type MerchantPaymentChannels @entity(immutable: false) {
   isMonthlyVolumeUnlimited: Boolean!
   fiatBalance: BigInt!
 
+  # Outstanding insurance debt owed to the protocol on this payment channel,
+  # in fiat units (same denomination as fiatBalance). Accrues when an insurance
+  # write-off exceeds fiatBalance; repaid organically by buy-order completions
+  # or directly via repayInsuranceDebt.
+  insuranceDebt: BigInt!
+
   # Current volume tracking for availability calculations
   dailyVolume: BigInt!
   monthlyVolume: BigInt!
@@ -965,7 +971,7 @@ type InsuranceClaim @entity(immutable: false) {
   claimant: Bytes!
   beneficiary: Bytes!
 
-  # ClaimType: 0=ABSCONDING, 1=MERCHANT_FAULT, 2=NON_MERCHANT_FAULT
+  # ClaimType: 0=MERCHANT_ABSCONDING, 1=MERCHANT_FAULT_FUND_LOSS, 2=USER_LOSS, 3=MERCHANT_REIMBURSEMENT
   claimType: Int!
 
   # ClaimStatus: 0=DEFAULT, 1=SUBMITTED, 2=APPROVED, 3=REJECTED, 4=SETTLED, 5=WITHDRAWN
@@ -1004,6 +1010,43 @@ type InsuranceClaim @entity(immutable: false) {
   fromCAIP: BigInt!
   fromCALR: BigInt!
   fromPIP: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# INSURANCE DEBT ACTIVITY
+# Immutable timeline of insurance-debt ledger events on a merchant's payment
+# channel. Accrual happens when a write-off exceeds the PC's fiat balance;
+# repayment is either organic (buy-order completion credit) or direct
+# (repayInsuranceDebt USDC payment).
+# activityType: ACCRUED | REPAID | REPAID_DIRECT
+type InsuranceDebtActivity @entity(immutable: true) {
+  id: Bytes! # txHash + logIndex
+  paymentChannel: MerchantPaymentChannels!
+  merchant: Bytes!
+  accountNo: BigInt!
+  activityType: String!
+
+  # Set on ACCRUED only; the claim whose write-off created the debt.
+  claimId: BigInt
+
+  # Fiat amount moved on the debt ledger by this event:
+  #  - ACCRUED: residual fiat added to debt
+  #  - REPAID / REPAID_DIRECT: fiat amount applied against debt
+  amountFiat: BigInt!
+
+  # REPAID only: portion of the credit that exceeded the debt and flowed to fiatBalance.
+  surplusToFreeFiat: BigInt!
+
+  # REPAID_DIRECT only: USDC the merchant paid in (6dp).
+  usdcPaid: BigInt!
+
+  # Outstanding debt on the PC after applying this event.
+  debtAfter: BigInt!
+
+  timestamp: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -1074,6 +1117,32 @@ type InsuranceApprover @entity(immutable: false) {
   approver: Bytes!
   allowed: Boolean!
   admin: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# INSURANCE CURRENCY CONFIG
+# Current insurance parameters for a currency, mirroring
+# InsurancePoolStorage.configByCurrency. Updated by InsuranceConfigUpdated,
+# which is emitted both by the pool setter and by the DiamondInitV27 upgrade
+# (the latter flips payoutDelay to 0). Keyed by currency tag.
+type InsuranceCurrencyConfig @entity(immutable: false) {
+  id: Bytes! # currency (bytes32)
+
+  currency: Bytes!
+  caipFeeBps: Int!
+  calrLockBps: Int!
+  calrLockPeriod: BigInt!
+  payoutDelay: BigInt!
+  maxClaimAge: BigInt!
+  orderClaimWindow: BigInt!
+  largeClaimThreshold: BigInt!
+
+  # Admin that triggered the most recent update.
+  updatedBy: Bytes!
+  updatedAt: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
