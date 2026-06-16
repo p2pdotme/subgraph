@@ -11,13 +11,6 @@ function pcKeyFor(merchant: Bytes, accountNo: BigInt): Bytes {
   return Bytes.fromUTF8(`${merchant.toHexString()}-${accountNo.toString()}`);
 }
 
-// insuranceDebt is nullable for grafting: a payment channel copied from a
-// pre-upgrade base deployment has no value until its first debt event. Treat
-// the absence as a zero balance.
-function currentDebt(value: BigInt | null): BigInt {
-  return value === null ? BigInt.zero() : value;
-}
-
 function newDebtActivity(
   event: ethereum.Event,
   activityType: string,
@@ -47,9 +40,7 @@ export function handleInsuranceDebtAccrued(
   const paymentChannel = loadMerchantPaymentChannels(pcKey, event);
   paymentChannel.merchant = merchant;
   paymentChannel.accountNo = accountNo;
-  const accrued = currentDebt(paymentChannel.insuranceDebt).plus(
-    event.params.residualFiat,
-  );
+  const accrued = paymentChannel.insuranceDebt.plus(event.params.residualFiat);
   paymentChannel.insuranceDebt = accrued;
   paymentChannel.save();
 
@@ -74,7 +65,7 @@ export function handleInsuranceDebtRepaid(
   paymentChannel.merchant = merchant;
   paymentChannel.accountNo = accountNo;
   const repaid = event.params.repaidFiat;
-  const debtBefore = currentDebt(paymentChannel.insuranceDebt);
+  const debtBefore = paymentChannel.insuranceDebt;
   const remaining = debtBefore.ge(repaid)
     ? debtBefore.minus(repaid)
     : BigInt.zero();
@@ -102,7 +93,7 @@ export function handleInsuranceDebtRepaidDirect(
   paymentChannel.merchant = merchant;
   paymentChannel.accountNo = accountNo;
   const repaid = event.params.repaidFiat;
-  const debtBefore = currentDebt(paymentChannel.insuranceDebt);
+  const debtBefore = paymentChannel.insuranceDebt;
   const remaining = debtBefore.ge(repaid)
     ? debtBefore.minus(repaid)
     : BigInt.zero();

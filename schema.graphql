@@ -192,9 +192,7 @@ type MerchantPaymentChannels @entity(immutable: false) {
   # in fiat units (same denomination as fiatBalance). Accrues when an insurance
   # write-off exceeds fiatBalance; repaid organically by buy-order completions
   # or directly via repayInsuranceDebt.
-  # Nullable to support grafting: rows copied from a pre-upgrade base deployment
-  # carry null until their next debt event (treated as zero by handlers).
-  insuranceDebt: BigInt
+  insuranceDebt: BigInt!
 
   # Current volume tracking for availability calculations
   dailyVolume: BigInt!
@@ -1115,6 +1113,32 @@ type InsuranceApprover @entity(immutable: false) {
   approver: Bytes!
   allowed: Boolean!
   admin: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# INSURANCE CURRENCY CONFIG
+# Current insurance parameters for a currency, mirroring
+# InsurancePoolStorage.configByCurrency. Updated by InsuranceConfigUpdated,
+# which is emitted both by the pool setter and by the DiamondInitV27 upgrade
+# (the latter flips payoutDelay to 0). Keyed by currency tag.
+type InsuranceCurrencyConfig @entity(immutable: false) {
+  id: Bytes! # currency (bytes32)
+
+  currency: Bytes!
+  caipFeeBps: Int!
+  calrLockBps: Int!
+  calrLockPeriod: BigInt!
+  payoutDelay: BigInt!
+  maxClaimAge: BigInt!
+  orderClaimWindow: BigInt!
+  largeClaimThreshold: BigInt!
+
+  # Admin that triggered the most recent update.
+  updatedBy: Bytes!
+  updatedAt: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
