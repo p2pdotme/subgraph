@@ -120,11 +120,14 @@ type CircleScoreState @entity(immutable: false) {
   avgSettlementSeconds: BigInt! # paidAt → completedAt (SELL/PAY only)
   disputeRate: BigInt! # 30d rate × 10000
   rolling30dVolume: BigInt! # 30d USDC volume
+  rolling30dCompletedOrders: BigInt! # 30d SELL/PAY completed (sample size for speed subscore)
+  rolling30dAcceptedOrders: BigInt! # 30d accepted (sample size for dispute subscore)
   # Lifetime counters
   lifetimeAcceptedOrders: BigInt! # All orders ever accepted by a merchant
   cumulativeSettlementSeconds: BigInt! # Running sum for settlement avg
   completedSellPayOrders: BigInt! # SELL/PAY completed minus dispute-reversed (settlement avg denominator)
-  activeMerchantsCount: BigInt! # Merchants with stake > 0, online, not blacklisted
+  activeMerchantsCount: BigInt! # Merchants with stake > 0, online, not blacklisted (score signal)
+  availableMerchantsCount: BigInt! # active + not unstake-requested (routing capacity signal)
   merchantFaultDisputesCount: BigInt! # All-time merchant fault disputes
   blockNumber: BigInt!
   blockTimestamp: BigInt!

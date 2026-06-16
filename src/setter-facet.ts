@@ -13,6 +13,7 @@ import {
 import { CurrencyConfig, PaymentChannelConfig } from "../generated/schema";
 import {
   isMerchantActive,
+  isMerchantAvailable,
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
@@ -21,6 +22,7 @@ import {
   loadMerchantPaymentChannels,
   loadMerchantRewards,
   loadMerchantWithdrawFeePercentage,
+  updateAvailableMerchantsCount,
 } from "./lib";
 
 // export function handleCircleCreatedUpdate(
@@ -50,6 +52,14 @@ export function handleCircleMerchantDetailsAndConfigUpdate(
   const merchant = loadCircleMerchant(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
+  );
+
+  // Snapshot availability BEFORE the bulk overwrite so we can emit a proper delta.
+  const wasAvailable = isMerchantAvailable(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    merchant.isUnstakeRequested,
   );
 
   merchant.circle = circle.id;
@@ -86,6 +96,18 @@ export function handleCircleMerchantDetailsAndConfigUpdate(
     let scoreState = loadCircleScoreState(circle.id, event);
     scoreState.activeMerchantsCount =
       scoreState.activeMerchantsCount.plus(BigInt.fromI32(1));
+    scoreState.save();
+  }
+
+  const isAvailable = isMerchantAvailable(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    merchant.isUnstakeRequested,
+  );
+  if (wasAvailable != isAvailable) {
+    let scoreState = loadCircleScoreState(circle.id, event);
+    updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
     scoreState.save();
   }
 }
