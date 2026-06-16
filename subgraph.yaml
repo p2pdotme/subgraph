@@ -143,6 +143,8 @@ dataSources:
           handler: handleOrderDisputeWithFaultType
         - event: CircleStatusUpdated(indexed address,indexed uint256,uint8)
           handler: handleCircleStatusUpdated
+        - event: OrderAppealed(indexed uint256,indexed address,uint128)
+          handler: handleOrderAppealed
       file: ./src/order.ts
   - kind: ethereum
     name: OrderFlowFacet
@@ -490,6 +492,8 @@ dataSources:
           handler: handleClaimApproved
         - event: ClaimRejected(indexed uint256,indexed uint256,indexed address)
           handler: handleClaimRejected
+        - event: ClaimForceRejected(indexed uint256,indexed uint256,indexed address)
+          handler: handleClaimForceRejected
         - event: ClaimWithdrawn(indexed uint256,indexed uint256,indexed address)
           handler: handleClaimWithdrawn
         - event: ClaimSettled(indexed uint256,indexed uint256,uint256,uint256,uint256)
@@ -511,6 +515,7 @@ dataSources:
       entities:
         - PIPRefillRequest
         - InsuranceApprover
+        - InsuranceCurrencyConfig
       abis:
         - name: InsurancePoolFacet
           file: ./abis/InsurancePoolFacet.json
@@ -525,7 +530,34 @@ dataSources:
           handler: handlePIPRefillRejected
         - event: CurrencyApproverUpdated(indexed bytes32,indexed address,bool,indexed address)
           handler: handleCurrencyApproverUpdated
+        - event: InsuranceConfigUpdated(indexed address,indexed bytes32,(uint16,uint16,uint32,uint32,uint32,uint32,uint128),(uint16,uint16,uint32,uint32,uint32,uint32,uint128))
+          handler: handleInsuranceConfigUpdated
       file: ./src/insurance-pool.ts
+  - kind: ethereum
+    name: InsuranceSinkFacet
+    network: base
+    source:
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      abi: InsuranceSinkFacet
+      startBlock: 45338444
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - MerchantPaymentChannels
+        - InsuranceDebtActivity
+      abis:
+        - name: InsuranceSinkFacet
+          file: ./abis/InsuranceSinkFacet.json
+      eventHandlers:
+        - event: InsuranceDebtAccrued(indexed uint256,indexed address,uint256,uint256)
+          handler: handleInsuranceDebtAccrued
+        - event: InsuranceDebtRepaid(indexed address,indexed uint256,uint256,uint256)
+          handler: handleInsuranceDebtRepaid
+        - event: InsuranceDebtRepaidDirect(indexed address,indexed uint256,uint256,uint256)
+          handler: handleInsuranceDebtRepaidDirect
+      file: ./src/insurance-sink.ts
   # B2B GATEWAY
   - kind: ethereum
     name: B2BGatewayFacet

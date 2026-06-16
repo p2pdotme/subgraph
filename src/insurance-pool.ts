@@ -5,8 +5,13 @@ import {
   PIPRefillApproved as PIPRefillApprovedEvent,
   PIPRefillRejected as PIPRefillRejectedEvent,
   CurrencyApproverUpdated as CurrencyApproverUpdatedEvent,
+  InsuranceConfigUpdated as InsuranceConfigUpdatedEvent,
 } from "../generated/InsurancePoolFacet/InsurancePoolFacet";
-import { InsuranceApprover, PIPRefillRequest } from "../generated/schema";
+import {
+  InsuranceApprover,
+  InsuranceCurrencyConfig,
+  PIPRefillRequest,
+} from "../generated/schema";
 import { loadPIPRefillRequest } from "./lib";
 
 export function handlePIPRefillRequested(
@@ -102,6 +107,35 @@ export function handleCurrencyApproverUpdated(
 
   entity.allowed = event.params.allowed;
   entity.admin = event.params.admin;
+  entity.blockNumber = event.block.number;
+  entity.blockTimestamp = event.block.timestamp;
+  entity.transactionHash = event.transaction.hash;
+
+  entity.save();
+}
+
+export function handleInsuranceConfigUpdated(
+  event: InsuranceConfigUpdatedEvent,
+): void {
+  const currency = event.params.currency;
+  const cfg = event.params.newConfig;
+
+  let entity = InsuranceCurrencyConfig.load(currency);
+  if (!entity) {
+    entity = new InsuranceCurrencyConfig(currency);
+    entity.currency = currency;
+  }
+
+  entity.caipFeeBps = cfg.caipFeeBps;
+  entity.calrLockBps = cfg.calrLockBps;
+  entity.calrLockPeriod = cfg.calrLockPeriod;
+  entity.payoutDelay = cfg.payoutDelay;
+  entity.maxClaimAge = cfg.maxClaimAge;
+  entity.orderClaimWindow = cfg.orderClaimWindow;
+  entity.largeClaimThreshold = cfg.largeClaimThreshold;
+
+  entity.updatedBy = event.params.admin;
+  entity.updatedAt = event.block.timestamp;
   entity.blockNumber = event.block.number;
   entity.blockTimestamp = event.block.timestamp;
   entity.transactionHash = event.transaction.hash;
