@@ -14,14 +14,20 @@ export const MAX_SETTLEMENT_SECONDS: i32 = 150; // Worst case
 // Dispute rate scaling factor
 export const DISPUTE_RATE_MULTIPLIER: i32 = 1800;
 
-// Volume threshold (in USDC, 6 decimals) — 1M USDC
-export const VOLUME_THRESHOLD_USDC: i64 = 1_000_000_000_000;
+// Volume threshold (in USDC, 6 decimals) — 100K USDC.
+// Lowered from 1M so the volume subscore actually differentiates between real circles.
+export const VOLUME_THRESHOLD_USDC: i64 = 100_000_000_000;
 
 // Merchants threshold
 export const MERCHANTS_THRESHOLD: i32 = 100;
 
 // Fixed-point scale factors
 export const DISPUTE_RATE_SCALE: i32 = 10000; // Rate * 10000
+
+// Neutral score returned when the 30d rolling window has no data.
+// Prevents idle circles from collecting "free" 100s on speed/dispute when
+// there are no samples to evaluate.
+export const NEUTRAL_BASELINE: i32 = 50;
 
 // Bootstrap lifecycle thresholds
 export const BOOTSTRAP_ORDERS: i32 = 40;
