@@ -78,6 +78,7 @@ export function loadMerchantPaymentChannels(
     merchantPaymentChannel.status = 0;
     merchantPaymentChannel.isMonthlyVolumeUnlimited = false;
     merchantPaymentChannel.fiatBalance = BigInt.zero();
+    merchantPaymentChannel.insuranceDebt = BigInt.zero();
     merchantPaymentChannel.dailyVolume = BigInt.zero();
     merchantPaymentChannel.monthlyVolume = BigInt.zero();
     merchantPaymentChannel.lastUpdatedDailyVolumeAt = BigInt.zero();

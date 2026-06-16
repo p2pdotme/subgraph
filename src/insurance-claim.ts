@@ -3,6 +3,7 @@ import {
   ClaimSubmitted as ClaimSubmittedEvent,
   ClaimApproved as ClaimApprovedEvent,
   ClaimRejected as ClaimRejectedEvent,
+  ClaimForceRejected as ClaimForceRejectedEvent,
   ClaimWithdrawn as ClaimWithdrawnEvent,
   ClaimSettled as ClaimSettledEvent,
   SuperAdminLargeClaimApproved as SuperAdminLargeClaimApprovedEvent,
@@ -75,6 +76,23 @@ export function handleClaimRejected(event: ClaimRejectedEvent): void {
   // ClaimStatus.REJECTED = 3
   entity.status = 3;
   entity.resolver = event.params.resolver;
+  entity.reviewedAt = event.block.timestamp;
+
+  entity.save();
+}
+
+// Super admin force-rejects a claim that had already reached APPROVED. The
+// contract emits this distinct event (not ClaimRejected) for the
+// APPROVED -> REJECTED escape hatch, so the claim still lands in REJECTED.
+export function handleClaimForceRejected(event: ClaimForceRejectedEvent): void {
+  const entity = loadInsuranceClaim(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.claimId)),
+    event,
+  );
+
+  // ClaimStatus.REJECTED = 3
+  entity.status = 3;
+  entity.resolver = event.params.superAdmin;
   entity.reviewedAt = event.block.timestamp;
 
   entity.save();
