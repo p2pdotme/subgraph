@@ -25,6 +25,7 @@ import {
   STATUS_ACTIVE,
   STATUS_REJECTED,
   STATUS_PAUSED,
+  NEUTRAL_BASELINE,
 } from "../constants/circle-score";
 
 function clamp(value: i32, min: i32, max: i32): i32 {
@@ -34,9 +35,16 @@ function clamp(value: i32, min: i32, max: i32): i32 {
 }
 
 /**
- * Calculate speed score: clamp(100 * (150 - avg) / (150 - 45), 0, 100)
+ * Calculate speed score: clamp(100 * (150 - avg) / (150 - 45), 0, 100).
+ * Returns NEUTRAL_BASELINE when the 30d window had no completed orders —
+ * "no data" must not be silently treated as "perfect speed."
  */
-function calculateSpeedScore(avgSettlementSeconds: BigInt): i32 {
+function calculateSpeedScore(
+  avgSettlementSeconds: BigInt,
+  completedOrdersInWindow: BigInt,
+): i32 {
+  if (!completedOrdersInWindow.gt(BigInt.zero())) return NEUTRAL_BASELINE;
+
   const avgSeconds = avgSettlementSeconds.toI32();
 
   if (avgSeconds >= MAX_SETTLEMENT_SECONDS) return 0;
@@ -50,10 +58,17 @@ function calculateSpeedScore(avgSettlementSeconds: BigInt): i32 {
 }
 
 /**
- * Calculate dispute score: max(0, 100 - (dispute_rate * 1800 / 10000))
- * disputeRate is stored as rate × 10000
+ * Calculate dispute score: max(0, 100 - (dispute_rate * 1800 / 10000)).
+ * disputeRate is stored as rate × 10000.
+ * Returns NEUTRAL_BASELINE when the 30d window had no accepted orders —
+ * a zero rate over an empty window is not evidence of clean behavior.
  */
-function calculateDisputeScore(disputeRate: BigInt): i32 {
+function calculateDisputeScore(
+  disputeRate: BigInt,
+  acceptedOrdersInWindow: BigInt,
+): i32 {
+  if (!acceptedOrdersInWindow.gt(BigInt.zero())) return NEUTRAL_BASELINE;
+
   const penalty =
     (disputeRate.toI32() * DISPUTE_RATE_MULTIPLIER) / DISPUTE_RATE_SCALE;
   const score = 100 - penalty;
@@ -134,6 +149,10 @@ export function compute30dMetrics(
 
   // Store 30d volume for volume score calculation
   scoreState.rolling30dVolume = totalVolume;
+
+  // Store sample sizes so calculate*Score can distinguish "no data" from "perfect".
+  scoreState.rolling30dCompletedOrders = totalCompletedOrders;
+  scoreState.rolling30dAcceptedOrders = totalAcceptedOrders;
 }
 
 /**
@@ -163,8 +182,14 @@ export function updateCircleScore(
   circleMetrics.hasMinOrdersForScore = true;
 
   // Calculate component scores
-  const speedScore = calculateSpeedScore(scoreState.avgSettlementSeconds);
-  const disputeScore = calculateDisputeScore(scoreState.disputeRate);
+  const speedScore = calculateSpeedScore(
+    scoreState.avgSettlementSeconds,
+    scoreState.rolling30dCompletedOrders,
+  );
+  const disputeScore = calculateDisputeScore(
+    scoreState.disputeRate,
+    scoreState.rolling30dAcceptedOrders,
+  );
   const merchantsScore = calculateMerchantsScore(
     scoreState.activeMerchantsCount,
   );
@@ -287,6 +312,45 @@ export function updateActiveMerchantsCount(
     if (scoreState.activeMerchantsCount.gt(BigInt.zero())) {
       scoreState.activeMerchantsCount =
         scoreState.activeMerchantsCount.minus(BigInt.fromI32(1));
+    }
+  }
+}
+
+/**
+ * A merchant is "available" — point-in-time routing capacity — when:
+ * stake > 0, online, not blacklisted, and no pending unstake request.
+ * Excludes isOngoingOrder; the on-chain getAssignableMerchantsFromCircle
+ * check handles that during routing's eligibility-validate step.
+ */
+export function isMerchantAvailable(
+  stakedAmount: BigInt,
+  isOnline: boolean,
+  isBlacklisted: boolean,
+  isUnstakeRequested: boolean,
+): boolean {
+  return (
+    stakedAmount.gt(BigInt.zero()) &&
+    isOnline &&
+    !isBlacklisted &&
+    !isUnstakeRequested
+  );
+}
+
+/**
+ * Update available merchants count based on availability transitions.
+ */
+export function updateAvailableMerchantsCount(
+  scoreState: CircleScoreState,
+  wasAvailable: boolean,
+  isAvailable: boolean,
+): void {
+  if (!wasAvailable && isAvailable) {
+    scoreState.availableMerchantsCount =
+      scoreState.availableMerchantsCount.plus(BigInt.fromI32(1));
+  } else if (wasAvailable && !isAvailable) {
+    if (scoreState.availableMerchantsCount.gt(BigInt.zero())) {
+      scoreState.availableMerchantsCount =
+        scoreState.availableMerchantsCount.minus(BigInt.fromI32(1));
     }
   }
 }

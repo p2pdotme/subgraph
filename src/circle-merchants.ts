@@ -20,7 +20,9 @@ import {
   loadFCMToken,
   loadMerchantStakeHistory,
   updateActiveMerchantsCount,
+  updateAvailableMerchantsCount,
   isMerchantActive,
+  isMerchantAvailable,
   loadOrders,
 } from "./lib";
 import {
@@ -73,11 +75,16 @@ export function handleMerchantRegisteredToCircle(
     BigInt.fromI32(1),
   );
 
-  // New merchant: starts online and not blacklisted
+  // New merchant: starts online, not blacklisted, no unstake request
   updateActiveMerchantsCount(
     scoreState,
     false,
     isMerchantActive(event.params.stakeAmount, true, false),
+  );
+  updateAvailableMerchantsCount(
+    scoreState,
+    false,
+    isMerchantAvailable(event.params.stakeAmount, true, false, false),
   );
 
   circleMetrics.save();
@@ -111,6 +118,12 @@ export function handleOnlineOfflineToggled(
     merchant.isOnline,
     merchant.isBlacklisted,
   );
+  const wasAvailable = isMerchantAvailable(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    merchant.isUnstakeRequested,
+  );
 
   merchant.isOnline = event.params.merchantDetails.isOnline;
 
@@ -127,10 +140,17 @@ export function handleOnlineOfflineToggled(
     merchant.isOnline,
     merchant.isBlacklisted,
   );
+  const isAvailable = isMerchantAvailable(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    merchant.isUnstakeRequested,
+  );
 
   let circle = loadCircle(merchant.circle, event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
+  updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
   scoreState.save();
 }
 
@@ -147,6 +167,12 @@ export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
     merchant.isOnline,
     merchant.isBlacklisted,
   );
+  const wasAvailable = isMerchantAvailable(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    merchant.isUnstakeRequested,
+  );
 
   merchant.isBlacklisted = event.params.isBlacklist;
 
@@ -157,10 +183,17 @@ export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
     merchant.isOnline,
     merchant.isBlacklisted,
   );
+  const isAvailable = isMerchantAvailable(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    merchant.isUnstakeRequested,
+  );
 
   let circle = loadCircle(merchant.circle, event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
+  updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
   scoreState.save();
 }
 
@@ -334,11 +367,30 @@ export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
   );
   if (merchant.circleId.equals(BigInt.zero())) return;
 
+  const wasAvailable = isMerchantAvailable(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    merchant.isUnstakeRequested,
+  );
+
   merchant.isUnstakeRequested = true;
   merchant.unstakeRequestedAt = event.block.timestamp;
   merchant.unstakeAmount = event.params.unstakeAmount;
 
   merchant.save();
+
+  const isAvailable = isMerchantAvailable(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    merchant.isUnstakeRequested,
+  );
+
+  let circle = loadCircle(merchant.circle, event);
+  let scoreState = loadCircleScoreState(circle.id, event);
+  updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
+  scoreState.save();
 
   // Record unstake request history
   const historyKey = Bytes.fromUTF8(
@@ -366,11 +418,30 @@ export function handleUnstakeRequestCancelled(
     return;
   }
 
+  const wasAvailable = isMerchantAvailable(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    merchant.isUnstakeRequested,
+  );
+
   merchant.isUnstakeRequested = false;
   merchant.unstakeRequestedAt = BigInt.zero();
   merchant.unstakeAmount = BigInt.zero();
 
   merchant.save();
+
+  const isAvailable = isMerchantAvailable(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    merchant.isUnstakeRequested,
+  );
+
+  let circle = loadCircle(merchant.circle, event);
+  let scoreState = loadCircleScoreState(circle.id, event);
+  updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
+  scoreState.save();
 
   // Record unstake cancellation history
   const historyKey = Bytes.fromUTF8(
@@ -428,7 +499,9 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
     paymentChannel.save();
   }
 
-  // Update active merchants count based on stake transition
+  // Update active merchants count based on stake transition.
+  // Pre-mutation: previousStakedAmount; post-mutation: new stake.
+  // Available also flips because isUnstakeRequested transitioned true → false.
   const wasActive = isMerchantActive(
     previousStakedAmount,
     merchant.isOnline,
@@ -439,10 +512,23 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
     merchant.isOnline,
     merchant.isBlacklisted,
   );
+  const wasAvailable = isMerchantAvailable(
+    previousStakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    true, // unstake was requested before this event resolved it
+  );
+  const isAvailable = isMerchantAvailable(
+    event.params.stake,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    false,
+  );
 
   let circle = loadCircle(merchant.circle, event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
+  updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
   scoreState.save();
 }
 
@@ -484,10 +570,23 @@ export function handleMerchantStaked(event: MerchantStakedEvent): void {
     merchant.isOnline,
     merchant.isBlacklisted,
   );
+  const wasAvailable = isMerchantAvailable(
+    previousStakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    merchant.isUnstakeRequested,
+  );
+  const isAvailable = isMerchantAvailable(
+    event.params.stake,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+    merchant.isUnstakeRequested,
+  );
 
   let circle = loadCircle(merchant.circle, event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
+  updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
   scoreState.save();
 }
 
