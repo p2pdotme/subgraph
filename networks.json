@@ -110,6 +110,10 @@
       "address": "0x17192bd2E8893E4eA0Ab5DB67AdbF38aE42e9931",
       "startBlock": 45338444
     },
+    "InsuranceSinkFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 45338444
+    },
     "GovernorFacet": {
       "address": "0x0daE40ECA6C5BF01860Ba6E9397BdD088f7D9fba",
       "startBlock": 46279933
