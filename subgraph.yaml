@@ -1,16 +1,6 @@
 specVersion: 1.3.0
 indexerHints:
   prune: auto
-features:
-  - grafting
-# Graft onto the currently-deployed base so we reuse its indexed history and only
-# index forward from the upgrade. The block is one before InsuranceSinkFacet's
-# startBlock (45338444) so no debt events are skipped. REPLACE `base` with the
-# IPFS hash of the live deployment, and confirm it has synced past `block` and
-# still retains state there (prune: auto limits how far back you can graft).
-graft:
-  base: QmREPLACE_WITH_LIVE_BASE_DEPLOYMENT_ID
-  block: 45338443
 schema:
   file: ./schema.graphql
 dataSources:
@@ -500,6 +490,8 @@ dataSources:
           handler: handleClaimApproved
         - event: ClaimRejected(indexed uint256,indexed uint256,indexed address)
           handler: handleClaimRejected
+        - event: ClaimForceRejected(indexed uint256,indexed uint256,indexed address)
+          handler: handleClaimForceRejected
         - event: ClaimWithdrawn(indexed uint256,indexed uint256,indexed address)
           handler: handleClaimWithdrawn
         - event: ClaimSettled(indexed uint256,indexed uint256,uint256,uint256,uint256)
@@ -521,6 +513,7 @@ dataSources:
       entities:
         - PIPRefillRequest
         - InsuranceApprover
+        - InsuranceCurrencyConfig
       abis:
         - name: InsurancePoolFacet
           file: ./abis/InsurancePoolFacet.json
@@ -535,6 +528,8 @@ dataSources:
           handler: handlePIPRefillRejected
         - event: CurrencyApproverUpdated(indexed bytes32,indexed address,bool,indexed address)
           handler: handleCurrencyApproverUpdated
+        - event: InsuranceConfigUpdated(indexed address,indexed bytes32,(uint16,uint16,uint32,uint32,uint32,uint32,uint128),(uint16,uint16,uint32,uint32,uint32,uint32,uint128))
+          handler: handleInsuranceConfigUpdated
       file: ./src/insurance-pool.ts
   - kind: ethereum
     name: InsuranceSinkFacet
