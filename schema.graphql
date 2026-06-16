@@ -256,6 +256,10 @@ type Orders @entity(immutable: false) {
   disputePlacedAt: BigInt!
   disputeSettledAt: BigInt!
 
+  # APPEAL DETAILS
+  appealedAt: BigInt!
+  appealedByMerchantAddress: Bytes!
+
   # INSURANCE CLAIMS
   claimSubmissions: [InsuranceClaim!] @derivedFrom(field: "order")
 
