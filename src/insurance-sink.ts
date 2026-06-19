@@ -3,6 +3,7 @@ import {
   InsuranceDebtAccrued as InsuranceDebtAccruedEvent,
   InsuranceDebtRepaid as InsuranceDebtRepaidEvent,
   InsuranceDebtRepaidDirect as InsuranceDebtRepaidDirectEvent,
+  MerchantPcFiatUpdated as MerchantPcFiatUpdatedEvent,
 } from "../generated/InsuranceSinkFacet/InsuranceSinkFacet";
 import { InsuranceDebtActivity } from "../generated/schema";
 import { loadMerchantPaymentChannels } from "./lib";
@@ -108,4 +109,23 @@ export function handleInsuranceDebtRepaidDirect(
   activity.usdcPaid = event.params.usdcPaid;
   activity.debtAfter = remaining;
   activity.save();
+}
+
+// Authoritative post-write-off snapshot. The insurance write-off path reduces
+// the PC's on-chain `freeFiatAmount` (and accrues debt on deficit) but emits no
+// `Merchant` balance event, so without this the indexed `fiatBalance` would go
+// stale after a claim. Set both fields directly from the emitted resolved state.
+export function handleMerchantPcFiatUpdated(
+  event: MerchantPcFiatUpdatedEvent,
+): void {
+  const merchant = event.params.merchant;
+  const accountNo = event.params.accountNo;
+  const pcKey = pcKeyFor(merchant, accountNo);
+
+  const paymentChannel = loadMerchantPaymentChannels(pcKey, event);
+  paymentChannel.merchant = merchant;
+  paymentChannel.accountNo = accountNo;
+  paymentChannel.fiatBalance = event.params.freeFiat;
+  paymentChannel.insuranceDebt = event.params.insuranceDebt;
+  paymentChannel.save();
 }

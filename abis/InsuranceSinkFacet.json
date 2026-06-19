@@ -52,6 +52,37 @@
         {
           "indexed": false,
           "internalType": "uint256",
+          "name": "freeFiat",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "insuranceDebt",
+          "type": "uint256"
+        }
+      ],
+      "name": "MerchantPcFiatUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "merchant",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "accountNo",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
           "name": "repaidFiat",
           "type": "uint256"
         },
