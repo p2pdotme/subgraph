@@ -15,6 +15,7 @@ import {
   loadCircleMetrics,
   loadCircleScoreState,
   loadMerchantPaymentChannels,
+  savePaymentChannel,
   loadMerchantVolumeByMonth,
   loadPaymentChannelMigration,
   loadFCMToken,
@@ -238,7 +239,7 @@ export function handleMerchant(event: MerchantEvent): void {
       paymentChannel.fiatBalance = event.params.freeAmountFiat;
     }
 
-    paymentChannel.save();
+    savePaymentChannel(paymentChannel);
   }
 
   merchant.save();
@@ -263,7 +264,7 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   paymentChannel.dailyVolume = event.params.dailyVolume;
   paymentChannel.monthlyVolume = event.params.monthlyVolume;
   paymentChannel.lastUpdatedDailyVolumeAt = event.block.timestamp;
-  paymentChannel.save();
+  savePaymentChannel(paymentChannel);
 
   // LOAD MERCHANT VOLUME BY MONTH
   const month = getYearMonthFromTimestamp(event.block.timestamp);
@@ -341,7 +342,7 @@ export function handlePaymentChannelMigrationRequest(
       fromPaymentChannel.fiatBalance = event.params.fromFiatAmount;
       fromPaymentChannel.status = 5; // TERMINATED
       fromPaymentChannel.isActive = false;
-      fromPaymentChannel.save();
+      savePaymentChannel(fromPaymentChannel);
 
       // Update "to" payment channel fiat balance
       const toPcKey = Bytes.fromUTF8(
@@ -350,7 +351,7 @@ export function handlePaymentChannelMigrationRequest(
       const toPaymentChannel = loadMerchantPaymentChannels(toPcKey, event);
       toPaymentChannel.merchant = merchant.id;
       toPaymentChannel.fiatBalance = event.params.toFiatAmount;
-      toPaymentChannel.save();
+      savePaymentChannel(toPaymentChannel);
     }
   }
 
@@ -505,7 +506,7 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
       );
       let paymentChannel = loadMerchantPaymentChannels(pcKey, event);
       paymentChannel.fiatBalance = BigInt.fromI32(0);
-      paymentChannel.save();
+      savePaymentChannel(paymentChannel);
     }
   }
 
@@ -649,7 +650,7 @@ export function handleMonthlyVolumeUnlimitedFlagUpdated(
     paymentChannel.status = 0;
   }
 
-  paymentChannel.save();
+  savePaymentChannel(paymentChannel);
 }
 
 export function handleFCMToken(event: FCMTokenEvent): void {

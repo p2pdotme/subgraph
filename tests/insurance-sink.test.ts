@@ -77,6 +77,13 @@ describe("handleMerchantPcFiatUpdated", () => {
     const id = pcId(MERCHANT, ACCOUNT_NO);
     assert.fieldEquals("MerchantPaymentChannels", id, "fiatBalance", "2000");
     assert.fieldEquals("MerchantPaymentChannels", id, "insuranceDebt", "0");
+    // realFiatBalance = fiatBalance - insuranceDebt
+    assert.fieldEquals(
+      "MerchantPaymentChannels",
+      id,
+      "realFiatBalance",
+      "2000",
+    );
   });
 
   // Deficit write-off: freeFiat floored to 0, residual recorded as debt.
@@ -92,6 +99,13 @@ describe("handleMerchantPcFiatUpdated", () => {
     const id = pcId(MERCHANT, ACCOUNT_NO);
     assert.fieldEquals("MerchantPaymentChannels", id, "fiatBalance", "0");
     assert.fieldEquals("MerchantPaymentChannels", id, "insuranceDebt", "4450");
+    // realFiatBalance goes negative when the channel is in debt.
+    assert.fieldEquals(
+      "MerchantPaymentChannels",
+      id,
+      "realFiatBalance",
+      "-4450",
+    );
   });
 
   // The snapshot is authoritative: a later event overwrites both fields.
@@ -115,5 +129,11 @@ describe("handleMerchantPcFiatUpdated", () => {
     const id = pcId(MERCHANT, ACCOUNT_NO);
     assert.fieldEquals("MerchantPaymentChannels", id, "fiatBalance", "1920");
     assert.fieldEquals("MerchantPaymentChannels", id, "insuranceDebt", "0");
+    assert.fieldEquals(
+      "MerchantPaymentChannels",
+      id,
+      "realFiatBalance",
+      "1920",
+    );
   });
 });
