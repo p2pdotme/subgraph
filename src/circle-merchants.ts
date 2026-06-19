@@ -15,6 +15,7 @@ import {
   loadCircleMetrics,
   loadCircleScoreState,
   loadMerchantPaymentChannels,
+  savePaymentChannel,
   loadMerchantVolumeByMonth,
   loadPaymentChannelMigration,
   loadFCMToken,
@@ -238,7 +239,7 @@ export function handleMerchant(event: MerchantEvent): void {
       paymentChannel.fiatBalance = event.params.freeAmountFiat;
     }
 
-    paymentChannel.save();
+    savePaymentChannel(paymentChannel);
   }
 
   merchant.save();
@@ -263,7 +264,7 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   paymentChannel.dailyVolume = event.params.dailyVolume;
   paymentChannel.monthlyVolume = event.params.monthlyVolume;
   paymentChannel.lastUpdatedDailyVolumeAt = event.block.timestamp;
-  paymentChannel.save();
+  savePaymentChannel(paymentChannel);
 
   // LOAD MERCHANT VOLUME BY MONTH
   const month = getYearMonthFromTimestamp(event.block.timestamp);
@@ -341,7 +342,7 @@ export function handlePaymentChannelMigrationRequest(
       fromPaymentChannel.fiatBalance = event.params.fromFiatAmount;
       fromPaymentChannel.status = 5; // TERMINATED
       fromPaymentChannel.isActive = false;
-      fromPaymentChannel.save();
+      savePaymentChannel(fromPaymentChannel);
 
       // Update "to" payment channel fiat balance
       const toPcKey = Bytes.fromUTF8(
@@ -350,7 +351,7 @@ export function handlePaymentChannelMigrationRequest(
       const toPaymentChannel = loadMerchantPaymentChannels(toPcKey, event);
       toPaymentChannel.merchant = merchant.id;
       toPaymentChannel.fiatBalance = event.params.toFiatAmount;
-      toPaymentChannel.save();
+      savePaymentChannel(toPaymentChannel);
     }
   }
 
@@ -488,15 +489,25 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   history.balanceAfter = event.params.merchantDetails.stake;
   history.save();
 
-  // SET FIAT BALANCE 0
-  for (let i = 0; i < event.params.merchantConfig.paymentChannels.length; i++) {
-    let paymentChannelDetails = event.params.merchantConfig.paymentChannels[i];
-    const pcKey = Bytes.fromUTF8(
-      `${event.params.merchant.toHexString()}-${paymentChannelDetails.accountNo.toString()}`,
-    );
-    let paymentChannel = loadMerchantPaymentChannels(pcKey, event);
-    paymentChannel.fiatBalance = BigInt.fromI32(0);
-    paymentChannel.save();
+  // SET FIAT BALANCE 0 — only on a COMPLETE unstake. On-chain, fiat is reset
+  // across the merchant's PCs solely inside `if (isCompleteUnstake)`; a partial
+  // unstake (resulting stake > 0) leaves fiat untouched, so zeroing it here
+  // would diverge from on-chain state.
+  if (event.params.merchantDetails.stake.isZero()) {
+    for (
+      let i = 0;
+      i < event.params.merchantConfig.paymentChannels.length;
+      i++
+    ) {
+      let paymentChannelDetails =
+        event.params.merchantConfig.paymentChannels[i];
+      const pcKey = Bytes.fromUTF8(
+        `${event.params.merchant.toHexString()}-${paymentChannelDetails.accountNo.toString()}`,
+      );
+      let paymentChannel = loadMerchantPaymentChannels(pcKey, event);
+      paymentChannel.fiatBalance = BigInt.fromI32(0);
+      savePaymentChannel(paymentChannel);
+    }
   }
 
   // Update active merchants count based on stake transition.
@@ -639,7 +650,7 @@ export function handleMonthlyVolumeUnlimitedFlagUpdated(
     paymentChannel.status = 0;
   }
 
-  paymentChannel.save();
+  savePaymentChannel(paymentChannel);
 }
 
 export function handleFCMToken(event: FCMTokenEvent): void {
