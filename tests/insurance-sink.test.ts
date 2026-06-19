@@ -7,8 +7,16 @@ import {
   newMockEvent,
 } from "matchstick-as/assembly/index";
 import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { MerchantPcFiatUpdated } from "../generated/InsuranceSinkFacet/InsuranceSinkFacet";
-import { handleMerchantPcFiatUpdated } from "../src/insurance-sink";
+import {
+  MerchantPcFiatUpdated,
+  InsuranceDebtAccrued,
+  InsuranceDebtRepaid,
+} from "../generated/InsuranceSinkFacet/InsuranceSinkFacet";
+import {
+  handleMerchantPcFiatUpdated,
+  handleInsuranceDebtAccrued,
+  handleInsuranceDebtRepaid,
+} from "../src/insurance-sink";
 
 const MERCHANT = "0x0000000000000000000000000000000000000001";
 const ACCOUNT_NO = 1234;
@@ -50,6 +58,89 @@ function createMerchantPcFiatUpdatedEvent(
     new ethereum.EventParam(
       "insuranceDebt",
       ethereum.Value.fromUnsignedBigInt(insuranceDebt),
+    ),
+  );
+  return event;
+}
+
+function createInsuranceDebtAccruedEvent(
+  merchant: Address,
+  accountNo: BigInt,
+  residualFiat: BigInt,
+): InsuranceDebtAccrued {
+  const mock = newMockEvent();
+  const event = new InsuranceDebtAccrued(
+    mock.address,
+    mock.logIndex,
+    mock.transactionLogIndex,
+    mock.logType,
+    mock.block,
+    mock.transaction,
+    mock.parameters,
+    mock.receipt,
+  );
+  event.parameters = new Array<ethereum.EventParam>();
+  event.parameters.push(
+    new ethereum.EventParam(
+      "claimId",
+      ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(1)),
+    ),
+  );
+  event.parameters.push(
+    new ethereum.EventParam("merchant", ethereum.Value.fromAddress(merchant)),
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "accountNo",
+      ethereum.Value.fromUnsignedBigInt(accountNo),
+    ),
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "residualFiat",
+      ethereum.Value.fromUnsignedBigInt(residualFiat),
+    ),
+  );
+  return event;
+}
+
+function createInsuranceDebtRepaidEvent(
+  merchant: Address,
+  accountNo: BigInt,
+  repaidFiat: BigInt,
+  surplusToFreeFiat: BigInt,
+): InsuranceDebtRepaid {
+  const mock = newMockEvent();
+  const event = new InsuranceDebtRepaid(
+    mock.address,
+    mock.logIndex,
+    mock.transactionLogIndex,
+    mock.logType,
+    mock.block,
+    mock.transaction,
+    mock.parameters,
+    mock.receipt,
+  );
+  event.parameters = new Array<ethereum.EventParam>();
+  event.parameters.push(
+    new ethereum.EventParam("merchant", ethereum.Value.fromAddress(merchant)),
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "accountNo",
+      ethereum.Value.fromUnsignedBigInt(accountNo),
+    ),
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "repaidFiat",
+      ethereum.Value.fromUnsignedBigInt(repaidFiat),
+    ),
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "surplusToFreeFiat",
+      ethereum.Value.fromUnsignedBigInt(surplusToFreeFiat),
     ),
   );
   return event;
@@ -134,6 +225,66 @@ describe("handleMerchantPcFiatUpdated", () => {
       id,
       "realFiatBalance",
       "1920",
+    );
+  });
+
+  // The key invariant: realFiatBalance stays correct when fiatBalance and
+  // insuranceDebt are mutated by DIFFERENT events/handlers. Each handler routes
+  // through savePaymentChannel(), which re-derives the field from current state.
+  test("stays in sync when fiat and debt are changed by different handlers", () => {
+    const merchant = Address.fromString(MERCHANT);
+    const accountNo = BigInt.fromI32(ACCOUNT_NO);
+    const id = pcId(MERCHANT, ACCOUNT_NO);
+
+    // 1) Seed fiatBalance = 5000, debt = 0 → real = 5000.
+    handleMerchantPcFiatUpdated(
+      createMerchantPcFiatUpdatedEvent(
+        merchant,
+        accountNo,
+        BigInt.fromI32(5000),
+        BigInt.zero(),
+      ),
+    );
+    assert.fieldEquals(
+      "MerchantPaymentChannels",
+      id,
+      "realFiatBalance",
+      "5000",
+    );
+
+    // 2) A separate event accrues debt = 2000 (fiatBalance untouched) → real = 3000.
+    handleInsuranceDebtAccrued(
+      createInsuranceDebtAccruedEvent(
+        merchant,
+        accountNo,
+        BigInt.fromI32(2000),
+      ),
+    );
+    assert.fieldEquals("MerchantPaymentChannels", id, "fiatBalance", "5000");
+    assert.fieldEquals("MerchantPaymentChannels", id, "insuranceDebt", "2000");
+    assert.fieldEquals(
+      "MerchantPaymentChannels",
+      id,
+      "realFiatBalance",
+      "3000",
+    );
+
+    // 3) A third event repays the debt (fiatBalance still untouched) → real = 5000.
+    handleInsuranceDebtRepaid(
+      createInsuranceDebtRepaidEvent(
+        merchant,
+        accountNo,
+        BigInt.fromI32(2000),
+        BigInt.zero(),
+      ),
+    );
+    assert.fieldEquals("MerchantPaymentChannels", id, "fiatBalance", "5000");
+    assert.fieldEquals("MerchantPaymentChannels", id, "insuranceDebt", "0");
+    assert.fieldEquals(
+      "MerchantPaymentChannels",
+      id,
+      "realFiatBalance",
+      "5000",
     );
   });
 });
