@@ -79,6 +79,7 @@ export function loadMerchantPaymentChannels(
     merchantPaymentChannel.isMonthlyVolumeUnlimited = false;
     merchantPaymentChannel.fiatBalance = BigInt.zero();
     merchantPaymentChannel.insuranceDebt = BigInt.zero();
+    merchantPaymentChannel.realFiatBalance = BigInt.zero();
     merchantPaymentChannel.dailyVolume = BigInt.zero();
     merchantPaymentChannel.monthlyVolume = BigInt.zero();
     merchantPaymentChannel.lastUpdatedDailyVolumeAt = BigInt.zero();
@@ -89,6 +90,16 @@ export function loadMerchantPaymentChannels(
   merchantPaymentChannel.transactionHash = event.transaction.hash;
 
   return merchantPaymentChannel;
+}
+
+// Single save path for payment channels: derives `realFiatBalance` (the signed
+// net position = usable fiat minus protocol-owed insurance debt; negative when
+// in debt) from the current fields so the materialized value can never drift
+// from `fiatBalance`/`insuranceDebt`. Every handler that mutates either field
+// must persist through this instead of calling `.save()` directly.
+export function savePaymentChannel(pc: MerchantPaymentChannels): void {
+  pc.realFiatBalance = pc.fiatBalance.minus(pc.insuranceDebt);
+  pc.save();
 }
 
 export function loadMerchantVolumeByMonth(

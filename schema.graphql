@@ -197,6 +197,12 @@ type MerchantPaymentChannels @entity(immutable: false) {
   # or directly via repayInsuranceDebt.
   insuranceDebt: BigInt!
 
+  # Signed net fiat position = fiatBalance - insuranceDebt. Materialized so it
+  # can be filtered/ordered in queries; negative when the channel is in debt.
+  # Maintained via savePaymentChannel(); at most one of fiatBalance /
+  # insuranceDebt is non-zero at a time per the on-chain invariant.
+  realFiatBalance: BigInt!
+
   # Current volume tracking for availability calculations
   dailyVolume: BigInt!
   monthlyVolume: BigInt!
@@ -475,7 +481,6 @@ type CurrencyMetricsByMonth @entity(immutable: false) {
 
   currency: Bytes!
   month: String! # "YYYY-MM" format
-
   # Completed order counts by type
   completedBuyOrdersCount: BigInt!
   completedSellOrdersCount: BigInt!
@@ -501,7 +506,6 @@ type CurrencyMetricsByDay @entity(immutable: false) {
 
   currency: Bytes!
   day: String! # "YYYY-MM-DD" format
-
   # Completed order counts by type
   completedBuyOrdersCount: BigInt!
   completedSellOrdersCount: BigInt!
@@ -808,13 +812,11 @@ type Proposal @entity(immutable: false) {
 
   status: String!
   timelockEta: BigInt # timestamp after which execution is allowed (set when queued)
-
   # Lifecycle timestamps
-  proposalCreatedAt: BigInt!  # block.timestamp of ProposalCreated
-  queuedAt: BigInt            # block.timestamp of ProposalQueued
-  executedAt: BigInt          # block.timestamp of ProposalExecuted
-  canceledAt: BigInt          # block.timestamp of ProposalCanceled
-
+  proposalCreatedAt: BigInt! # block.timestamp of ProposalCreated
+  queuedAt: BigInt # block.timestamp of ProposalQueued
+  executedAt: BigInt # block.timestamp of ProposalExecuted
+  canceledAt: BigInt # block.timestamp of ProposalCanceled
   blockNumber: BigInt!
   transactionHash: Bytes!
 }
@@ -829,7 +831,6 @@ type Vote @entity(immutable: true) {
   support: Int!
   votes: BigInt!
   reason: String # null unless VoteCastWithReason
-
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -913,7 +914,6 @@ type B2BIntegratorCallbackFailure @entity(immutable: true) {
 # Tracks addresses granted community admin status
 type CommunityAdmin @entity(immutable: false) {
   id: Bytes! # account address
-
   updater: Bytes!
   account: Bytes!
   isActive: Boolean!
@@ -941,7 +941,6 @@ type CirclePermission @entity(immutable: false) {
 # A request by a circle admin to refill the Protocol Insurance Pool for their circle
 type PIPRefillRequest @entity(immutable: false) {
   id: Bytes! # circleId as bytes (one active request per circle at a time)
-
   circleId: BigInt!
   circle: Circle!
 
@@ -967,7 +966,6 @@ type PIPRefillRequest @entity(immutable: false) {
 # A claim submitted by a merchant against the insurance pool
 type InsuranceClaim @entity(immutable: false) {
   id: Bytes! # claimId as bytes
-
   claimId: BigInt!
   circleId: BigInt!
   circle: Circle!
@@ -1067,15 +1065,11 @@ type UserP2PStake @entity(immutable: false) {
   stakedAmount: BigInt! # current locked tokens (0 in NONE/SEIZED)
   status: String! # NONE | ACTIVE | COOLDOWN | SEIZED
   cooldownEnd: BigInt! # 0 when not in COOLDOWN
-
   totalSeized: BigInt! # sum of all P2PStakeSeized amounts
-
   firstStakedAt: BigInt! # block.timestamp of first P2PStaked (0 until first stake)
   lastActionAt: BigInt! # block.timestamp of most recent event
-
   # Last seizure metadata (only populated once a seize occurs)
   fraudReserve: Bytes # address that received the seized stake
-
   activities: [UserP2PStakeActivity!]! @derivedFrom(field: "stake")
 
   # Updated on every event for this user; reflect the most recent event, not creation.
@@ -1099,13 +1093,11 @@ type UserP2PStakeActivity @entity(immutable: true) {
   newTotal: BigInt! # event `newTotal` field (STAKED / TOPPED_UP)
   cooldownEnd: BigInt! # event `cooldownEnd` / `newCooldownEnd` (UNSTAKE_REQUESTED / COOLDOWN_EXTENDED)
   fraudReserve: Bytes # SEIZED only
-
   # Post-action snapshot of user's staked balance and status (for easy timeline queries)
   stakedAmountAfter: BigInt!
   statusAfter: String!
 
   timestamp: BigInt! # block.timestamp at emission
-
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -1115,7 +1107,6 @@ type UserP2PStakeActivity @entity(immutable: true) {
 # Tracks which addresses are approved to handle claims for a given currency
 type InsuranceApprover @entity(immutable: false) {
   id: Bytes! # currency + approver
-
   currency: Bytes!
   approver: Bytes!
   allowed: Boolean!
@@ -1133,7 +1124,6 @@ type InsuranceApprover @entity(immutable: false) {
 # (the latter flips payoutDelay to 0). Keyed by currency tag.
 type InsuranceCurrencyConfig @entity(immutable: false) {
   id: Bytes! # currency (bytes32)
-
   currency: Bytes!
   caipFeeBps: Int!
   calrLockBps: Int!

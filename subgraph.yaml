@@ -557,6 +557,8 @@ dataSources:
           handler: handleInsuranceDebtRepaid
         - event: InsuranceDebtRepaidDirect(indexed address,indexed uint256,uint256,uint256)
           handler: handleInsuranceDebtRepaidDirect
+        - event: MerchantPcFiatUpdated(indexed address,indexed uint256,uint256,uint256)
+          handler: handleMerchantPcFiatUpdated
       file: ./src/insurance-sink.ts
   # B2B GATEWAY
   - kind: ethereum
