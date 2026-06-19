@@ -6,7 +6,7 @@ import {
   MerchantPcFiatUpdated as MerchantPcFiatUpdatedEvent,
 } from "../generated/InsuranceSinkFacet/InsuranceSinkFacet";
 import { InsuranceDebtActivity } from "../generated/schema";
-import { loadMerchantPaymentChannels } from "./lib";
+import { loadMerchantPaymentChannels, savePaymentChannel } from "./lib";
 
 function pcKeyFor(merchant: Bytes, accountNo: BigInt): Bytes {
   return Bytes.fromUTF8(`${merchant.toHexString()}-${accountNo.toString()}`);
@@ -43,7 +43,7 @@ export function handleInsuranceDebtAccrued(
   paymentChannel.accountNo = accountNo;
   const accrued = paymentChannel.insuranceDebt.plus(event.params.residualFiat);
   paymentChannel.insuranceDebt = accrued;
-  paymentChannel.save();
+  savePaymentChannel(paymentChannel);
 
   const activity = newDebtActivity(event, "ACCRUED");
   activity.paymentChannel = pcKey;
@@ -71,7 +71,7 @@ export function handleInsuranceDebtRepaid(
     ? debtBefore.minus(repaid)
     : BigInt.zero();
   paymentChannel.insuranceDebt = remaining;
-  paymentChannel.save();
+  savePaymentChannel(paymentChannel);
 
   const activity = newDebtActivity(event, "REPAID");
   activity.paymentChannel = pcKey;
@@ -99,7 +99,7 @@ export function handleInsuranceDebtRepaidDirect(
     ? debtBefore.minus(repaid)
     : BigInt.zero();
   paymentChannel.insuranceDebt = remaining;
-  paymentChannel.save();
+  savePaymentChannel(paymentChannel);
 
   const activity = newDebtActivity(event, "REPAID_DIRECT");
   activity.paymentChannel = pcKey;
@@ -127,5 +127,5 @@ export function handleMerchantPcFiatUpdated(
   paymentChannel.accountNo = accountNo;
   paymentChannel.fiatBalance = event.params.freeFiat;
   paymentChannel.insuranceDebt = event.params.insuranceDebt;
-  paymentChannel.save();
+  savePaymentChannel(paymentChannel);
 }

@@ -20,6 +20,7 @@ import {
   loadCircleScoreState,
   loadCurrency,
   loadMerchantPaymentChannels,
+  savePaymentChannel,
   loadMerchantRewards,
   loadMerchantWithdrawFeePercentage,
   updateAvailableMerchantsCount,
@@ -94,8 +95,9 @@ export function handleCircleMerchantDetailsAndConfigUpdate(
 
   if (isActive) {
     let scoreState = loadCircleScoreState(circle.id, event);
-    scoreState.activeMerchantsCount =
-      scoreState.activeMerchantsCount.plus(BigInt.fromI32(1));
+    scoreState.activeMerchantsCount = scoreState.activeMerchantsCount.plus(
+      BigInt.fromI32(1),
+    );
     scoreState.save();
   }
 
@@ -137,7 +139,7 @@ export function handleMerchantPaymentChannelUpdate(
   paymentChannel.dailyVolume = event.params.dailyVolume;
   paymentChannel.monthlyVolume = event.params.monthlyVolume;
   paymentChannel.lastUpdatedDailyVolumeAt = event.block.timestamp;
-  paymentChannel.save();
+  savePaymentChannel(paymentChannel);
 }
 
 export function handleCurrencyAddedUpdate(
