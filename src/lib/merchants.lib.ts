@@ -1,4 +1,5 @@
-import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { CircleFacet } from "../../generated/CircleFacet/CircleFacet";
 import {
   AssignedMerchants,
   CircleMerchant,
@@ -40,7 +41,8 @@ export function loadCircleMerchant(
     circleMerchant.merchant = key.toHexString();
     circleMerchant.telegramId = "";
     circleMerchant.circleId = BigInt.zero();
-    circleMerchant.circle = Bytes.fromI32(0);
+    // `circle` is left unset (null) by default. Handlers that know the real
+    // circle (MerchantRegisteredToCircle / setter) overwrite it after this.
     circleMerchant.orders = [];
     circleMerchant.stakedAmount = BigInt.zero();
     circleMerchant.delegatedStakedAmount = BigInt.zero();
@@ -54,6 +56,23 @@ export function loadCircleMerchant(
     circleMerchant.offlineAt = BigInt.zero();
     circleMerchant.startedAt = BigInt.zero();
     circleMerchant.currency = Bytes.empty();
+
+    // For any handler that first-materializes a merchant whose
+    // MerchantRegisteredToCircle event was never indexed, backfill the real
+    // circle from chain so we never persist a dangling/bogus reference (the old
+    // `Bytes.fromI32(0)` default pointed at a non-existent Circle, which made
+    // the whole query fail on the non-null relation). Revert-safe, and only on
+    // the create path so it never re-fires for an already-known merchant.
+    const details = CircleFacet.bind(event.address).try_getMerchantDetails(
+      Address.fromBytes(key),
+    );
+    if (!details.reverted && details.value.circleId.gt(BigInt.zero())) {
+      circleMerchant.circleId = details.value.circleId;
+      circleMerchant.circle = changetype<Bytes>(
+        Bytes.fromBigInt(details.value.circleId),
+      );
+      circleMerchant.currency = details.value.currency;
+    }
   }
 
   circleMerchant.blockNumber = event.block.number;

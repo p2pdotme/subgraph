@@ -142,7 +142,13 @@ type CircleMerchant @entity(immutable: false) {
   telegramId: String!
   circleId: BigInt!
 
-  circle: Circle!
+  # Nullable: a CircleMerchant can be first materialized by a non-registration
+  # handler (e.g. an order event) before — or without — its MerchantRegisteredToCircle
+  # event being indexed. When that happens the real circle is unknown at create
+  # time, so this stays null instead of pointing at a bogus id. A non-null
+  # constraint here makes the entire query fail ("Null value resolved for
+  # non-null field `circle`") whenever any single row is unresolved.
+  circle: Circle
   orders: [Orders!]
 
   stakedAmount: BigInt!

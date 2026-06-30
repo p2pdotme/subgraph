@@ -4,6 +4,32 @@
   "sourceName": "contracts/facets/CircleFacet.sol",
   "abi": [
     {
+      "inputs": [{ "internalType": "address", "name": "merchant", "type": "address" }],
+      "name": "getMerchantDetails",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "uint256", "name": "stake", "type": "uint256" },
+            { "internalType": "bool", "name": "isOnline", "type": "bool" },
+            { "internalType": "uint256", "name": "totalVolume", "type": "uint256" },
+            { "internalType": "uint256", "name": "withdrawnAmount", "type": "uint256" },
+            { "internalType": "uint256", "name": "lastVolumeResetTimestamp", "type": "uint256" },
+            { "internalType": "uint256", "name": "accruedFees", "type": "uint256" },
+            { "internalType": "bool", "name": "isRegistered", "type": "bool" },
+            { "internalType": "bytes32", "name": "currency", "type": "bytes32" },
+            { "internalType": "uint256", "name": "freeAmountUsdc", "type": "uint256" },
+            { "internalType": "uint256", "name": "circleId", "type": "uint256" },
+            { "internalType": "uint256", "name": "delegatedStake", "type": "uint256" }
+          ],
+          "internalType": "struct MerchantDetails",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "AdminAlreadyHasCircle",
       "type": "error"
