@@ -67,6 +67,10 @@ export function handleMerchantRegisteredToCircle(
 
   merchant.save();
 
+  // Persist the Circle so the non-null CircleMerchant.circle link never dangles:
+  // loadCircle only materializes it in memory.
+  circle.save();
+
   // UPDATE CIRCLE METRICS
   let circleMetrics = loadCircleMetrics(circle.id, event);
   let scoreState = loadCircleScoreState(circle.id, event);
