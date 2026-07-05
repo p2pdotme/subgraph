@@ -81,6 +81,10 @@ export function handleCircleMerchantDetailsAndConfigUpdate(
 
   merchant.save();
 
+  // Persist the Circle so the non-null CircleMerchant.circle link never dangles:
+  // loadCircle only materializes it in memory.
+  circle.save();
+
   let circleMetrics = loadCircleMetrics(circle.id, event);
   circleMetrics.totalMerchantsCount = circleMetrics.totalMerchantsCount.plus(
     BigInt.fromI32(1),
