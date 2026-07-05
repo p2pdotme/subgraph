@@ -1054,6 +1054,61 @@ type InsuranceDebtActivity @entity(immutable: true) {
   transactionHash: Bytes!
 }
 
+# CIRCLE ADMIN CALR
+# Cumulative CALR (Circle Admin Locked Reward) ledger per admin on the
+# Insurance Diamond. The on-chain lockedBalance cannot be mirrored exactly —
+# expired locks vest into unlockableBalance lazily, with no event — so exact
+# cumulative counters are kept instead. Outstanding CALR still held by the
+# Insurance Diamond (locked or vested-but-unclaimed) is derivable as:
+#   totalLocked - totalUnlocked - totalReverted - totalSettled
+type CircleAdminCALR @entity(immutable: false) {
+  id: Bytes! # admin address
+  admin: Bytes!
+
+  totalLocked: BigInt! # sum of CALRLocked amounts
+  totalUnlocked: BigInt! # sum of CALRUnlocked amounts (direct unlock + pullUnlockableCALR)
+  totalReverted: BigInt! # sum of CALRLockReverted actual amounts
+  totalSettled: BigInt! # sum of ClaimSettled.fromCALR drained from this admin's bucket
+  lastLockExpiresAt: BigInt! # lockExpiresAt of the most recent CALRLocked
+
+  activities: [CALRActivity!]! @derivedFrom(field: "calr")
+
+  # Updated on every event for this admin; reflect the most recent event, not creation.
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CALR ACTIVITY
+# Immutable timeline of every CALR movement for a circle admin, across both
+# diamonds: lock/unlock/revert on the Insurance Diamond, settlement drains
+# attributed from ClaimSettled, and the main-side claimable credit that
+# mirrors each unlock.
+# activityType: LOCKED | UNLOCKED | LOCK_REVERTED | SETTLEMENT_DRAIN | CLAIMABLE_CREDITED
+type CALRActivity @entity(immutable: true) {
+  id: Bytes! # txHash + logIndex
+  calr: CircleAdminCALR!
+  admin: Bytes!
+  activityType: String!
+
+  # USDC moved by this event (6dp).
+  amount: BigInt!
+
+  # LOCKED only: end of the new lock window.
+  lockExpiresAt: BigInt
+  # LOCK_REVERTED only: the order whose lock was reverted and the per-order
+  # snapshot the revert tried to return (amount holds the actual returned).
+  orderId: BigInt
+  snapshotAmount: BigInt
+  # SETTLEMENT_DRAIN only: the claim whose settlement drained the bucket.
+  claimId: BigInt
+
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # USER P2P STAKE
 # Aggregated per-user P2P stake state, updated by every P2PStakeBoostFacet event.
 # Status reflects the on-chain state machine: NONE | ACTIVE | COOLDOWN | SEIZED.
