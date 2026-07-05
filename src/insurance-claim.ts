@@ -1,4 +1,4 @@
-import { Bytes } from "@graphprotocol/graph-ts";
+import { BigInt, Bytes } from "@graphprotocol/graph-ts";
 import {
   ClaimSubmitted as ClaimSubmittedEvent,
   ClaimApproved as ClaimApprovedEvent,
@@ -8,7 +8,11 @@ import {
   ClaimSettled as ClaimSettledEvent,
   SuperAdminLargeClaimApproved as SuperAdminLargeClaimApprovedEvent,
 } from "../generated/InsuranceClaimFacet/InsuranceClaimFacet";
-import { loadInsuranceClaim } from "./lib";
+import {
+  loadCircleAdminCALR,
+  loadInsuranceClaim,
+  newCALRActivity,
+} from "./lib";
 
 export function handleClaimSubmitted(event: ClaimSubmittedEvent): void {
   const claim = event.params.claim;
@@ -125,6 +129,22 @@ export function handleClaimSettled(event: ClaimSettledEvent): void {
   entity.fromCALR = event.params.fromCALR;
 
   entity.save();
+
+  // Settlement drains the snapshot admin's CALR.locked bucket (never a
+  // successor's) — attribute the drained amount to that admin's CALR ledger.
+  // The guard skips claims submitted before this data source's startBlock,
+  // whose circleAdminAtSubmit was never populated.
+  const fromCALR = event.params.fromCALR;
+  if (fromCALR.gt(BigInt.zero()) && entity.circleAdminAtSubmit.length > 0) {
+    const admin = entity.circleAdminAtSubmit;
+    const calr = loadCircleAdminCALR(admin, event);
+    calr.totalSettled = calr.totalSettled.plus(fromCALR);
+    calr.save();
+
+    const activity = newCALRActivity(event, admin, "SETTLEMENT_DRAIN", fromCALR);
+    activity.claimId = event.params.claimId;
+    activity.save();
+  }
 }
 
 export function handleSuperAdminLargeClaimApproved(

@@ -52,5 +52,9 @@ export * from "./circle-score.lib";
 export { loadProposal, loadVote } from "./governor.lib";
 export { loadIntegrator } from "./b2b-gateway.lib";
 export { loadInsuranceClaim } from "./insurance-claim.lib";
-export { loadPIPRefillRequest } from "./insurance-pool.lib";
+export {
+  loadPIPRefillRequest,
+  loadCircleAdminCALR,
+  newCALRActivity,
+} from "./insurance-pool.lib";
 export { loadUserP2PStake, newUserP2PStakeActivity } from "./p2p-stake.lib";

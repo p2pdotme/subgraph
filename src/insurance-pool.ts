@@ -6,13 +6,20 @@ import {
   PIPRefillRejected as PIPRefillRejectedEvent,
   CurrencyApproverUpdated as CurrencyApproverUpdatedEvent,
   InsuranceConfigUpdated as InsuranceConfigUpdatedEvent,
+  CALRLocked as CALRLockedEvent,
+  CALRUnlocked as CALRUnlockedEvent,
+  CALRLockReverted as CALRLockRevertedEvent,
 } from "../generated/InsurancePoolFacet/InsurancePoolFacet";
 import {
   InsuranceApprover,
   InsuranceCurrencyConfig,
   PIPRefillRequest,
 } from "../generated/schema";
-import { loadPIPRefillRequest } from "./lib";
+import {
+  loadPIPRefillRequest,
+  loadCircleAdminCALR,
+  newCALRActivity,
+} from "./lib";
 
 export function handlePIPRefillRequested(
   event: PIPRefillRequestedEvent,
@@ -141,4 +148,50 @@ export function handleInsuranceConfigUpdated(
   entity.transactionHash = event.transaction.hash;
 
   entity.save();
+}
+
+export function handleCALRLocked(event: CALRLockedEvent): void {
+  const admin = event.params.admin;
+
+  const calr = loadCircleAdminCALR(admin, event);
+  calr.totalLocked = calr.totalLocked.plus(event.params.amount);
+  calr.lastLockExpiresAt = event.params.lockExpiresAt;
+  calr.save();
+
+  const activity = newCALRActivity(event, admin, "LOCKED", event.params.amount);
+  activity.lockExpiresAt = event.params.lockExpiresAt;
+  activity.save();
+}
+
+// Covers both the admin-initiated unlockCALR and the main Diamond's
+// pullUnlockableCALR (single-tx claim of CALR + regular rewards) — the
+// contract emits the same event with the admin as topic on both paths.
+export function handleCALRUnlocked(event: CALRUnlockedEvent): void {
+  const admin = event.params.admin;
+
+  const calr = loadCircleAdminCALR(admin, event);
+  calr.totalUnlocked = calr.totalUnlocked.plus(event.params.amount);
+  calr.save();
+
+  newCALRActivity(event, admin, "UNLOCKED", event.params.amount).save();
+}
+
+export function handleCALRLockReverted(event: CALRLockRevertedEvent): void {
+  const admin = event.params.admin;
+
+  const calr = loadCircleAdminCALR(admin, event);
+  calr.totalReverted = calr.totalReverted.plus(event.params.actual);
+  calr.save();
+
+  // `actual` is what actually left the bucket; `snapshot` is what the revert
+  // tried to return (shortfall = snapshot - actual).
+  const activity = newCALRActivity(
+    event,
+    admin,
+    "LOCK_REVERTED",
+    event.params.actual,
+  );
+  activity.orderId = event.params.orderId;
+  activity.snapshotAmount = event.params.snapshot;
+  activity.save();
 }
