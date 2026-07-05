@@ -1,6 +1,10 @@
 import { BigInt, Bytes } from "@graphprotocol/graph-ts";
 import { ethereum } from "@graphprotocol/graph-ts";
-import { PIPRefillRequest } from "../../generated/schema";
+import {
+  CALRActivity,
+  CircleAdminCALR,
+  PIPRefillRequest,
+} from "../../generated/schema";
 
 export function loadPIPRefillRequest(
   circleId: BigInt,
@@ -26,4 +30,47 @@ export function loadPIPRefillRequest(
   entity.transactionHash = event.transaction.hash;
 
   return entity;
+}
+
+export function loadCircleAdminCALR(
+  admin: Bytes,
+  event: ethereum.Event,
+): CircleAdminCALR {
+  let calr = CircleAdminCALR.load(admin);
+
+  if (!calr) {
+    calr = new CircleAdminCALR(admin);
+    calr.admin = admin;
+    calr.totalLocked = BigInt.zero();
+    calr.totalUnlocked = BigInt.zero();
+    calr.totalReverted = BigInt.zero();
+    calr.totalSettled = BigInt.zero();
+    calr.lastLockExpiresAt = BigInt.zero();
+  }
+
+  calr.blockNumber = event.block.number;
+  calr.blockTimestamp = event.block.timestamp;
+  calr.transactionHash = event.transaction.hash;
+
+  return calr;
+}
+
+export function newCALRActivity(
+  event: ethereum.Event,
+  admin: Bytes,
+  activityType: string,
+  amount: BigInt,
+): CALRActivity {
+  const activity = new CALRActivity(
+    event.transaction.hash.concatI32(event.logIndex.toI32()),
+  );
+  activity.calr = admin;
+  activity.admin = admin;
+  activity.activityType = activityType;
+  activity.amount = amount;
+  activity.timestamp = event.block.timestamp;
+  activity.blockNumber = event.block.number;
+  activity.blockTimestamp = event.block.timestamp;
+  activity.transactionHash = event.transaction.hash;
+  return activity;
 }

@@ -482,6 +482,8 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - InsuranceClaim
+        - CircleAdminCALR
+        - CALRActivity
       abis:
         - name: InsuranceClaimFacet
           file: ./abis/InsuranceClaimFacet.json
@@ -516,6 +518,8 @@ dataSources:
         - PIPRefillRequest
         - InsuranceApprover
         - InsuranceCurrencyConfig
+        - CircleAdminCALR
+        - CALRActivity
       abis:
         - name: InsurancePoolFacet
           file: ./abis/InsurancePoolFacet.json
@@ -532,6 +536,12 @@ dataSources:
           handler: handleCurrencyApproverUpdated
         - event: InsuranceConfigUpdated(indexed address,indexed bytes32,(uint16,uint16,uint32,uint32,uint32,uint32,uint128),(uint16,uint16,uint32,uint32,uint32,uint32,uint128))
           handler: handleInsuranceConfigUpdated
+        - event: CALRLocked(indexed address,uint256,uint256)
+          handler: handleCALRLocked
+        - event: CALRUnlocked(indexed address,uint256)
+          handler: handleCALRUnlocked
+        - event: CALRLockReverted(indexed uint256,indexed address,uint256,uint256)
+          handler: handleCALRLockReverted
       file: ./src/insurance-pool.ts
   - kind: ethereum
     name: InsuranceSinkFacet
@@ -547,6 +557,9 @@ dataSources:
       entities:
         - MerchantPaymentChannels
         - InsuranceDebtActivity
+        - CircleAdminRewards
+        - CircleAdminCALR
+        - CALRActivity
       abis:
         - name: InsuranceSinkFacet
           file: ./abis/InsuranceSinkFacet.json
@@ -559,6 +572,8 @@ dataSources:
           handler: handleInsuranceDebtRepaidDirect
         - event: MerchantPcFiatUpdated(indexed address,indexed uint256,uint256,uint256)
           handler: handleMerchantPcFiatUpdated
+        - event: CircleAdminClaimableRewardsCredited(indexed address,uint256)
+          handler: handleCircleAdminClaimableRewardsCredited
       file: ./src/insurance-sink.ts
   # B2B GATEWAY
   - kind: ethereum
