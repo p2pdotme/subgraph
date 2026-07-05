@@ -4,9 +4,16 @@ import {
   InsuranceDebtRepaid as InsuranceDebtRepaidEvent,
   InsuranceDebtRepaidDirect as InsuranceDebtRepaidDirectEvent,
   MerchantPcFiatUpdated as MerchantPcFiatUpdatedEvent,
+  CircleAdminClaimableRewardsCredited as CircleAdminClaimableRewardsCreditedEvent,
 } from "../generated/InsuranceSinkFacet/InsuranceSinkFacet";
 import { InsuranceDebtActivity } from "../generated/schema";
-import { loadMerchantPaymentChannels, savePaymentChannel } from "./lib";
+import {
+  loadCircleAdminCALR,
+  loadCircleAdminRewards,
+  loadMerchantPaymentChannels,
+  newCALRActivity,
+  savePaymentChannel,
+} from "./lib";
 
 function pcKeyFor(merchant: Bytes, accountNo: BigInt): Bytes {
   return Bytes.fromUTF8(`${merchant.toHexString()}-${accountNo.toString()}`);
@@ -128,4 +135,27 @@ export function handleMerchantPcFiatUpdated(
   paymentChannel.fiatBalance = event.params.freeFiat;
   paymentChannel.insuranceDebt = event.params.insuranceDebt;
   savePaymentChannel(paymentChannel);
+}
+
+// Main-side leg of a CALR unlock: the Insurance Diamond has returned USDC and
+// credited the admin's claimable rewards. Mirror the exact on-chain mutation
+// (claimableRewards += amount); the next struct-carrying RewardsFacet event
+// overwrites with authoritative state, so any drift self-corrects.
+export function handleCircleAdminClaimableRewardsCredited(
+  event: CircleAdminClaimableRewardsCreditedEvent,
+): void {
+  const admin = event.params.admin;
+
+  const rewards = loadCircleAdminRewards(
+    Bytes.fromHexString(admin.toHexString()),
+    event,
+  );
+  rewards.admin = admin.toHexString();
+  rewards.claimableRewards = rewards.claimableRewards.plus(event.params.amount);
+  rewards.save();
+
+  // Keep the CALR aggregate's last-touched block fields fresh and record the
+  // credit on the same activity timeline as the insurance-side events.
+  loadCircleAdminCALR(admin, event).save();
+  newCALRActivity(event, admin, "CLAIMABLE_CREDITED", event.params.amount).save();
 }
