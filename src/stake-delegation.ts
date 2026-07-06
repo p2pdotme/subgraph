@@ -7,6 +7,7 @@ import {
   UsdcUndelegatedFromMerchantInCircle as UsdcUndelegatedFromMerchantInCircleEvent,
 } from "../generated/USDCStakeDelegationFacet/USDCStakeDelegationFacet";
 import {
+  backfillMerchantCircle,
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
@@ -132,6 +133,7 @@ export function handleUsdcDelegatedToMerchantInCircle(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  backfillMerchantCircle(merchant, event.params.circleId, event);
   merchant.delegatedStakedAmount = merchant.delegatedStakedAmount.plus(
     event.params.amount,
   );
@@ -141,6 +143,8 @@ export function handleUsdcDelegatedToMerchantInCircle(
   // Record stake history
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(circleKey, event);
+  // Persist so the non-null MerchantStakeHistory.circle link never dangles.
+  circle.save();
 
   const stakeHistoryKey = Bytes.fromUTF8(
     `${event.params.merchant.toHexString()}-DELEGATED-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
@@ -170,6 +174,7 @@ export function handleUsdcUndelegatedFromMerchantInCircle(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  backfillMerchantCircle(merchant, event.params.circleId, event);
   merchant.delegatedStakedAmount = merchant.delegatedStakedAmount.minus(
     event.params.amount,
   );
@@ -179,6 +184,8 @@ export function handleUsdcUndelegatedFromMerchantInCircle(
   // Record stake history
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(circleKey, event);
+  // Persist so the non-null MerchantStakeHistory.circle link never dangles.
+  circle.save();
 
   const stakeHistoryKey = Bytes.fromUTF8(
     `${event.params.merchant.toHexString()}-UNDELEGATED-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,

@@ -67,7 +67,7 @@ export function handleMerchantRegisteredToCircle(
 
   merchant.save();
 
-  // Persist the Circle so the non-null CircleMerchant.circle link never dangles:
+  // Persist the Circle so the CircleMerchant.circle link never dangles:
   // loadCircle only materializes it in memory.
   circle.save();
 
@@ -101,7 +101,7 @@ export function handleMerchantRegisteredToCircle(
   );
   const stakeHistory = loadMerchantStakeHistory(stakeHistoryKey, event);
   stakeHistory.merchant = merchant.id;
-  stakeHistory.circle = merchant.circle;
+  stakeHistory.circle = circle.id;
   stakeHistory.type = STAKE_HISTORY_TYPE_STAKED;
   stakeHistory.balanceBefore = BigInt.zero();
   stakeHistory.balanceAfter = event.params.stakeAmount;
@@ -152,7 +152,7 @@ export function handleOnlineOfflineToggled(
     merchant.isUnstakeRequested,
   );
 
-  let circle = loadCircle(merchant.circle, event);
+  let circle = loadCircle(changetype<Bytes>(Bytes.fromBigInt(merchant.circleId)), event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
   updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
@@ -195,7 +195,7 @@ export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
     merchant.isUnstakeRequested,
   );
 
-  let circle = loadCircle(merchant.circle, event);
+  let circle = loadCircle(changetype<Bytes>(Bytes.fromBigInt(merchant.circleId)), event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
   updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
@@ -279,7 +279,9 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   );
 
   merchantVolumeByMonth.merchant = merchant.id;
-  merchantVolumeByMonth.circle = merchant.circle;
+  merchantVolumeByMonth.circle = changetype<Bytes>(
+    Bytes.fromBigInt(merchant.circleId),
+  );
   merchantVolumeByMonth.paymentChannel = paymentChannel.id;
   merchantVolumeByMonth.month = month;
   merchantVolumeByMonth.volume = event.params.monthlyVolume;
@@ -392,7 +394,7 @@ export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
     merchant.isUnstakeRequested,
   );
 
-  let circle = loadCircle(merchant.circle, event);
+  let circle = loadCircle(changetype<Bytes>(Bytes.fromBigInt(merchant.circleId)), event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
   scoreState.save();
@@ -403,7 +405,7 @@ export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
   );
   const history = loadMerchantStakeHistory(historyKey, event);
   history.merchant = merchant.id;
-  history.circle = merchant.circle;
+  history.circle = circle.id;
   history.type = STAKE_HISTORY_TYPE_UNSTAKE_REQUESTED;
   history.balanceBefore = merchant.stakedAmount;
   history.balanceAfter = merchant.stakedAmount;
@@ -443,7 +445,7 @@ export function handleUnstakeRequestCancelled(
     merchant.isUnstakeRequested,
   );
 
-  let circle = loadCircle(merchant.circle, event);
+  let circle = loadCircle(changetype<Bytes>(Bytes.fromBigInt(merchant.circleId)), event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
   scoreState.save();
@@ -454,7 +456,7 @@ export function handleUnstakeRequestCancelled(
   );
   const history = loadMerchantStakeHistory(historyKey, event);
   history.merchant = merchant.id;
-  history.circle = merchant.circle;
+  history.circle = circle.id;
   history.type = STAKE_HISTORY_TYPE_UNSTAKE_REJECTED;
   history.balanceBefore = merchant.stakedAmount;
   history.balanceAfter = merchant.stakedAmount;
@@ -487,7 +489,7 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   );
   const history = loadMerchantStakeHistory(historyKey, event);
   history.merchant = merchant.id;
-  history.circle = merchant.circle;
+  history.circle = changetype<Bytes>(Bytes.fromBigInt(merchant.circleId));
   history.type = STAKE_HISTORY_TYPE_UNSTAKE_APPROVED;
   history.balanceBefore = previousStakedAmount;
   history.balanceAfter = event.params.merchantDetails.stake;
@@ -540,7 +542,7 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
     false,
   );
 
-  let circle = loadCircle(merchant.circle, event);
+  let circle = loadCircle(changetype<Bytes>(Bytes.fromBigInt(merchant.circleId)), event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
   updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
@@ -568,7 +570,7 @@ export function handleMerchantStaked(event: MerchantStakedEvent): void {
   );
   const stakeHistory = loadMerchantStakeHistory(stakeHistoryKey, event);
   stakeHistory.merchant = merchant.id;
-  stakeHistory.circle = merchant.circle;
+  stakeHistory.circle = changetype<Bytes>(Bytes.fromBigInt(merchant.circleId));
   stakeHistory.type = STAKE_HISTORY_TYPE_STAKED;
   stakeHistory.balanceBefore = previousStakedAmount;
   stakeHistory.balanceAfter = event.params.merchantDetails.stake;
@@ -598,7 +600,7 @@ export function handleMerchantStaked(event: MerchantStakedEvent): void {
     merchant.isUnstakeRequested,
   );
 
-  let circle = loadCircle(merchant.circle, event);
+  let circle = loadCircle(changetype<Bytes>(Bytes.fromBigInt(merchant.circleId)), event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
   updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);

@@ -1,4 +1,5 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { loadCircle } from "./circle.lib";
 import {
   AssignedMerchants,
   CircleMerchant,
@@ -40,7 +41,7 @@ export function loadCircleMerchant(
     circleMerchant.merchant = key.toHexString();
     circleMerchant.telegramId = "";
     circleMerchant.circleId = BigInt.zero();
-    circleMerchant.circle = Bytes.fromI32(0);
+    circleMerchant.circle = null;
     circleMerchant.orders = [];
     circleMerchant.stakedAmount = BigInt.zero();
     circleMerchant.delegatedStakedAmount = BigInt.zero();
@@ -61,6 +62,29 @@ export function loadCircleMerchant(
   circleMerchant.transactionHash = event.transaction.hash;
 
   return circleMerchant;
+}
+
+// Self-heal a merchant whose MerchantRegisteredToCircle event was never
+// delivered (observed: RPC/provider log gaps during backfill). Any later
+// event that carries the circleId can adopt the merchant into its circle,
+// so the stub never stays dangling.
+export function backfillMerchantCircle(
+  merchant: CircleMerchant,
+  circleId: BigInt,
+  event: ethereum.Event,
+): void {
+  if (!merchant.circleId.equals(BigInt.zero())) return;
+  if (circleId.equals(BigInt.zero())) return;
+
+  const circle = loadCircle(
+    Bytes.fromByteArray(Bytes.fromBigInt(circleId)),
+    event,
+  );
+  circle.save();
+
+  merchant.circle = circle.id;
+  merchant.circleId = circleId;
+  merchant.save();
 }
 
 export function loadMerchantPaymentChannels(

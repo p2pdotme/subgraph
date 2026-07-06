@@ -11,6 +11,7 @@ import {
   OrderAppealed as OrderAppealedEvent,
 } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
 import {
+  backfillMerchantCircle,
   loadAssignedMerchants,
   loadCircle,
   loadCircleMerchant,
@@ -176,11 +177,12 @@ export function handleOrderDisputeWithFaultType(
     Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
     event,
   );
+  backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
-  // merchant.circle is already Bytes - no conversion needed
   const circle = merchant.circle;
 
-  // Check if circle is the default placeholder value (Bytes.fromI32(0))
+  // Null when the registration event is missing and no backfill has run yet;
+  // Bytes.fromI32(0) is the legacy placeholder from older deployments.
   if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
   const newStatus = event.params._order.status;
@@ -434,11 +436,12 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
       Bytes.fromHexString(acceptedMerchantAddress.toHexString()),
       event,
     );
+    backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
-    // merchant.circle is already Bytes - no conversion needed
-    const circle = merchant.circle;
+      const circle = merchant.circle;
 
-    // Check if circle is the default placeholder value (Bytes.fromI32(0))
+    // Null when the registration event is missing and no backfill has run yet;
+  // Bytes.fromI32(0) is the legacy placeholder from older deployments.
     if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
     // Update monthly order metrics
@@ -590,6 +593,7 @@ export function handleMerchantAssignedNewOrder(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
   const assignedMerchantKey = Bytes.fromUTF8(
     `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`,
@@ -649,6 +653,7 @@ export function handleMerchantReAssignedNewOrder(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
   const assignedMerchantKey = Bytes.fromUTF8(
     `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`,
@@ -772,6 +777,7 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
     Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
     event,
   );
+  backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
@@ -847,11 +853,12 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
     Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
     event,
   );
+  backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
-  // merchant.circle is already Bytes - no conversion needed
   const circle = merchant.circle;
 
-  // Check if circle is the default placeholder value (Bytes.fromI32(0))
+  // Null when the registration event is missing and no backfill has run yet;
+  // Bytes.fromI32(0) is the legacy placeholder from older deployments.
   if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
   // Update monthly order metrics
