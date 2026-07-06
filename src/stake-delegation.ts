@@ -22,6 +22,7 @@ import {
   STAKE_HISTORY_TYPE_DELEGATED,
   STAKE_HISTORY_TYPE_UNDELEGATED,
 } from "./constants";
+import { Circle } from "../generated/schema";
 
 export function handleExitRequested(event: ExitRequestedEvent): void {
   const stakeRecordKey = Bytes.fromHexString(
@@ -143,8 +144,12 @@ export function handleUsdcDelegatedToMerchantInCircle(
   // Record stake history
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(circleKey, event);
-  // Persist so the non-null MerchantStakeHistory.circle link never dangles.
-  circle.save();
+  // Materialize the Circle only if missing so the non-null
+  // MerchantStakeHistory.circle link never dangles; never rewrite an
+  // existing Circle's bookkeeping fields.
+  if (Circle.load(circleKey) == null) {
+    circle.save();
+  }
 
   const stakeHistoryKey = Bytes.fromUTF8(
     `${event.params.merchant.toHexString()}-DELEGATED-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,
@@ -184,8 +189,12 @@ export function handleUsdcUndelegatedFromMerchantInCircle(
   // Record stake history
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(circleKey, event);
-  // Persist so the non-null MerchantStakeHistory.circle link never dangles.
-  circle.save();
+  // Materialize the Circle only if missing so the non-null
+  // MerchantStakeHistory.circle link never dangles; never rewrite an
+  // existing Circle's bookkeeping fields.
+  if (Circle.load(circleKey) == null) {
+    circle.save();
+  }
 
   const stakeHistoryKey = Bytes.fromUTF8(
     `${event.params.merchant.toHexString()}-UNDELEGATED-${event.transaction.hash.toHexString()}-${event.logIndex.toString()}`,

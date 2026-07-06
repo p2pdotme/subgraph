@@ -181,8 +181,11 @@ async function main() {
     stubs,
     (r) => `${r.merchant} expected circleId=${r.circleId} block=${r.block} tx=${r.tx}`,
   );
+  // Note: a mismatch can also be legitimate — CircleMerchantDetailsAndConfigUpdate
+  // (SetterFacet) can move a merchant to a different circle after registration.
+  // Confirm manually before treating a MISMATCH as a dropped event.
   report(
-    "MISMATCHED circleId",
+    "MISMATCHED circleId (may be a legitimate SetterFacet update — confirm manually)",
     mismatched,
     (r) => `${r.merchant} on-chain=${r.expected} indexed=${r.got} block=${r.block}`,
   );

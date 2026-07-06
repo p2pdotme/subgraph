@@ -77,11 +77,12 @@ async function main() {
       for (const lg of logs) {
         const merchant = topicToAddr(lg.topics[1]);
         const circleId = BigInt("0x" + lg.data.slice(2, 66)).toString();
-        if (!found.has(merchant)) {
-          found.set(merchant, {
-            block: parseInt(lg.blockNumber, 16),
-            circleId,
-          });
+        // Last registration wins (matches handler semantics); chunks complete
+        // out of order under concurrency, so compare blocks explicitly.
+        const block = parseInt(lg.blockNumber, 16);
+        const prev = found.get(merchant);
+        if (!prev || block >= prev.block) {
+          found.set(merchant, { block, circleId });
         }
       }
       done++;

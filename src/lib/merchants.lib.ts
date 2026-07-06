@@ -2,6 +2,7 @@ import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import { loadCircle } from "./circle.lib";
 import {
   AssignedMerchants,
+  Circle,
   CircleMerchant,
   MerchantPaymentChannels,
   MerchantVolumeByMonth,
@@ -76,13 +77,14 @@ export function backfillMerchantCircle(
   if (!merchant.circleId.equals(BigInt.zero())) return;
   if (circleId.equals(BigInt.zero())) return;
 
-  const circle = loadCircle(
-    Bytes.fromByteArray(Bytes.fromBigInt(circleId)),
-    event,
-  );
-  circle.save();
+  const circleKey = Bytes.fromByteArray(Bytes.fromBigInt(circleId));
+  // Materialize the Circle only if its own creation event was also dropped;
+  // never rewrite an existing Circle's bookkeeping fields.
+  if (Circle.load(circleKey) == null) {
+    loadCircle(circleKey, event).save();
+  }
 
-  merchant.circle = circle.id;
+  merchant.circle = circleKey;
   merchant.circleId = circleId;
   merchant.save();
 }
