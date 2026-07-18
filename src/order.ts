@@ -503,6 +503,9 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
 
   // KPI: an order cancelled/expired without any acceptance is a miss for every
   // assigned merchant (the accepted!=empty case was already counted at accept time)
+  // The contract emits address(0) for a never-accepted order's acceptedMerchant;
+  // the legacy branch below tests Bytes.empty() against the same event field and
+  // only matches synthetic defaults — both checks are intentional as-is.
   if (event.params._order.acceptedMerchant.equals(Address.zero())) {
     const cancelledOrder = loadOrders(
       Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
