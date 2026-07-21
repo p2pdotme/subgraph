@@ -25,3 +25,8 @@ export const MIGRATION_STATUS_REJECTED: i32 = 3;
 export const ORDER_TYPE_BUY: i32 = 0;
 export const ORDER_TYPE_SELL: i32 = 1;
 export const ORDER_TYPE_PAY: i32 = 2;
+
+// Dispute FaultType enum values
+export const FAULT_TYPE_USER: i32 = 1;
+export const FAULT_TYPE_MERCHANT: i32 = 2;
+export const FAULT_TYPE_BANK: i32 = 3;
