@@ -142,7 +142,11 @@ type CircleMerchant @entity(immutable: false) {
   telegramId: String!
   circleId: BigInt!
 
-  circle: Circle!
+  # Nullable: a merchant stub may be created by order/delegation events before
+  # (or instead of) its MerchantRegisteredToCircle event — e.g. when the RPC
+  # provider drops logs. Null here means "registration not yet indexed"; it is
+  # backfilled by the first circleId-carrying event and never left dangling.
+  circle: Circle
   orders: [Orders!]
 
   stakedAmount: BigInt!
