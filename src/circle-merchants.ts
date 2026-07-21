@@ -25,6 +25,7 @@ import {
   isMerchantActive,
   isMerchantAvailable,
   loadOrders,
+  loadMerchantDailyMetrics,
 } from "./lib";
 import {
   OnlineOfflineToggled as OnlineOfflineToggledEvent,
@@ -67,7 +68,7 @@ export function handleMerchantRegisteredToCircle(
 
   merchant.save();
 
-  // Persist the Circle so the non-null CircleMerchant.circle link never dangles:
+  // Persist the Circle so the CircleMerchant.circle link never dangles:
   // loadCircle only materializes it in memory.
   circle.save();
 
@@ -101,7 +102,7 @@ export function handleMerchantRegisteredToCircle(
   );
   const stakeHistory = loadMerchantStakeHistory(stakeHistoryKey, event);
   stakeHistory.merchant = merchant.id;
-  stakeHistory.circle = merchant.circle;
+  stakeHistory.circle = circle.id;
   stakeHistory.type = STAKE_HISTORY_TYPE_STAKED;
   stakeHistory.balanceBefore = BigInt.zero();
   stakeHistory.balanceAfter = event.params.stakeAmount;
@@ -130,12 +131,25 @@ export function handleOnlineOfflineToggled(
     merchant.isUnstakeRequested,
   );
 
+  const wasOnline = merchant.isOnline;
   merchant.isOnline = event.params.merchantDetails.isOnline;
 
   if (event.params.merchantDetails.isOnline) {
     merchant.onlineAt = event.block.timestamp;
   } else {
     merchant.offlineAt = event.block.timestamp;
+    // KPI: close the online span (attributed wholly to the closing day)
+    if (wasOnline && merchant.onlineAt.gt(BigInt.zero())) {
+      const span = event.block.timestamp.minus(merchant.onlineAt);
+      merchant.totalOnlineSeconds = merchant.totalOnlineSeconds.plus(span);
+      const daily = loadMerchantDailyMetrics(
+        merchant,
+        event.block.timestamp,
+        event,
+      );
+      daily.onlineSeconds = daily.onlineSeconds.plus(span);
+      daily.save();
+    }
   }
 
   merchant.save();
@@ -152,7 +166,7 @@ export function handleOnlineOfflineToggled(
     merchant.isUnstakeRequested,
   );
 
-  let circle = loadCircle(merchant.circle, event);
+  let circle = loadCircle(changetype<Bytes>(Bytes.fromBigInt(merchant.circleId)), event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
   updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
@@ -195,7 +209,7 @@ export function handleBlacklistMerchant(event: BlacklistMerchantEvent): void {
     merchant.isUnstakeRequested,
   );
 
-  let circle = loadCircle(merchant.circle, event);
+  let circle = loadCircle(changetype<Bytes>(Bytes.fromBigInt(merchant.circleId)), event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
   updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
@@ -211,7 +225,26 @@ export function handleMerchantOngoingOrder(
     event,
   );
   if (merchant.circleId.equals(BigInt.zero())) return;
+  const wasOngoing = merchant.isOngoingOrder;
   merchant.isOngoingOrder = event.params.isOngoing;
+
+  if (event.params.isOngoing && !wasOngoing) {
+    merchant.busyAt = event.block.timestamp;
+  } else if (!event.params.isOngoing && wasOngoing) {
+    // KPI: close the busy span (attributed wholly to the closing day)
+    if (merchant.busyAt.gt(BigInt.zero())) {
+      const span = event.block.timestamp.minus(merchant.busyAt);
+      merchant.totalBusySeconds = merchant.totalBusySeconds.plus(span);
+      const daily = loadMerchantDailyMetrics(
+        merchant,
+        event.block.timestamp,
+        event,
+      );
+      daily.busySeconds = daily.busySeconds.plus(span);
+      daily.save();
+    }
+    merchant.busyAt = BigInt.zero();
+  }
   merchant.save();
 }
 
@@ -279,7 +312,9 @@ export function handleMerchantVolume(event: MerchantVolumeEvent): void {
   );
 
   merchantVolumeByMonth.merchant = merchant.id;
-  merchantVolumeByMonth.circle = merchant.circle;
+  merchantVolumeByMonth.circle = changetype<Bytes>(
+    Bytes.fromBigInt(merchant.circleId),
+  );
   merchantVolumeByMonth.paymentChannel = paymentChannel.id;
   merchantVolumeByMonth.month = month;
   merchantVolumeByMonth.volume = event.params.monthlyVolume;
@@ -392,7 +427,7 @@ export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
     merchant.isUnstakeRequested,
   );
 
-  let circle = loadCircle(merchant.circle, event);
+  let circle = loadCircle(changetype<Bytes>(Bytes.fromBigInt(merchant.circleId)), event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
   scoreState.save();
@@ -403,7 +438,7 @@ export function handleUnstakeRequested(event: UnstakeRequestedEvent): void {
   );
   const history = loadMerchantStakeHistory(historyKey, event);
   history.merchant = merchant.id;
-  history.circle = merchant.circle;
+  history.circle = circle.id;
   history.type = STAKE_HISTORY_TYPE_UNSTAKE_REQUESTED;
   history.balanceBefore = merchant.stakedAmount;
   history.balanceAfter = merchant.stakedAmount;
@@ -443,7 +478,7 @@ export function handleUnstakeRequestCancelled(
     merchant.isUnstakeRequested,
   );
 
-  let circle = loadCircle(merchant.circle, event);
+  let circle = loadCircle(changetype<Bytes>(Bytes.fromBigInt(merchant.circleId)), event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
   scoreState.save();
@@ -454,7 +489,7 @@ export function handleUnstakeRequestCancelled(
   );
   const history = loadMerchantStakeHistory(historyKey, event);
   history.merchant = merchant.id;
-  history.circle = merchant.circle;
+  history.circle = circle.id;
   history.type = STAKE_HISTORY_TYPE_UNSTAKE_REJECTED;
   history.balanceBefore = merchant.stakedAmount;
   history.balanceAfter = merchant.stakedAmount;
@@ -487,7 +522,7 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
   );
   const history = loadMerchantStakeHistory(historyKey, event);
   history.merchant = merchant.id;
-  history.circle = merchant.circle;
+  history.circle = changetype<Bytes>(Bytes.fromBigInt(merchant.circleId));
   history.type = STAKE_HISTORY_TYPE_UNSTAKE_APPROVED;
   history.balanceBefore = previousStakedAmount;
   history.balanceAfter = event.params.merchantDetails.stake;
@@ -540,7 +575,7 @@ export function handleUnstakeApproved(event: UnstakeApprovedEvent): void {
     false,
   );
 
-  let circle = loadCircle(merchant.circle, event);
+  let circle = loadCircle(changetype<Bytes>(Bytes.fromBigInt(merchant.circleId)), event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
   updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
@@ -568,7 +603,7 @@ export function handleMerchantStaked(event: MerchantStakedEvent): void {
   );
   const stakeHistory = loadMerchantStakeHistory(stakeHistoryKey, event);
   stakeHistory.merchant = merchant.id;
-  stakeHistory.circle = merchant.circle;
+  stakeHistory.circle = changetype<Bytes>(Bytes.fromBigInt(merchant.circleId));
   stakeHistory.type = STAKE_HISTORY_TYPE_STAKED;
   stakeHistory.balanceBefore = previousStakedAmount;
   stakeHistory.balanceAfter = event.params.merchantDetails.stake;
@@ -598,7 +633,7 @@ export function handleMerchantStaked(event: MerchantStakedEvent): void {
     merchant.isUnstakeRequested,
   );
 
-  let circle = loadCircle(merchant.circle, event);
+  let circle = loadCircle(changetype<Bytes>(Bytes.fromBigInt(merchant.circleId)), event);
   let scoreState = loadCircleScoreState(circle.id, event);
   updateActiveMerchantsCount(scoreState, wasActive, isActive);
   updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);

@@ -1,6 +1,8 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { loadCircle } from "./circle.lib";
 import {
   AssignedMerchants,
+  Circle,
   CircleMerchant,
   MerchantPaymentChannels,
   MerchantVolumeByMonth,
@@ -40,7 +42,7 @@ export function loadCircleMerchant(
     circleMerchant.merchant = key.toHexString();
     circleMerchant.telegramId = "";
     circleMerchant.circleId = BigInt.zero();
-    circleMerchant.circle = Bytes.fromI32(0);
+    circleMerchant.circle = null;
     circleMerchant.orders = [];
     circleMerchant.stakedAmount = BigInt.zero();
     circleMerchant.delegatedStakedAmount = BigInt.zero();
@@ -54,6 +56,15 @@ export function loadCircleMerchant(
     circleMerchant.offlineAt = BigInt.zero();
     circleMerchant.startedAt = BigInt.zero();
     circleMerchant.currency = Bytes.empty();
+    circleMerchant.consecutiveMissedStreak = BigInt.zero();
+    circleMerchant.lifetimeAssignedCount = BigInt.zero();
+    circleMerchant.lifetimeAcceptedCount = BigInt.zero();
+    circleMerchant.lifetimeCompletedCount = BigInt.zero();
+    circleMerchant.lifetimeMissedCount = BigInt.zero();
+    circleMerchant.lastCompletedOrderAt = BigInt.zero();
+    circleMerchant.totalOnlineSeconds = BigInt.zero();
+    circleMerchant.totalBusySeconds = BigInt.zero();
+    circleMerchant.busyAt = BigInt.zero();
   }
 
   circleMerchant.blockNumber = event.block.number;
@@ -61,6 +72,30 @@ export function loadCircleMerchant(
   circleMerchant.transactionHash = event.transaction.hash;
 
   return circleMerchant;
+}
+
+// Self-heal a merchant whose MerchantRegisteredToCircle event was never
+// delivered (observed: RPC/provider log gaps during backfill). Any later
+// event that carries the circleId can adopt the merchant into its circle,
+// so the stub never stays dangling.
+export function backfillMerchantCircle(
+  merchant: CircleMerchant,
+  circleId: BigInt,
+  event: ethereum.Event,
+): void {
+  if (!merchant.circleId.equals(BigInt.zero())) return;
+  if (circleId.equals(BigInt.zero())) return;
+
+  const circleKey = Bytes.fromByteArray(Bytes.fromBigInt(circleId));
+  // Materialize the Circle only if its own creation event was also dropped;
+  // never rewrite an existing Circle's bookkeeping fields.
+  if (Circle.load(circleKey) == null) {
+    loadCircle(circleKey, event).save();
+  }
+
+  merchant.circle = circleKey;
+  merchant.circleId = circleId;
+  merchant.save();
 }
 
 export function loadMerchantPaymentChannels(

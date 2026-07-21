@@ -11,6 +11,7 @@ import {
   OrderAppealed as OrderAppealedEvent,
 } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
 import {
+  backfillMerchantCircle,
   loadAssignedMerchants,
   loadCircle,
   loadCircleMerchant,
@@ -31,6 +32,7 @@ import {
   compute30dMetrics,
   applyTrustFirewall,
   checkBootstrapGraduation,
+  loadMerchantDailyMetrics,
 } from "./lib";
 import {
   CircleMetrics,
@@ -38,6 +40,8 @@ import {
   CircleScoreState,
   MerchantOrderMetricsByMonth,
   User,
+  Orders,
+  AssignedMerchants,
 } from "../generated/schema";
 import {
   DISPUTE_STATUS_RAISED,
@@ -47,6 +51,9 @@ import {
   ORDER_TYPE_BUY,
   ORDER_TYPE_SELL,
   ORDER_TYPE_PAY,
+  FAULT_TYPE_USER,
+  FAULT_TYPE_MERCHANT,
+  FAULT_TYPE_BANK,
 } from "./constants/status";
 import {
   CancelledOrders as CancelledOrdersEvent,
@@ -113,6 +120,22 @@ function adjustCircleMetricsByOrderType(
   }
 }
 
+// Returns the unique merchant addresses currently attached to an order.
+// Assignment rows are keyed per accountNo, so one merchant can appear
+// multiple times in order.assignedMerchants.
+function uniqueAssignedMerchantAddresses(order: Orders): string[] {
+  const result: string[] = [];
+  const rows = order.assignedMerchants;
+  if (rows == null) return result;
+  for (let i = 0; i < rows.length; i++) {
+    const row = AssignedMerchants.load(rows[i]);
+    if (row == null) continue;
+    if (!result.includes(row.assignedMerchant)) {
+      result.push(row.assignedMerchant);
+    }
+  }
+  return result;
+}
 
 export function handleOrderDisputeWithFaultType(
   event: OrderDisputeWithFaultTypeEvent,
@@ -176,11 +199,12 @@ export function handleOrderDisputeWithFaultType(
     Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
     event,
   );
+  backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
-  // merchant.circle is already Bytes - no conversion needed
   const circle = merchant.circle;
 
-  // Check if circle is the default placeholder value (Bytes.fromI32(0))
+  // Null when the registration event is missing and no backfill has run yet;
+  // Bytes.fromI32(0) is the legacy placeholder from older deployments.
   if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
   const newStatus = event.params._order.status;
@@ -217,6 +241,58 @@ export function handleOrderDisputeWithFaultType(
     );
     orderMetrics.merchant = merchant.id;
     orderMetrics.month = month;
+
+    // KPI: fault-attributed dispute buckets on the settle day
+    const settleDaily = loadMerchantDailyMetrics(
+      merchant,
+      event.block.timestamp,
+      event,
+    );
+    if (event.params.faultType === FAULT_TYPE_MERCHANT) {
+      settleDaily.merchantFaultDisputes = settleDaily.merchantFaultDisputes.plus(
+        BigInt.fromI32(1),
+      );
+    } else if (event.params.faultType === FAULT_TYPE_BANK) {
+      settleDaily.bankFaultDisputes = settleDaily.bankFaultDisputes.plus(
+        BigInt.fromI32(1),
+      );
+    } else if (event.params.faultType === FAULT_TYPE_USER) {
+      settleDaily.userFaultDisputes = settleDaily.userFaultDisputes.plus(
+        BigInt.fromI32(1),
+      );
+    }
+    settleDaily.save();
+
+    // KPI: reverse completion metrics when a completed order is overturned
+    if (
+      previousStatus === ORDER_STATUS_COMPLETED &&
+      newStatus === ORDER_STATUS_CANCELLED
+    ) {
+      const disputedOrderForKpi = loadOrders(
+        Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+        event,
+      );
+      const completionDaily = loadMerchantDailyMetrics(
+        merchant,
+        disputedOrderForKpi.completedAt,
+        event,
+      );
+      if (completionDaily.completedCount.gt(BigInt.zero())) {
+        completionDaily.completedCount = completionDaily.completedCount.minus(
+          BigInt.fromI32(1),
+        );
+        completionDaily.usdcVolume = completionDaily.usdcVolume.minus(
+          event.params._order.amount,
+        );
+        completionDaily.save();
+      }
+      if (merchant.lifetimeCompletedCount.gt(BigInt.zero())) {
+        merchant.lifetimeCompletedCount = merchant.lifetimeCompletedCount.minus(
+          BigInt.fromI32(1),
+        );
+        merchant.save();
+      }
+    }
 
     // Update circle monthly order metrics
     const circleMetricsKey = Bytes.fromUTF8(`${circle.toHexString()}-${month}`);
@@ -427,6 +503,39 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     event,
   );
 
+  // KPI: an order cancelled/expired without any acceptance is a miss for every
+  // assigned merchant (the accepted!=empty case was already counted at accept time)
+  // The contract emits address(0) for a never-accepted order's acceptedMerchant;
+  // the legacy branch below tests Bytes.empty() against the same event field and
+  // only matches synthetic defaults — both checks are intentional as-is.
+  if (event.params._order.acceptedMerchant.equals(Address.zero())) {
+    const cancelledOrder = loadOrders(
+      Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+      event,
+    );
+    const assignedAddresses = uniqueAssignedMerchantAddresses(cancelledOrder);
+    for (let i = 0; i < assignedAddresses.length; i++) {
+      const missed = loadCircleMerchant(
+        Bytes.fromHexString(assignedAddresses[i]),
+        event,
+      );
+      missed.lifetimeMissedCount = missed.lifetimeMissedCount.plus(
+        BigInt.fromI32(1),
+      );
+      missed.consecutiveMissedStreak = missed.consecutiveMissedStreak.plus(
+        BigInt.fromI32(1),
+      );
+      missed.save();
+      const missedDaily = loadMerchantDailyMetrics(
+        missed,
+        event.block.timestamp,
+        event,
+      );
+      missedDaily.missedCount = missedDaily.missedCount.plus(BigInt.fromI32(1));
+      missedDaily.save();
+    }
+  }
+
   // Only update merchant stats if an order was accepted by a merchant
   const acceptedMerchantAddress = event.params._order.acceptedMerchant;
   if (!acceptedMerchantAddress.equals(Bytes.empty())) {
@@ -434,11 +543,12 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
       Bytes.fromHexString(acceptedMerchantAddress.toHexString()),
       event,
     );
+    backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
-    // merchant.circle is already Bytes - no conversion needed
-    const circle = merchant.circle;
+      const circle = merchant.circle;
 
-    // Check if circle is the default placeholder value (Bytes.fromI32(0))
+    // Null when the registration event is missing and no backfill has run yet;
+  // Bytes.fromI32(0) is the legacy placeholder from older deployments.
     if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
     // Update monthly order metrics
@@ -590,6 +700,7 @@ export function handleMerchantAssignedNewOrder(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
   const assignedMerchantKey = Bytes.fromUTF8(
     `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`,
@@ -614,6 +725,16 @@ export function handleMerchantAssignedNewOrder(
   assignedMerchants.push(assignedMerchant.id);
   order.assignedMerchants = assignedMerchants;
   order.save();
+
+  // KPI: assignment counters
+  merchant.lifetimeAssignedCount = merchant.lifetimeAssignedCount.plus(
+    BigInt.fromI32(1),
+  );
+  merchant.save();
+
+  const daily = loadMerchantDailyMetrics(merchant, event.block.timestamp, event);
+  daily.assignedCount = daily.assignedCount.plus(BigInt.fromI32(1));
+  daily.save();
 }
 
 export function handleMerchantReAssignedNewOrder(
@@ -649,6 +770,7 @@ export function handleMerchantReAssignedNewOrder(
     Bytes.fromHexString(event.params.merchant.toHexString()),
     event,
   );
+  backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
   const assignedMerchantKey = Bytes.fromUTF8(
     `${event.params.orderId.toString()}-${event.params.accountNo.toString()}-${event.params.merchant.toHexString()}`,
@@ -672,6 +794,16 @@ export function handleMerchantReAssignedNewOrder(
   assignedMerchants.push(assignedMerchant.id);
   order.assignedMerchants = assignedMerchants;
   order.save();
+
+  // KPI: assignment counters
+  merchant.lifetimeAssignedCount = merchant.lifetimeAssignedCount.plus(
+    BigInt.fromI32(1),
+  );
+  merchant.save();
+
+  const daily = loadMerchantDailyMetrics(merchant, event.block.timestamp, event);
+  daily.assignedCount = daily.assignedCount.plus(BigInt.fromI32(1));
+  daily.save();
 }
 
 export function handleSellOrderUpiSet(event: SellOrderUpiSetEvent): void {
@@ -772,6 +904,7 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
     Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
     event,
   );
+  backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
   let order = loadOrders(
     Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
@@ -795,6 +928,47 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
   }
 
   merchant.save();
+
+  // KPI: acceptance for the acceptor, a miss for every other assigned merchant
+  const acceptorAddress = event.params._order.acceptedMerchant.toHexString();
+  merchant.lifetimeAcceptedCount = merchant.lifetimeAcceptedCount.plus(
+    BigInt.fromI32(1),
+  );
+  merchant.consecutiveMissedStreak = BigInt.zero();
+  merchant.save();
+
+  const acceptorDaily = loadMerchantDailyMetrics(
+    merchant,
+    event.block.timestamp,
+    event,
+  );
+  acceptorDaily.acceptedCount = acceptorDaily.acceptedCount.plus(
+    BigInt.fromI32(1),
+  );
+  acceptorDaily.save();
+
+  const assignedAddresses = uniqueAssignedMerchantAddresses(order);
+  for (let i = 0; i < assignedAddresses.length; i++) {
+    if (assignedAddresses[i] == acceptorAddress) continue;
+    const missed = loadCircleMerchant(
+      Bytes.fromHexString(assignedAddresses[i]),
+      event,
+    );
+    missed.lifetimeMissedCount = missed.lifetimeMissedCount.plus(
+      BigInt.fromI32(1),
+    );
+    missed.consecutiveMissedStreak = missed.consecutiveMissedStreak.plus(
+      BigInt.fromI32(1),
+    );
+    missed.save();
+    const missedDaily = loadMerchantDailyMetrics(
+      missed,
+      event.block.timestamp,
+      event,
+    );
+    missedDaily.missedCount = missedDaily.missedCount.plus(BigInt.fromI32(1));
+    missedDaily.save();
+  }
 
   // Increment lifetime accepted orders and daily bucket for circle score
   const circle = merchant.circle;
@@ -847,12 +1021,45 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
     Bytes.fromHexString(event.params._order.acceptedMerchant.toHexString()),
     event,
   );
+  backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
-  // merchant.circle is already Bytes - no conversion needed
   const circle = merchant.circle;
 
-  // Check if circle is the default placeholder value (Bytes.fromI32(0))
+  // Null when the registration event is missing and no backfill has run yet;
+  // Bytes.fromI32(0) is the legacy placeholder from older deployments.
   if (!circle || circle.equals(Bytes.fromI32(0))) return;
+
+  // KPI: completion metrics
+  merchant.lifetimeCompletedCount = merchant.lifetimeCompletedCount.plus(
+    BigInt.fromI32(1),
+  );
+  merchant.lastCompletedOrderAt = event.block.timestamp;
+  merchant.save();
+
+  const kpiDaily = loadMerchantDailyMetrics(
+    merchant,
+    event.block.timestamp,
+    event,
+  );
+  kpiDaily.completedCount = kpiDaily.completedCount.plus(BigInt.fromI32(1));
+  kpiDaily.usdcVolume = kpiDaily.usdcVolume.plus(event.params._order.amount);
+
+  const completedOrderForKpi = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+    event,
+  );
+  if (
+    completedOrderForKpi.acceptedAt.gt(BigInt.zero()) &&
+    event.block.timestamp.ge(completedOrderForKpi.acceptedAt)
+  ) {
+    kpiDaily.acceptToCompleteSecondsSum = kpiDaily.acceptToCompleteSecondsSum.plus(
+      event.block.timestamp.minus(completedOrderForKpi.acceptedAt),
+    );
+    kpiDaily.completedWithSpeedCount = kpiDaily.completedWithSpeedCount.plus(
+      BigInt.fromI32(1),
+    );
+  }
+  kpiDaily.save();
 
   // Update monthly order metrics
   const month = getYearMonthFromTimestamp(event.block.timestamp);
@@ -1051,6 +1258,26 @@ export function handleOrderCancelledBy(event: OrderCancelledByEvent): void {
   order.cancelledBy = event.params.cancelledBy;
   order.cancelledAt = event.block.timestamp;
   order.save();
+
+  // KPI: cancellation counts against the merchant only when the merchant did it
+  if (
+    !order.acceptedMerchantAddress.equals(Bytes.empty()) &&
+    event.params.cancelledBy.equals(order.acceptedMerchantAddress)
+  ) {
+    const cancellingMerchant = loadCircleMerchant(
+      Bytes.fromHexString(order.acceptedMerchantAddress.toHexString()),
+      event,
+    );
+    const daily = loadMerchantDailyMetrics(
+      cancellingMerchant,
+      event.block.timestamp,
+      event,
+    );
+    daily.cancelledByMerchantCount = daily.cancelledByMerchantCount.plus(
+      BigInt.fromI32(1),
+    );
+    daily.save();
+  }
 }
 
 export function handleOrderCancelledByV2(event: OrderCancelledByV2Event): void {
@@ -1061,6 +1288,26 @@ export function handleOrderCancelledByV2(event: OrderCancelledByV2Event): void {
   order.cancelledBy = event.params.cancelledBy;
   order.cancelledAt = event.block.timestamp;
   order.save();
+
+  // KPI: cancellation counts against the merchant only when the merchant did it
+  if (
+    !order.acceptedMerchantAddress.equals(Bytes.empty()) &&
+    event.params.cancelledBy.equals(order.acceptedMerchantAddress)
+  ) {
+    const cancellingMerchant = loadCircleMerchant(
+      Bytes.fromHexString(order.acceptedMerchantAddress.toHexString()),
+      event,
+    );
+    const daily = loadMerchantDailyMetrics(
+      cancellingMerchant,
+      event.block.timestamp,
+      event,
+    );
+    daily.cancelledByMerchantCount = daily.cancelledByMerchantCount.plus(
+      BigInt.fromI32(1),
+    );
+    daily.save();
+  }
 }
 
 export function handleAdditionalOrderDetails(
