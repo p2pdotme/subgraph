@@ -18,6 +18,7 @@ export { loadOrders, syncOrder } from "./order.lib";
 export {
   loadAssignedMerchants,
   loadCircleMerchant,
+  backfillMerchantCircle,
   loadMerchantPaymentChannels,
   savePaymentChannel,
   loadMerchantVolumeByMonth,
