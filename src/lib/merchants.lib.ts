@@ -54,6 +54,15 @@ export function loadCircleMerchant(
     circleMerchant.offlineAt = BigInt.zero();
     circleMerchant.startedAt = BigInt.zero();
     circleMerchant.currency = Bytes.empty();
+    circleMerchant.consecutiveMissedStreak = BigInt.zero();
+    circleMerchant.lifetimeAssignedCount = BigInt.zero();
+    circleMerchant.lifetimeAcceptedCount = BigInt.zero();
+    circleMerchant.lifetimeCompletedCount = BigInt.zero();
+    circleMerchant.lifetimeMissedCount = BigInt.zero();
+    circleMerchant.lastCompletedOrderAt = BigInt.zero();
+    circleMerchant.totalOnlineSeconds = BigInt.zero();
+    circleMerchant.totalBusySeconds = BigInt.zero();
+    circleMerchant.busyAt = BigInt.zero();
   }
 
   circleMerchant.blockNumber = event.block.number;

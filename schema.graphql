@@ -161,6 +161,17 @@ type CircleMerchant @entity(immutable: false) {
   offlineAt: BigInt!
   startedAt: BigInt!
 
+  # MERCHANT KPI TRACKING
+  consecutiveMissedStreak: BigInt!
+  lifetimeAssignedCount: BigInt!
+  lifetimeAcceptedCount: BigInt!
+  lifetimeCompletedCount: BigInt!
+  lifetimeMissedCount: BigInt!
+  lastCompletedOrderAt: BigInt!
+  totalOnlineSeconds: BigInt!
+  totalBusySeconds: BigInt!
+  busyAt: BigInt!
+
   currency: Bytes!
 
   paymentChannels: [MerchantPaymentChannels!] @derivedFrom(field: "merchant")
@@ -171,6 +182,7 @@ type CircleMerchant @entity(immutable: false) {
     @derivedFrom(field: "merchant")
   stakeHistory: [MerchantStakeHistory!] @derivedFrom(field: "merchant")
   fcmTokens: [FCMToken!] @derivedFrom(field: "merchant")
+  dailyMetrics: [MerchantDailyMetrics!] @derivedFrom(field: "merchant")
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -292,6 +304,40 @@ type AssignedMerchants @entity(immutable: false) {
   assignedPCId: BigInt!
   orderId: BigInt!
   merchant: CircleMerchant
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# MERCHANT DAILY METRICS
+# One row per merchant per UTC day; feeds the merchant KPI dashboard.
+# id = "<merchantAddressHex>-<dayNumber>" (dayNumber = timestamp / 86400)
+type MerchantDailyMetrics @entity(immutable: false) {
+  id: Bytes!
+  merchant: CircleMerchant!
+  merchantAddress: String!
+  circleId: BigInt!
+  dayNumber: BigInt!
+  date: String! # YYYY-MM-DD
+
+  assignedCount: BigInt!
+  acceptedCount: BigInt!
+  missedCount: BigInt!
+  completedCount: BigInt!
+  cancelledByMerchantCount: BigInt!
+
+  acceptToCompleteSecondsSum: BigInt!
+  completedWithSpeedCount: BigInt!
+
+  usdcVolume: BigInt!
+
+  merchantFaultDisputes: BigInt!
+  bankFaultDisputes: BigInt!
+  userFaultDisputes: BigInt!
+
+  onlineSeconds: BigInt!
+  busySeconds: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

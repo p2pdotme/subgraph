@@ -25,6 +25,7 @@ import {
   isMerchantActive,
   isMerchantAvailable,
   loadOrders,
+  loadMerchantDailyMetrics,
 } from "./lib";
 import {
   OnlineOfflineToggled as OnlineOfflineToggledEvent,
@@ -130,12 +131,25 @@ export function handleOnlineOfflineToggled(
     merchant.isUnstakeRequested,
   );
 
+  const wasOnline = merchant.isOnline;
   merchant.isOnline = event.params.merchantDetails.isOnline;
 
   if (event.params.merchantDetails.isOnline) {
     merchant.onlineAt = event.block.timestamp;
   } else {
     merchant.offlineAt = event.block.timestamp;
+    // KPI: close the online span (attributed wholly to the closing day)
+    if (wasOnline && merchant.onlineAt.gt(BigInt.zero())) {
+      const span = event.block.timestamp.minus(merchant.onlineAt);
+      merchant.totalOnlineSeconds = merchant.totalOnlineSeconds.plus(span);
+      const daily = loadMerchantDailyMetrics(
+        merchant,
+        event.block.timestamp,
+        event,
+      );
+      daily.onlineSeconds = daily.onlineSeconds.plus(span);
+      daily.save();
+    }
   }
 
   merchant.save();
@@ -211,7 +225,26 @@ export function handleMerchantOngoingOrder(
     event,
   );
   if (merchant.circleId.equals(BigInt.zero())) return;
+  const wasOngoing = merchant.isOngoingOrder;
   merchant.isOngoingOrder = event.params.isOngoing;
+
+  if (event.params.isOngoing && !wasOngoing) {
+    merchant.busyAt = event.block.timestamp;
+  } else if (!event.params.isOngoing && wasOngoing) {
+    // KPI: close the busy span (attributed wholly to the closing day)
+    if (merchant.busyAt.gt(BigInt.zero())) {
+      const span = event.block.timestamp.minus(merchant.busyAt);
+      merchant.totalBusySeconds = merchant.totalBusySeconds.plus(span);
+      const daily = loadMerchantDailyMetrics(
+        merchant,
+        event.block.timestamp,
+        event,
+      );
+      daily.busySeconds = daily.busySeconds.plus(span);
+      daily.save();
+    }
+    merchant.busyAt = BigInt.zero();
+  }
   merchant.save();
 }
 
