@@ -1246,3 +1246,63 @@ type InsuranceCurrencyConfig @entity(immutable: false) {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
+
+# USER DAILY PLACEMENTS
+# Gross per-user, per-UTC-day order placement counts, mirroring the on-chain
+# counters `dailyBuyOrdersPlaced` and `dailySellOrdersPlaced` in
+# OrderProcessorStorage.
+#
+# GROSS means these are incremented at placement and NEVER decremented — not on
+# cancellation, not on expiry, not on dispute. That is the whole point of the
+# on-chain counters: the volume buckets (`dailySellOrders`) are credited back in
+# full on cancel, so they cannot bound a place-and-cancel loop. Anything that
+# subtracts here silently diverges from what the contract will enforce.
+#
+# `sellPlacements` is a SHARED bucket for SELL and PAY, exactly as on-chain.
+# B2B-originated orders (placeOrderForB2B) also increment it, because
+# _placeOrderCore increments regardless of entrypoint.
+#
+# id = "<userAddressHex>-<dayIndex>", dayIndex = blockTimestamp / 86400, the
+# same key libOrderProcessorFacet.getDayKey computes.
+type UserDailyPlacements @entity(immutable: false) {
+  id: Bytes!
+  user: Bytes!
+  dayIndex: BigInt!
+  day: String! # "YYYY-MM-DD" (UTC), for human-readable queries
+  buyPlacements: BigInt!
+  sellPlacements: BigInt! # SELL + PAY share this bucket
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# ORDER PLACEMENT LIMIT CONFIG
+# Singleton (id = "placement-limits") holding the current gross daily placement
+# caps from OrderProcessorStorage. Neither field has an on-chain getter, so
+# events are the only way to observe them.
+#
+# The sell limit is seeded by PlacementLimitInit during the upgrade cut and
+# changed afterwards by SetterFacet.setDailySellOrderPlacementLimit; both emit
+# the same DailySellOrderPlacementLimitUpdated signature, so one handler covers
+# the seed and every later adjustment.
+#
+# The `*Configured` flags distinguish "never observed" from "observed as 0".
+# That distinction is load-bearing for the sell limit, where 0 means UNLIMITED:
+# a consumer must not render "0 of 0 orders left" on a Diamond that simply has
+# not been migrated yet.
+type OrderPlacementLimitConfig @entity(immutable: false) {
+  id: Bytes!
+
+  dailyBuyOrderPlacementLimit: BigInt!
+  buyLimitConfigured: Boolean!
+
+  # 0 = unlimited (deliberately unlike the buy limit — see PlacementLimitInit).
+  dailySellOrderPlacementLimit: BigInt!
+  sellLimitConfigured: Boolean!
+
+  updatedAt: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}

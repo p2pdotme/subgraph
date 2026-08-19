@@ -681,6 +681,32 @@
       "type": "event"
     },
     {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "limit",
+          "type": "uint256"
+        }
+      ],
+      "name": "DailyBuyOrderPlacementLimitUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "limit",
+          "type": "uint256"
+        }
+      ],
+      "name": "DailySellOrderPlacementLimitUpdated",
+      "type": "event"
+    },
+    {
       "inputs": [
         {
           "internalType": "bytes32",
@@ -1415,6 +1441,32 @@
         }
       ],
       "name": "updateRpPerUsdtLimitRational",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "limit",
+          "type": "uint256"
+        }
+      ],
+      "name": "setDailyBuyOrderPlacementLimit",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "limit",
+          "type": "uint256"
+        }
+      ],
+      "name": "setDailySellOrderPlacementLimit",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

@@ -33,6 +33,7 @@ import {
   applyTrustFirewall,
   checkBootstrapGraduation,
   loadMerchantDailyMetrics,
+  recordPlacement,
 } from "./lib";
 import {
   CircleMetrics,
@@ -646,6 +647,16 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
     event.params._order.disputeInfo.status,
     event.params._order.disputeInfo.redactTransId,
     event.params._order.disputeInfo.accountNumber,
+    event,
+  );
+
+  // Gross daily placement counter, mirroring dailyBuyOrdersPlaced /
+  // dailySellOrdersPlaced on-chain. Recorded before the circle lookup so a
+  // missing circle can never cost us a placement the contract has already
+  // counted. Never undone by the cancellation handlers — that is the point.
+  recordPlacement(
+    event.params._order.user,
+    event.params._order.orderType,
     event,
   );
 
