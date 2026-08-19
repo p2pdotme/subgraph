@@ -9,6 +9,8 @@ import {
   PaymentChannelConfigUpdate as PaymentChannelConfigUpdateEvent,
   MerchantClaimableRewardsUpdate as MerchantClaimableRewardsUpdateEvent,
   MerchantWithdrawFeePercentage as MerchantWithdrawFeePercentageEvent,
+  DailyBuyOrderPlacementLimitUpdated as DailyBuyOrderPlacementLimitUpdatedEvent,
+  DailySellOrderPlacementLimitUpdated as DailySellOrderPlacementLimitUpdatedEvent,
 } from "../generated/SetterFacet/SetterFacet";
 import { CurrencyConfig, PaymentChannelConfig } from "../generated/schema";
 import {
@@ -23,6 +25,7 @@ import {
   savePaymentChannel,
   loadMerchantRewards,
   loadMerchantWithdrawFeePercentage,
+  loadOrderPlacementLimitConfig,
   updateAvailableMerchantsCount,
 } from "./lib";
 
@@ -230,4 +233,34 @@ export function handleMerchantWithdrawFeePercentage(
   withdrawFee.feePercentage = event.params.feePercentage;
   withdrawFee.time = event.block.timestamp;
   withdrawFee.save();
+}
+
+export function handleDailyBuyOrderPlacementLimitUpdated(
+  event: DailyBuyOrderPlacementLimitUpdatedEvent,
+): void {
+  const config = loadOrderPlacementLimitConfig(event);
+  config.dailyBuyOrderPlacementLimit = event.params.limit;
+  config.buyLimitConfigured = true;
+  config.updatedAt = event.block.timestamp;
+  config.save();
+}
+
+/**
+ * Fires for both the PlacementLimitInit seed inside the upgrade cut and every
+ * later setDailySellOrderPlacementLimit call — the initializer declares an
+ * identical event signature and runs by delegatecall, so both arrive on the
+ * Diamond address under the same topic0.
+ *
+ * A limit of 0 here means UNLIMITED, not "blocked". `sellLimitConfigured`
+ * carries the difference between that and a Diamond we have simply never seen
+ * a value from.
+ */
+export function handleDailySellOrderPlacementLimitUpdated(
+  event: DailySellOrderPlacementLimitUpdatedEvent,
+): void {
+  const config = loadOrderPlacementLimitConfig(event);
+  config.dailySellOrderPlacementLimit = event.params.limit;
+  config.sellLimitConfigured = true;
+  config.updatedAt = event.block.timestamp;
+  config.save();
 }

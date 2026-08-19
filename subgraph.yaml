@@ -159,6 +159,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - OrderFlowFacet
+        - UserDailyPlacements
       abis:
         - name: OrderFlowFacet
           file: ./abis/OrderFlowFacet.json
@@ -417,6 +418,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - CircleCreatedUpdate
+        - OrderPlacementLimitConfig
       abis:
         - name: SetterFacet
           file: ./abis/SetterFacet.json
@@ -439,6 +441,13 @@ dataSources:
           handler: handleMerchantClaimableRewardsUpdate
         - event: MerchantWithdrawFeePercentage(bytes32,uint256)
           handler: handleMerchantWithdrawFeePercentage
+        - event: DailyBuyOrderPlacementLimitUpdated(uint256)
+          handler: handleDailyBuyOrderPlacementLimitUpdated
+        # Also emitted by PlacementLimitInit during the upgrade cut (identical
+        # signature, delegatecalled from the Diamond) — that seed is the only
+        # on-chain report of the initial limit, since the field has no getter.
+        - event: DailySellOrderPlacementLimitUpdated(uint256)
+          handler: handleDailySellOrderPlacementLimitUpdated
       file: ./src/setter-facet.ts
   - kind: ethereum
     name: CapabilityFacet
