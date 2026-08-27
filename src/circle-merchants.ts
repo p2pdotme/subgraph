@@ -18,7 +18,6 @@ import {
   savePaymentChannel,
   loadMerchantVolumeByMonth,
   loadPaymentChannelMigration,
-  loadFCMToken,
   loadMerchantStakeHistory,
   updateActiveMerchantsCount,
   updateAvailableMerchantsCount,
@@ -33,7 +32,6 @@ import {
   MerchantOngoingOrder as MerchantOngoingOrderEvent,
   Merchant as MerchantEvent,
   MerchantVolume as MerchantVolumeEvent,
-  FCMToken as FCMTokenEvent,
   MerchantRewardAllocatedForOrder as MerchantRewardAllocatedForOrderEvent,
   CircleAdminRewardAllocatedForOrder as CircleAdminRewardAllocatedForOrderEvent,
   CircleUSDCStakeDelegationRewardAllocatedForOrder as CircleUSDCStakeDelegationRewardAllocatedForOrderEvent,
@@ -690,26 +688,6 @@ export function handleMonthlyVolumeUnlimitedFlagUpdated(
   }
 
   savePaymentChannel(paymentChannel);
-}
-
-export function handleFCMToken(event: FCMTokenEvent): void {
-  if (event.params.merchant.equals(Address.zero())) return;
-  const merchant = loadCircleMerchant(
-    Bytes.fromHexString(event.params.merchant.toHexString()),
-    event,
-  );
-  if (merchant.circleId.equals(BigInt.zero())) {
-    return;
-  }
-
-  const fcmToken = loadFCMToken(
-    Bytes.fromHexString(event.params.merchant.toHexString()),
-    event,
-  );
-  fcmToken.address = event.params.merchant;
-  fcmToken.tokens = event.params.tokens;
-  fcmToken.merchant = merchant.id;
-  fcmToken.save();
 }
 
 export function handleMerchantRewardAllocatedForOrder(
