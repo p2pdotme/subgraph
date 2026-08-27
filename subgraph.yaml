@@ -226,7 +226,6 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - MerchantRegistryFacet
-        - FCMToken
         - MerchantRewardAllocatedForOrder
         - CircleAdminRewardAllocatedForOrder
         - CircleUSDCStakeDelegationRewardAllocatedForOrder
@@ -244,8 +243,6 @@ dataSources:
           handler: handleMerchant
         - event: MerchantVolume(indexed address,uint256,uint256,uint256)
           handler: handleMerchantVolume
-        - event: FCMToken(indexed address,string[])
-          handler: handleFCMToken
         - event: MerchantRewardAllocatedForOrder(indexed uint256,indexed address,uint256)
           handler: handleMerchantRewardAllocatedForOrder
         - event: CircleAdminRewardAllocatedForOrder(indexed uint256,indexed uint256,uint256)
