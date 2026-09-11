@@ -43,6 +43,10 @@
     "CapabilityFacet": {
       "address": "0x5450A144d3CCB0c48170e70950B41944b6516Da6",
       "startBlock": 39242823
+    },
+    "RoleAdminFacet": {
+      "address": "0x5450A144d3CCB0c48170e70950B41944b6516Da6",
+      "startBlock": 39242823
     }
   },
   "base": {
@@ -119,6 +123,10 @@
       "startBlock": 46279933
     },
     "P2PStakeBoostFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 29875200
+    },
+    "RoleAdminFacet": {
       "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
       "startBlock": 29875200
     }

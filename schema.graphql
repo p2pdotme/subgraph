@@ -324,7 +324,6 @@ type MerchantDailyMetrics @entity(immutable: false) {
   circleId: BigInt!
   dayNumber: BigInt!
   date: String! # YYYY-MM-DD
-
   assignedCount: BigInt!
   acceptedCount: BigInt!
   missedCount: BigInt!
@@ -688,6 +687,8 @@ type Currency @entity(immutable: false) {
   id: Bytes!
   currency: Bytes!
   isActive: Boolean!
+  # R5 country scope: the country this currency is bound to (null until bound)
+  country: Country
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -1056,6 +1057,13 @@ type InsuranceClaim @entity(immutable: false) {
 
   payoutEligibleAt: BigInt!
 
+  # R6 Ops contest window: while contested the claim cannot settle; removing
+  # the contest restarts a fresh 48h window (payoutEligibleAt is refreshed)
+  contested: Boolean!
+  contestedBy: Bytes
+  contestedAt: BigInt
+  contestCount: Int!
+
   # Settlement breakdown
   settledUsdcAmount: BigInt!
   fromCAIP: BigInt!
@@ -1120,7 +1128,6 @@ type CircleAdminCALR @entity(immutable: false) {
   totalReverted: BigInt! # sum of CALRLockReverted actual amounts
   totalSettled: BigInt! # sum of ClaimSettled.fromCALR drained from this admin's bucket
   lastLockExpiresAt: BigInt! # lockExpiresAt of the most recent CALRLocked
-
   activities: [CALRActivity!]! @derivedFrom(field: "calr")
 
   # Updated on every event for this admin; reflect the most recent event, not creation.
@@ -1241,6 +1248,337 @@ type InsuranceCurrencyConfig @entity(immutable: false) {
   # Admin that triggered the most recent update.
   updatedBy: Bytes!
   updatedAt: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ROLES & PERMISSIONS (contracts-v4 rollout R2 → R8)
+# Selector-level role registry (RoleAdminFacet on the main Diamond), country
+# scope (CountryFacet), break-glass pause (OrderProcessorFacet), dual-sign,
+# per-lead timelocks (LeadTimelock) and the legacy admin stores retired at R8.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# PROTOCOL AUTH STATE
+# Singleton (id = "auth"). Tracks the shadow-mode legacy switch, the
+# LegacyAuthUsed counters that gate the R7 flip, and the emergency pause.
+type ProtocolAuthState @entity(immutable: false) {
+  id: Bytes!
+  # Inverted on-chain (`legacyAuthDisabled`): true until R7 flips it off
+  legacyAuthEnabled: Boolean!
+  legacyAuthToggledBy: Bytes
+  legacyAuthToggledAt: BigInt
+  # LegacyAuthUsed emissions across all three emission points
+  legacyAuthUsedCount: BigInt!
+  lastLegacyAuthUsedAt: BigInt
+  # Selectors currently present in the policy registry
+  configuredSelectorCount: Int!
+  # R7 break-glass pause (OrderProcessorFacet.emergencyPause)
+  emergencyPaused: Boolean!
+  emergencyPausedBy: Bytes
+  emergencyPausedAt: BigInt
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# PROTOCOL ROLE
+# One row per role bit (0 = DEV_LEAD … 9 = ADMIN_VALUE)
+type ProtocolRole @entity(immutable: false) {
+  id: Bytes! # single byte: role id
+  role: Int!
+  name: String!
+  memberCount: Int!
+  # Bound LeadTimelock (R7); null while unbound
+  timelock: LeadTimelock
+  members: [RoleMember!]! @derivedFrom(field: "protocolRole")
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# ROLE MEMBER
+# Membership of an account in a role; revocations flip isActive
+type RoleMember @entity(immutable: false) {
+  id: Bytes! # role byte ++ account
+  protocolRole: ProtocolRole!
+  role: Int!
+  roleName: String!
+  account: Bytes!
+  isActive: Boolean!
+  # Operator of the latest grant / revoke
+  operator: Bytes!
+  grantedAt: BigInt!
+  revokedAt: BigInt
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# ADMIN COUNTRY
+# Country assignment of an ADMIN / ADMIN_VALUE holder (R5 country scope)
+type AdminCountry @entity(immutable: false) {
+  id: Bytes! # admin ++ country
+  admin: Bytes!
+  country: Country!
+  countryCode: String!
+  assigned: Boolean!
+  operator: Bytes!
+  assignedAt: BigInt!
+  unassignedAt: BigInt
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# COUNTRY
+# ISO-3166 alpha-2 country entity (R5). Currencies bind to exactly one country.
+type Country @entity(immutable: false) {
+  id: Bytes! # bytes32 country
+  country: Bytes!
+  code: String!
+  isActive: Boolean!
+  currencies: [Currency!]! @derivedFrom(field: "country")
+  admins: [AdminCountry!]! @derivedFrom(field: "country")
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# SELECTOR POLICY
+# Per-selector authorization policy — the on-chain permission map
+type SelectorPolicy @entity(immutable: false) {
+  id: Bytes! # bytes4 selector
+  selector: Bytes!
+  # "Contract.fn(types)" from src/constants/selectors.ts, "" if unknown
+  functionName: String!
+  roleMask: BigInt!
+  roles: [Int!]!
+  roleNames: [String!]!
+  permissionless: Boolean!
+  # 0 GLOBAL, 1 COUNTRY, 2 CIRCLE, 3 CURRENCY
+  scope: Int!
+  scopeName: String!
+  # 0 ROUTINE, 1 SENSITIVE, 2 CATASTROPHIC
+  tier: Int!
+  tierName: String!
+  timelocked: Boolean!
+  dualSign: Boolean!
+  coSignRoleMask: BigInt!
+  coSignRoles: [Int!]!
+  coSignRoleNames: [String!]!
+  # false once cleared (LibAuth fails closed on unconfigured selectors)
+  configured: Boolean!
+  # Per-selector early cutover: legacy path ignored for this selector
+  legacyExempt: Boolean!
+  # LegacyAuthUsed emissions for this selector on the main Diamond
+  legacyAuthUsedCount: BigInt!
+  lastLegacyAuthUsedAt: BigInt
+  updateCount: Int!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# ROLE ACTIVITY
+# Immutable audit log of every registry mutation
+type RoleActivity @entity(immutable: true) {
+  id: Bytes! # txHash ++ logIndex
+  # ROLE_GRANTED | ROLE_REVOKED | COUNTRY_ASSIGNED | COUNTRY_UNASSIGNED |
+  # TIMELOCK_SET | POLICY_SET | POLICY_CLEARED | LEGACY_AUTH_TOGGLED |
+  # LEGACY_EXEMPT_SET
+  action: String!
+  operator: Bytes!
+  role: Int
+  roleName: String
+  account: Bytes
+  country: Bytes
+  countryCode: String
+  selector: Bytes
+  functionName: String
+  timelock: Bytes
+  previousTimelock: Bytes
+  flag: Boolean
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CO-SIGN
+# Dual-sign record (R7): proposed by a coSignRoleMask holder, consumed by the
+# gated call from a different roleMask holder, or cancelled / expired
+type CoSign @entity(immutable: false) {
+  id: Bytes! # key = keccak256(selector ‖ paramsHash)
+  key: Bytes!
+  selector: Bytes!
+  functionName: String!
+  proposer: Bytes!
+  proposerRole: Int!
+  proposerRoleName: String!
+  expiry: BigInt!
+  # PROPOSED | CANCELLED | CONSUMED
+  status: String!
+  cancelledBy: Bytes
+  executor: Bytes
+  proposedAt: BigInt!
+  resolvedAt: BigInt
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# LEGACY AUTH USAGE
+# One row per LegacyAuthUsed emission — a call that passed ONLY on the legacy
+# superAdmin/admin path (i.e. a missing role grant). Zero for 7 days across all
+# three emitters is the R7 flip criterion.
+type LegacyAuthUsage @entity(immutable: true) {
+  id: Bytes! # txHash ++ logIndex
+  # MAIN_DIAMOND | INSURANCE_DIAMOND | REPUTATION_MANAGER
+  source: String!
+  emitter: Bytes!
+  caller: Bytes!
+  selector: Bytes!
+  functionName: String!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# LEGACY AUTH SELECTOR STATS
+# Aggregate per (emitter, selector)
+type LegacyAuthSelectorStats @entity(immutable: false) {
+  id: Bytes! # emitter ++ selector
+  source: String!
+  emitter: Bytes!
+  selector: Bytes!
+  functionName: String!
+  count: BigInt!
+  firstUsedAt: BigInt!
+  lastUsedAt: BigInt!
+  lastCaller: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# LEGACY ADMIN
+# The pre-registry superAdmin / admin / globalAdmin stores. Replayed from
+# genesis so the R8 RetirementInit address lists can be produced from here;
+# the R8 cut emits the same events with status=false and drains them.
+type LegacyAdmin @entity(immutable: false) {
+  id: Bytes! # account
+  account: Bytes!
+  isSuperAdmin: Boolean!
+  isAdmin: Boolean!
+  isGlobalAdmin: Boolean!
+  updater: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# EMERGENCY PAUSE ACTIVITY
+# Immutable log of the R7 break-glass pause toggles
+type EmergencyPauseActivity @entity(immutable: true) {
+  id: Bytes! # txHash ++ logIndex
+  by: Bytes!
+  paused: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# INSURANCE CLAIM CONTEST ACTIVITY
+# Immutable log of R6 claim contests and their removal
+type InsuranceClaimContestActivity @entity(immutable: true) {
+  id: Bytes! # txHash ++ logIndex
+  claimId: BigInt!
+  claim: InsuranceClaim!
+  # CONTESTED | CONTEST_REMOVED
+  action: String!
+  by: Bytes!
+  # Set on CONTEST_REMOVED: the fresh 48h window's release timestamp
+  newEligibleAt: BigInt
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# LEAD TIMELOCK
+# A per-lead OpenZeppelin TimelockController bound via RoleAdminFacet
+# .setRoleTimelock (R7). Instantiated as a data-source template on binding.
+type LeadTimelock @entity(immutable: false) {
+  id: Bytes! # timelock address
+  address: Bytes!
+  # Role this timelock was last bound to (see isBound for whether it still is)
+  role: Int!
+  roleName: String!
+  isBound: Boolean!
+  boundAt: BigInt!
+  unboundAt: BigInt
+  # From MinDelayChange; null if the constructor emission predates indexing
+  minDelay: BigInt
+  operationCount: Int!
+  pendingCount: Int!
+  operations: [TimelockOperation!]! @derivedFrom(field: "timelock")
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# TIMELOCK OPERATION
+# A scheduled (batch) operation: propose → delay → execute, cancellable
+type TimelockOperation @entity(immutable: false) {
+  id: Bytes! # timelock ++ operationId
+  timelock: LeadTimelock!
+  operationId: Bytes!
+  predecessor: Bytes!
+  salt: Bytes
+  delay: BigInt!
+  # PENDING | EXECUTED | CANCELLED
+  status: String!
+  scheduledAt: BigInt!
+  readyAt: BigInt!
+  executedAt: BigInt
+  cancelledAt: BigInt
+  callCount: Int!
+  executedCallCount: Int!
+  calls: [TimelockCall!]! @derivedFrom(field: "operation")
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# TIMELOCK CALL
+# One call inside a timelock operation
+type TimelockCall @entity(immutable: false) {
+  id: Bytes! # timelock ++ operationId ++ index
+  operation: TimelockOperation!
+  index: Int!
+  target: Bytes!
+  value: BigInt!
+  data: Bytes!
+  selector: Bytes!
+  functionName: String!
+  executed: Boolean!
+  executedAt: BigInt
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

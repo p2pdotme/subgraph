@@ -68,13 +68,54 @@ Deploys to The Graph Studio at `https://thegraph.com/studio/`.
 
 Contract addresses per network are defined in `networks.json`:
 
-| Network | Diamond Proxy | ReputationManager |
-|---------|--------------|-------------------|
-| `base` | `0x4cad6eC90e65baBec9335cAd728DDC610c316368` | `0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D` |
+| Network | Diamond Proxy                                | ReputationManager                            |
+| ------- | -------------------------------------------- | -------------------------------------------- |
+| `base`  | `0x4cad6eC90e65baBec9335cAd728DDC610c316368` | `0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D` |
 
-All data sources (except ReputationManager) point to the same diamond proxy contract.
+All main-protocol data sources point to the same diamond proxy contract; the
+Insurance Diamond and the Governance Diamond have their own addresses. The
+`LeadTimelock` data-source **template** has no fixed address: an instance is
+created for every timelock that `RoleAdminFacet.setRoleTimelock` binds to a role.
 
 ---
+
+## Roles & Permissions (contracts-v4 rollout R2 → R8)
+
+The selector-level role registry replaced the flat `superAdmin` / `admin` model
+in staged releases. The indexer follows every release's events so a UI or an ops
+dashboard can answer "who can call what, from where, and is anyone still relying
+on the legacy path":
+
+| Release              | Contract events                                                                                                                                                                                                                                        | Entities                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| R2 role registry     | `RoleGranted`, `RoleRevoked`, `RoleTimelockSet`, `SelectorPolicySet`, `SelectorPolicyCleared`, `LegacyAuthToggled`, `LegacyExemptSet` (RoleAdminFacet)                                                                                                 | `ProtocolRole`, `RoleMember`, `SelectorPolicy`, `RoleActivity`, `ProtocolAuthState`              |
+| R3/R4 shadow re-gate | `LegacyAuthUsed` on the main Diamond, the Insurance Diamond and the ReputationManager                                                                                                                                                                  | `LegacyAuthUsage`, `LegacyAuthSelectorStats`, counters on `ProtocolAuthState` / `SelectorPolicy` |
+| R5 country scope     | `CountryActiveSet`, `CurrencyCountryBound` (CountryFacet), `CountryAssigned` (RoleAdminFacet)                                                                                                                                                          | `Country`, `Currency.country`, `AdminCountry`                                                    |
+| R6 claim contest     | `ClaimContested`, `ClaimContestRemoved` (InsuranceClaimFacet)                                                                                                                                                                                          | `InsuranceClaim.contested*`, `InsuranceClaimContestActivity`                                     |
+| R7 cutover           | `EmergencyPauseSet` (OrderProcessorFacet), `CoSignProposed` / `CoSignCancelled` (RoleAdminFacet), `CoSignConsumed` (LibAuth via B2BGatewayFacet), `LeadTimelock` template (`CallScheduled`, `CallSalt`, `CallExecuted`, `Cancelled`, `MinDelayChange`) | `EmergencyPauseActivity`, `CoSign`, `LeadTimelock`, `TimelockOperation`, `TimelockCall`          |
+| R8 retirement        | `SuperAdminUpdated`, `AdminStatusUpdated`, `GlobalAdminUpdated` replayed from genesis; `RetirementInit` re-emits them with `status=false`                                                                                                              | `LegacyAdmin`                                                                                    |
+
+Notes:
+
+- `ProtocolAuthState` (id `"auth"`) is a singleton: the legacy switch (defaults
+  to **enabled** — it is stored inverted on-chain), the `LegacyAuthUsed`
+  counters that gate the R7 flip (zero for seven days across all three emitters),
+  the configured-selector count and the break-glass pause.
+- Roles are bit positions (`0 DEV_LEAD … 9 ADMIN_VALUE`, see
+  `src/constants/roles.ts`); `SelectorPolicy.roles` / `roleNames` expand the
+  on-chain bitmask.
+- `SelectorPolicy.functionName`, `CoSign.functionName`, `LegacyAuthUsage
+.functionName` and `TimelockCall.functionName` resolve selectors through
+  `src/constants/selectors.ts`, a generated map. Regenerate it after each
+  contracts release from a compiled contracts-v4 checkout:
+
+  ```bash
+  node scripts/generate-selectors.mjs ../contracts-v4/artifacts
+  ```
+
+- A timelock's `MinDelayChange` is emitted in its constructor, before the
+  template exists, so `LeadTimelock.minDelay` stays null unless the delay is
+  changed later; the 48h policy minimum lives in the contracts runbook.
 
 ## Entity Relationship Diagram
 
@@ -268,11 +309,11 @@ erDiagram
 
 ## Available Scripts
 
-| Command | Description |
-|---------|-------------|
+| Command           | Description                                    |
+| ----------------- | ---------------------------------------------- |
 | `npm run codegen` | Generate TypeScript types from ABIs and schema |
-| `npm run build` | Compile AssemblyScript to WebAssembly |
-| `npm run deploy` | Deploy to The Graph Studio |
+| `npm run build`   | Compile AssemblyScript to WebAssembly          |
+| `npm run deploy`  | Deploy to The Graph Studio                     |
 
 ---
 
@@ -330,9 +371,9 @@ When a circle is first created, it enters **bootstrap** with a default score of 
 
 **Graduation to active** happens when either threshold is met:
 
-| Threshold | Value |
-|-----------|-------|
-| Lifetime orders | ≥ 40 |
+| Threshold            | Value         |
+| -------------------- | ------------- |
+| Lifetime orders      | ≥ 40          |
 | Lifetime USDC volume | ≥ 20,000 USDC |
 
 **Weight cap** — Bootstrap circles have their score capped at 25 (`BOOTSTRAP_MAX_WEIGHT`), regardless of the calculated score. This prevents unproven circles from dominating order routing.
@@ -342,6 +383,7 @@ When a circle is first created, it enters **bootstrap** with a default score of 
 ### Step 3: Circle Score Calculation (0–100)
 
 The score is only computed when:
+
 - Circle is **not rejected**
 - Circle has completed at least **10 orders** (MIN_ORDERS_FOR_SCORE)
 
@@ -363,13 +405,13 @@ speed = clamp(100 × (150 - avg_settlement_seconds) / (150 - 45), 0, 100)
 - 150 seconds = worst case (score 0)
 
 | Avg Settlement | Speed Score |
-|---------------|-------------|
-| 45s | 100 |
-| 60s | ~86 |
-| 75s | ~71 |
-| 90s | ~57 |
-| 120s | ~29 |
-| 150s+ | 0 |
+| -------------- | ----------- |
+| 45s            | 100         |
+| 60s            | ~86         |
+| 75s            | ~71         |
+| 90s            | ~57         |
+| 120s           | ~29         |
+| 150s+          | 0           |
 
 #### 3b. Dispute Score (30% weight)
 
@@ -380,14 +422,14 @@ dispute = max(0, 100 - (dispute_rate × 1800))
 ```
 
 | Dispute % | Score |
-|-----------|-------|
-| 0.0% | 100 |
-| 0.5% | 91 |
-| 1.0% | 82 |
-| 2.0% | 64 |
-| 3.0% | 46 |
-| 5.0% | 10 |
-| ≥5.6% | 0 |
+| --------- | ----- |
+| 0.0%      | 100   |
+| 0.5%      | 91    |
+| 1.0%      | 82    |
+| 2.0%      | 64    |
+| 3.0%      | 46    |
+| 5.0%      | 10    |
+| ≥5.6%     | 0     |
 
 #### 3c. Merchants Score (20% weight)
 
@@ -408,13 +450,13 @@ volume = min(100, total_volume_usdc / 10,000)
 ```
 
 | Total Volume (USDC) | Volume Score |
-|--------------------|-------------|
-| 0 | 0 |
-| 50,000 | 5 |
-| 100,000 | 10 |
-| 250,000 | 25 |
-| 500,000 | 50 |
-| ≥1,000,000 | 100 |
+| ------------------- | ------------ |
+| 0                   | 0            |
+| 50,000              | 5            |
+| 100,000             | 10           |
+| 250,000             | 25           |
+| 500,000             | 50           |
+| ≥1,000,000          | 100          |
 
 ### Note: Order Routing
 
@@ -438,18 +480,19 @@ Let's walk through two circles with different performance profiles to see how th
 
 #### Raw Metrics
 
-| Metric | Circle Alpha | Circle Beta |
-|--------|-------------|------------|
-| Avg Settlement Time | 60s | 120s |
-| Dispute Rate | 1.0% | 4.0% |
-| Active Merchants | 25 | 8 |
-| 30d Volume (USDC) | 500,000 | 50,000 |
-| Lifetime Orders | 200 | 15 |
-| Status | active | bootstrap |
+| Metric              | Circle Alpha | Circle Beta |
+| ------------------- | ------------ | ----------- |
+| Avg Settlement Time | 60s          | 120s        |
+| Dispute Rate        | 1.0%         | 4.0%        |
+| Active Merchants    | 25           | 8           |
+| 30d Volume (USDC)   | 500,000      | 50,000      |
+| Lifetime Orders     | 200          | 15          |
+| Status              | active       | bootstrap   |
 
 #### Sub-Score Breakdown
 
 **Circle Alpha:**
+
 ```
 speed    = clamp(100 × (150 - 60) / (150 - 45), 0, 100)  = 85.7  ≈ 86
 dispute  = max(0, 100 - (0.01 × 1800))                    = 82
@@ -458,6 +501,7 @@ volume   = min(100, 500,000 / 10,000)                      = 50
 ```
 
 **Circle Beta:**
+
 ```
 speed    = clamp(100 × (150 - 120) / (150 - 45), 0, 100)  = 28.6  ≈ 29
 dispute  = max(0, 100 - (0.04 × 1800))                     = 28
@@ -489,5 +533,6 @@ xychart-beta
 ```
 
 **What this means:**
+
 - Circle Alpha scores 67 vs Circle Beta's 21 — Alpha dominates because it settles 2x faster (60s vs 120s), has 4x fewer disputes (1% vs 4%), has 3x more merchants, and 10x more volume.
 - Circle Beta can improve its score by: reducing settlement time, lowering disputes, onboarding more merchants, or increasing volume. The score recalculates on every completed order, so improvements are reflected immediately.

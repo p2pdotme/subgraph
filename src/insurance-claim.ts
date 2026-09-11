@@ -7,12 +7,22 @@ import {
   ClaimWithdrawn as ClaimWithdrawnEvent,
   ClaimSettled as ClaimSettledEvent,
   SuperAdminLargeClaimApproved as SuperAdminLargeClaimApprovedEvent,
+  ClaimContested as ClaimContestedEvent,
+  ClaimContestRemoved as ClaimContestRemovedEvent,
+  LegacyAuthUsed as LegacyAuthUsedEvent,
 } from "../generated/InsuranceClaimFacet/InsuranceClaimFacet";
 import {
   loadCircleAdminCALR,
   loadInsuranceClaim,
   newCALRActivity,
+  newInsuranceClaimContestActivity,
+  recordLegacyAuthUsed,
 } from "./lib";
+import {
+  AUTH_SOURCE_INSURANCE_DIAMOND,
+  CONTEST_ACTION_CONTESTED,
+  CONTEST_ACTION_REMOVED,
+} from "./constants/roles";
 
 export function handleClaimSubmitted(event: ClaimSubmittedEvent): void {
   const claim = event.params.claim;
@@ -141,7 +151,12 @@ export function handleClaimSettled(event: ClaimSettledEvent): void {
     calr.totalSettled = calr.totalSettled.plus(fromCALR);
     calr.save();
 
-    const activity = newCALRActivity(event, admin, "SETTLEMENT_DRAIN", fromCALR);
+    const activity = newCALRActivity(
+      event,
+      admin,
+      "SETTLEMENT_DRAIN",
+      fromCALR,
+    );
     activity.claimId = event.params.claimId;
     activity.save();
   }
@@ -158,4 +173,60 @@ export function handleSuperAdminLargeClaimApproved(
   entity.superAdminApproved = true;
 
   entity.save();
+}
+
+// ─────────────────────────── R6 Ops contest window ───────────────────────
+
+export function handleClaimContested(event: ClaimContestedEvent): void {
+  const entity = loadInsuranceClaim(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.claimId)),
+    event,
+  );
+
+  entity.contested = true;
+  entity.contestedBy = event.params.by;
+  entity.contestedAt = event.block.timestamp;
+  entity.contestCount += 1;
+  entity.save();
+
+  newInsuranceClaimContestActivity(
+    event,
+    event.params.claimId,
+    CONTEST_ACTION_CONTESTED,
+    event.params.by,
+  ).save();
+}
+
+export function handleClaimContestRemoved(
+  event: ClaimContestRemovedEvent,
+): void {
+  const entity = loadInsuranceClaim(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.claimId)),
+    event,
+  );
+
+  // Removal is a positive re-clearance: a FRESH 48h window starts.
+  entity.contested = false;
+  entity.payoutEligibleAt = event.params.newEligibleAt;
+  entity.save();
+
+  const activity = newInsuranceClaimContestActivity(
+    event,
+    event.params.claimId,
+    CONTEST_ACTION_REMOVED,
+    event.params.by,
+  );
+  activity.newEligibleAt = event.params.newEligibleAt;
+  activity.save();
+}
+
+// Same signature and topic as the main Diamond's LibAuth event, emitted from
+// the Insurance Diamond address on legacy-only authorizations.
+export function handleLegacyAuthUsed(event: LegacyAuthUsedEvent): void {
+  recordLegacyAuthUsed(
+    event,
+    AUTH_SOURCE_INSURANCE_DIAMOND,
+    event.params.caller,
+    event.params.selector,
+  );
 }

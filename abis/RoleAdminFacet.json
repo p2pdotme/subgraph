@@ -1,0 +1,1170 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "RoleAdminFacet",
+  "sourceName": "contracts/facets/RoleAdminFacet.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "CoSignNotFound",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "CoSignPending",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidAddress",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidInput",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidPolicy",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidRole",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotAdmin",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotAuthorized",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotSuperAdmin",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "TimelockNotAContract",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "key",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "by",
+          "type": "address"
+        }
+      ],
+      "name": "CoSignCancelled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "key",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "proposer",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "expiry",
+          "type": "uint64"
+        }
+      ],
+      "name": "CoSignProposed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "operator",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "country",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "assigned",
+          "type": "bool"
+        }
+      ],
+      "name": "CountryAssigned",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "operator",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "enabled",
+          "type": "bool"
+        }
+      ],
+      "name": "LegacyAuthToggled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "caller",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        }
+      ],
+      "name": "LegacyAuthUsed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "exempt",
+          "type": "bool"
+        }
+      ],
+      "name": "LegacyExemptSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "operator",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "RoleGranted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "operator",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "RoleRevoked",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previous",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "current",
+          "type": "address"
+        }
+      ],
+      "name": "RoleTimelockSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        }
+      ],
+      "name": "SelectorPolicyCleared",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "roleMask",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "permissionless",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint8",
+              "name": "scope",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "tier",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "timelocked",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "dualSign",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "coSignRoleMask",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "configured",
+              "type": "bool"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct RoleStorage.SelectorPolicy",
+          "name": "policy",
+          "type": "tuple"
+        }
+      ],
+      "name": "SelectorPolicySet",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32[]",
+          "name": "countries",
+          "type": "bytes32[]"
+        },
+        {
+          "internalType": "bool",
+          "name": "assigned",
+          "type": "bool"
+        }
+      ],
+      "name": "assignAdminCountries",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "paramsHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "cancelCoSign",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        }
+      ],
+      "name": "clearSelectorPolicy",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "superAdmin",
+          "type": "bool"
+        }
+      ],
+      "name": "enforceShadowAuth",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        }
+      ],
+      "name": "enforceShadowAuthCountry",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "admin",
+          "type": "address"
+        }
+      ],
+      "name": "getAdminCountries",
+      "outputs": [
+        {
+          "internalType": "bytes32[]",
+          "name": "out",
+          "type": "bytes32[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "paramsHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getCoSign",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "proposer",
+              "type": "address"
+            },
+            {
+              "internalType": "uint8",
+              "name": "proposerRole",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint64",
+              "name": "expiry",
+              "type": "uint64"
+            }
+          ],
+          "internalType": "struct RoleStorage.PendingCoSign",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "offset",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "limit",
+          "type": "uint256"
+        }
+      ],
+      "name": "getConfiguredSelectors",
+      "outputs": [
+        {
+          "internalType": "bytes4[]",
+          "name": "selectors",
+          "type": "bytes4[]"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "roleMask",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "permissionless",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint8",
+              "name": "scope",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "tier",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "timelocked",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "dualSign",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "coSignRoleMask",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "configured",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct RoleStorage.SelectorPolicy[]",
+          "name": "policies",
+          "type": "tuple[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "total",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "offset",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "limit",
+          "type": "uint256"
+        }
+      ],
+      "name": "getPermissionMap",
+      "outputs": [
+        {
+          "internalType": "bytes4[]",
+          "name": "selectors",
+          "type": "bytes4[]"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "roleMask",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "permissionless",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint8",
+              "name": "scope",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "tier",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "timelocked",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "dualSign",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "coSignRoleMask",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "configured",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct RoleStorage.SelectorPolicy[]",
+          "name": "policies",
+          "type": "tuple[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "total",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        }
+      ],
+      "name": "getRoleMembers",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "out",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        }
+      ],
+      "name": "getRoleTimelock",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        }
+      ],
+      "name": "getSelectorPolicy",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "roleMask",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "permissionless",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint8",
+              "name": "scope",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "tier",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "timelocked",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "dualSign",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "coSignRoleMask",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "configured",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct RoleStorage.SelectorPolicy",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "grantRole",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "country",
+          "type": "bytes32"
+        }
+      ],
+      "name": "hasAdminCountry",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "hasRole",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "country",
+          "type": "bytes32"
+        }
+      ],
+      "name": "hasRoleForCountry",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isLegacyAuthEnabled",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        }
+      ],
+      "name": "isLegacyExempt",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "paramsHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint8",
+          "name": "asRole",
+          "type": "uint8"
+        }
+      ],
+      "name": "proposeCoSigned",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "revokeRole",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "rolesOf",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "enabled",
+          "type": "bool"
+        }
+      ],
+      "name": "setLegacyAuthEnabled",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "internalType": "bool",
+          "name": "exempt",
+          "type": "bool"
+        }
+      ],
+      "name": "setLegacyExempt",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "internalType": "address",
+          "name": "timelock",
+          "type": "address"
+        }
+      ],
+      "name": "setRoleTimelock",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4[]",
+          "name": "selectors",
+          "type": "bytes4[]"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "roleMask",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "permissionless",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint8",
+              "name": "scope",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "tier",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "timelocked",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "dualSign",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "coSignRoleMask",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "configured",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct RoleStorage.SelectorPolicy[]",
+          "name": "policies",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "setSelectorPolicies",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "roleMask",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "permissionless",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint8",
+              "name": "scope",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "tier",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "timelocked",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "dualSign",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "coSignRoleMask",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "configured",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct RoleStorage.SelectorPolicy",
+          "name": "policy",
+          "type": "tuple"
+        }
+      ],
+      "name": "setSelectorPolicy",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "shadowAuthPasses",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        }
+      ],
+      "name": "shadowAuthPassesForCurrency",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+}
