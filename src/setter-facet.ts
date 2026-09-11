@@ -9,7 +9,10 @@ import {
   PaymentChannelConfigUpdate as PaymentChannelConfigUpdateEvent,
   MerchantClaimableRewardsUpdate as MerchantClaimableRewardsUpdateEvent,
   MerchantWithdrawFeePercentage as MerchantWithdrawFeePercentageEvent,
+  SuperAdminUpdated as SuperAdminUpdatedEvent,
+  AdminStatusUpdated as AdminStatusUpdatedEvent,
 } from "../generated/SetterFacet/SetterFacet";
+import { loadLegacyAdmin } from "./lib";
 import { CurrencyConfig, PaymentChannelConfig } from "../generated/schema";
 import {
   isMerchantActive,
@@ -230,4 +233,23 @@ export function handleMerchantWithdrawFeePercentage(
   withdrawFee.feePercentage = event.params.feePercentage;
   withdrawFee.time = event.block.timestamp;
   withdrawFee.save();
+}
+
+// ─────────────────────────── legacy admin stores ─────────────────────────
+// `superAdmins` / `admins` are not enumerable on-chain; replaying these
+// events from genesis is how the R8 RetirementInit address lists are built,
+// and the R8 cut emits the same events with status=false to drain them.
+
+export function handleSuperAdminUpdated(event: SuperAdminUpdatedEvent): void {
+  const admin = loadLegacyAdmin(event.params.updatedAddress, event);
+  admin.isSuperAdmin = event.params.status;
+  admin.updater = event.params.updater;
+  admin.save();
+}
+
+export function handleAdminStatusUpdated(event: AdminStatusUpdatedEvent): void {
+  const admin = loadLegacyAdmin(event.params.admin, event);
+  admin.isAdmin = event.params.status;
+  admin.updater = event.transaction.from;
+  admin.save();
 }

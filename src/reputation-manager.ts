@@ -17,7 +17,10 @@ import {
   RewardClaimed as RewardClaimedEvent,
   RewardClaimed1 as RewardClaimedWithHashEvent,
   UserVoted as UserVotedEvent,
+  LegacyAuthUsed as LegacyAuthUsedEvent,
 } from "../generated/ReputationManager/ReputationManager";
+import { recordLegacyAuthUsed } from "./lib";
+import { AUTH_SOURCE_REPUTATION_MANAGER } from "./constants/roles";
 import { CampaignRewardRedeemed } from "../generated/schema";
 import {
   loadUser,
@@ -371,4 +374,15 @@ export function handleUserVoted(event: UserVotedEvent): void {
     user.primaryRecommender = event.params.voter;
   }
   user.save();
+}
+
+// Emitted by the RpHelpers (delegatecall) from the ReputationManager address
+// on legacy-only authorizations — the third LegacyAuthUsed emission point.
+export function handleLegacyAuthUsed(event: LegacyAuthUsedEvent): void {
+  recordLegacyAuthUsed(
+    event,
+    AUTH_SOURCE_REPUTATION_MANAGER,
+    event.params.caller,
+    event.params.selector,
+  );
 }

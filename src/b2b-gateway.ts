@@ -7,9 +7,12 @@ import {
   B2BOrderCompleted as B2BOrderCompletedEvent,
   B2BOrderCancelled as B2BOrderCancelledEvent,
   B2BIntegratorCallbackFailed as B2BIntegratorCallbackFailedEvent,
+  CoSignConsumed as CoSignConsumedEvent,
 } from "../generated/B2BGatewayFacet/B2BGatewayFacet";
 import { B2BOrder, B2BIntegratorCallbackFailure } from "../generated/schema";
 import { loadIntegrator } from "./lib/b2b-gateway.lib";
+import { loadCoSign } from "./lib";
+import { COSIGN_STATUS_CONSUMED } from "./constants/roles";
 import { ORDER_TYPE_BUY, ORDER_TYPE_SELL } from "./constants/status";
 
 // ─── Integrator Registration ──────────────────────────────────────
@@ -130,4 +133,18 @@ export function handleB2BIntegratorCallbackFailed(
   failure.blockTimestamp = event.block.timestamp;
   failure.transactionHash = event.transaction.hash;
   failure.save();
+}
+
+// ─────────────────────────── R7 dual-sign consumption ────────────────────
+// Emitted by LibAuth.passesConsumingCoSign from the main Diamond address when
+// a dual-signed call (today: the three B2B admin entrypoints) consumes the
+// standing co-sign for its exact arguments. Single-use: the record is gone.
+export function handleCoSignConsumed(event: CoSignConsumedEvent): void {
+  const coSign = loadCoSign(event.params.key, event);
+  if (coSign.selector.length == 0) coSign.selector = event.params.selector;
+  if (coSign.proposer.length == 0) coSign.proposer = event.params.proposer;
+  coSign.status = COSIGN_STATUS_CONSUMED;
+  coSign.executor = event.params.executor;
+  coSign.resolvedAt = event.block.timestamp;
+  coSign.save();
 }

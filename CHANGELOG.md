@@ -9,10 +9,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+
+- Roles & permissions rollout (contracts-v4 R2 → R8): `RoleAdminFacet` data source
+  (`ProtocolRole`, `RoleMember`, `SelectorPolicy`, `RoleActivity`, `CoSign`,
+  `ProtocolAuthState`), `LegacyAuthUsed` indexing across the main Diamond,
+  Insurance Diamond and ReputationManager (`LegacyAuthUsage`,
+  `LegacyAuthSelectorStats`), R5 country scope (`Country`, `AdminCountry`,
+  `Currency.country`), R6 claim contests (`InsuranceClaim.contested*`,
+  `InsuranceClaimContestActivity`), R7 break-glass pause
+  (`EmergencyPauseActivity`), dual-sign consumption, and a `LeadTimelock`
+  data-source template (`LeadTimelock`, `TimelockOperation`, `TimelockCall`)
+- Legacy `superAdmin` / `admin` / `globalAdmin` stores replayed into
+  `LegacyAdmin` so the R8 `RetirementInit` address lists can be produced from
+  the subgraph
+- `scripts/generate-selectors.mjs` + generated `src/constants/selectors.ts`:
+  selector → `Contract.fn(types)` labels on policies, co-signs, legacy-auth
+  usage and timelock calls
 - MIT License and open-source community files (`CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`)
 - `.env.example` for local docker-compose setup
 
 ### Changed
+
+- Refreshed ABIs for `CountryFacet`, `InsuranceClaimFacet`, `OrderProcessorFacet`,
+  `SetterFacet`, `CapabilityFacet`, `B2BGatewayFacet` from the R8 contracts;
+  `ReputationManager` ABI gains the `LegacyAuthUsed` event emitted via the RpHelpers
 - Replaced hardcoded postgres password in `docker-compose.yml` with `POSTGRES_PASSWORD` env var
 
 ---
@@ -20,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.9.0] — 2025
 
 ### Added
+
 - `CapabilityFacet`: index `AccountNameUpdated`, `PermissionGranted`, `PermissionRevoked` events (#44)
 - ABI and subgraph config updated for security-check sync (#43)
 - RBAC (Role-Based Access Control) entity support (#37)
@@ -31,12 +52,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.8.0] — 2025
 
 ### Added
+
 - Campaign volume tracking (#35)
 - Per-order reward amounts indexed on the `Orders` entity (#33)
 - Monthly and daily stats per currency with legacy data support (#29)
 - Merchant and admin reward allocation entities (#28)
 
 ### Fixed
+
 - Reputation points double-count bug (#31)
 
 ---
@@ -44,12 +67,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.7.0] — 2024
 
 ### Added
+
 - Legacy order support (pre-COT data sources: `LegacyOrderFlowFacet`, `LegacyOrderProcessorFacet`)
 - `CircleOrderMetricsByMonth`: granular order-type counts
 - `CircleScoreState` entity extracted from `CircleMetrics`
 - User `totalVolume` and `ordersCount` tracking
 
 ### Fixed
+
 - Use actual settlement time in dispute rollback instead of average
 - Removed duplicate `AdditionalOrderDetails` handler
 - Merchant reassign nullable field fix
@@ -59,6 +84,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.6.0] — 2024
 
 ### Added
+
 - Circle score calculation and `CircleScore` entity (#9)
 - Campaign entities and reward claiming (#8)
 - Payment channel migration data and completed/cancelled order totals (#5)
@@ -67,6 +93,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - FCM token indexing for merchant notifications
 
 ### Fixed
+
 - Hex to UTF-8 conversion for string fields
 
 ---
@@ -74,6 +101,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.5.0] — 2024
 
 ### Added
+
 - Volume tracking entities (`OrderVolumeByMonth`, `OrderVolumeByDay`) (#4)
 - Rewards indexing: `MerchantReward`, `CircleAdminReward` (#2)
 - `paidAt` timestamp for sell/pay orders
@@ -85,6 +113,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.4.0] — 2024
 
 ### Added
+
 - COT (Change of Terms) order flow support
 - First-order-completed tracking per merchant
 - Active merchant count metric
@@ -94,6 +123,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.1.0] — 2024
 
 ### Added
+
 - Initial subgraph scaffold targeting Base Sepolia
 - `CircleFacet`, `USDCStakeDelegationFacet`, `OrderFlowFacet`, `OrderProcessorFacet` data sources
 - `MerchantOnboardFacet`, `MerchantRegistryFacet`, `RewardsFacet`, `CountryFacet` data sources
