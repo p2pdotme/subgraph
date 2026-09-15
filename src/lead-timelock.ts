@@ -29,15 +29,21 @@ export function handleCallScheduled(event: CallScheduledEvent): void {
   const operationId = event.params.id;
 
   const operation = loadTimelockOperation(timelockAddress, operationId, event);
-  const isNew = operation.callCount == 0;
-  if (isNew) {
+  // Index 0 opens a (re)schedule: OZ emits one CallScheduled per call with a
+  // rising index, and a cancelled operation id may be scheduled again with
+  // the identical calls (the id hashes them), so the row is reset here.
+  const opensSchedule = event.params.index.isZero();
+  const firstSighting = operation.callCount == 0;
+  if (opensSchedule) {
     operation.status = TIMELOCK_OP_PENDING;
     operation.scheduledAt = event.block.timestamp;
     operation.readyAt = event.block.timestamp.plus(event.params.delay);
     operation.delay = event.params.delay;
     operation.predecessor = event.params.predecessor;
+    operation.salt = null;
     operation.executedAt = null;
     operation.cancelledAt = null;
+    operation.callCount = 0;
     operation.executedCallCount = 0;
   }
   operation.callCount += 1;
@@ -59,9 +65,9 @@ export function handleCallScheduled(event: CallScheduledEvent): void {
   call.executedAt = null;
   call.save();
 
-  if (isNew) {
+  if (opensSchedule) {
     const timelock = loadLeadTimelock(timelockAddress, event);
-    timelock.operationCount += 1;
+    if (firstSighting) timelock.operationCount += 1;
     timelock.pendingCount += 1;
     timelock.save();
   }

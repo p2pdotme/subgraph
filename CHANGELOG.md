@@ -19,6 +19,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `InsuranceClaimContestActivity`), R7 break-glass pause
   (`EmergencyPauseActivity`), dual-sign consumption, and a `LeadTimelock`
   data-source template (`LeadTimelock`, `TimelockOperation`, `TimelockCall`)
+- R1 fund custody (`CircleAdminP2PStakeReturn`, `InsuranceNonPoolTokenSweep`),
+  the R4 blacklist rate limit on `ProtocolAuthState`, and Diamond ownership
+  (`DiamondOwnership`, `DiamondOwnershipTransfer`) for the R7 move to DevTimelock
 - Legacy `superAdmin` / `admin` / `globalAdmin` stores replayed into
   `LegacyAdmin` so the R8 `RetirementInit` address lists can be produced from
   the subgraph
@@ -30,8 +33,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
-- Refreshed ABIs for `CountryFacet`, `InsuranceClaimFacet`, `OrderProcessorFacet`,
-  `SetterFacet`, `CapabilityFacet`, `B2BGatewayFacet` from the R8 contracts;
+- Refreshed ABIs for `CircleFacet`, `CountryFacet`, `InsuranceClaimFacet`,
+  `InsurancePoolFacet`, `OrderProcessorFacet`, `SetterFacet`, `CapabilityFacet`,
+  `B2BGatewayFacet` from the R8 contracts; added `OwnershipFacet`;
   `ReputationManager` ABI gains the `LegacyAuthUsed` event emitted via the RpHelpers
 - Replaced hardcoded postgres password in `docker-compose.yml` with `POSTGRES_PASSWORD` env var
 

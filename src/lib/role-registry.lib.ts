@@ -3,6 +3,8 @@ import {
   AdminCountry,
   CoSign,
   Country,
+  DiamondOwnership,
+  DiamondOwnershipTransfer,
   EmergencyPauseActivity,
   InsuranceClaimContestActivity,
   LeadTimelock,
@@ -51,6 +53,9 @@ export function loadProtocolAuthState(
     state.emergencyPaused = false;
     state.emergencyPausedBy = null;
     state.emergencyPausedAt = null;
+    state.blacklistWindowSeconds = null;
+    state.blacklistMaxPerWindow = null;
+    state.blacklistRateLimitSetAt = null;
   }
 
   state.blockNumber = event.block.number;
@@ -403,6 +408,47 @@ export function newInsuranceClaimContestActivity(
   activity.blockTimestamp = event.block.timestamp;
   activity.transactionHash = event.transaction.hash;
   return activity;
+}
+
+// ─────────────────────────── diamond ownership ───────────────────────────
+
+export function loadDiamondOwnership(
+  diamond: Bytes,
+  event: ethereum.Event,
+): DiamondOwnership {
+  let ownership = DiamondOwnership.load(diamond);
+  if (!ownership) {
+    ownership = new DiamondOwnership(diamond);
+    ownership.diamond = diamond;
+    ownership.owner = Bytes.empty();
+    ownership.previousOwner = Bytes.empty();
+    ownership.transferredAt = BigInt.zero();
+    ownership.transferCount = 0;
+  }
+
+  ownership.blockNumber = event.block.number;
+  ownership.blockTimestamp = event.block.timestamp;
+  ownership.transactionHash = event.transaction.hash;
+
+  return ownership;
+}
+
+export function newDiamondOwnershipTransfer(
+  event: ethereum.Event,
+  diamond: Bytes,
+  previousOwner: Bytes,
+  newOwner: Bytes,
+): DiamondOwnershipTransfer {
+  const transfer = new DiamondOwnershipTransfer(
+    logKey(event.transaction.hash, event.logIndex),
+  );
+  transfer.diamond = diamond;
+  transfer.previousOwner = previousOwner;
+  transfer.newOwner = newOwner;
+  transfer.blockNumber = event.block.number;
+  transfer.blockTimestamp = event.block.timestamp;
+  transfer.transactionHash = event.transaction.hash;
+  return transfer;
 }
 
 // ─────────────────────────── timelocks ───────────────────────────────────

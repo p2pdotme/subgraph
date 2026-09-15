@@ -78,5 +78,7 @@ export {
   loadLeadTimelock,
   loadTimelockOperation,
   loadTimelockCall,
+  loadDiamondOwnership,
+  newDiamondOwnershipTransfer,
   functionNameOf,
 } from "./role-registry.lib";

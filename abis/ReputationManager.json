@@ -2287,5 +2287,24 @@
     ],
     "name": "LegacyAuthUsed",
     "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "windowSeconds",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "maxPerWindow",
+        "type": "uint256"
+      }
+    ],
+    "name": "BlacklistRateLimitSet",
+    "type": "event"
   }
 ]
