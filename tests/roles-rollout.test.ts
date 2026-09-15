@@ -22,7 +22,13 @@ import {
   ClaimContestRemoved,
   LegacyAuthUsed as InsuranceLegacyAuthUsed,
 } from "../generated/InsuranceClaimFacet/InsuranceClaimFacet";
-import { LegacyAuthUsed as RmLegacyAuthUsed } from "../generated/ReputationManager/ReputationManager";
+import {
+  BlacklistRateLimitSet,
+  LegacyAuthUsed as RmLegacyAuthUsed,
+} from "../generated/ReputationManager/ReputationManager";
+import { CircleAdminP2PStakeReturned } from "../generated/CircleFacet/CircleFacet";
+import { NonPoolTokenSwept } from "../generated/InsurancePoolFacet/InsurancePoolFacet";
+import { OwnershipTransferred } from "../generated/DiamondOwnership/OwnershipFacet";
 import {
   CallExecuted,
   CallSalt,
@@ -45,7 +51,13 @@ import {
   handleClaimContested,
   handleLegacyAuthUsed as handleInsuranceLegacyAuthUsed,
 } from "../src/insurance-claim";
-import { handleLegacyAuthUsed as handleRmLegacyAuthUsed } from "../src/reputation-manager";
+import {
+  handleBlacklistRateLimitSet,
+  handleLegacyAuthUsed as handleRmLegacyAuthUsed,
+} from "../src/reputation-manager";
+import { handleCircleAdminP2PStakeReturned } from "../src/circle-facet";
+import { handleNonPoolTokenSwept } from "../src/insurance-pool";
+import { handleOwnershipTransferred } from "../src/ownership";
 import {
   handleCallExecuted,
   handleCallSalt,
@@ -434,6 +446,167 @@ describe("LeadTimelock — R7 timelock operations", () => {
       TIMELOCK.toHexString(),
       "minDelay",
       "172800",
+    );
+  });
+});
+
+describe("R1 fund custody", () => {
+  afterEach(() => {
+    clearStore();
+  });
+
+  test("circle-admin stake return and non-pool token sweep are logged", () => {
+    const r = baseEvent<CircleAdminP2PStakeReturned>(DIAMOND);
+    r.parameters.push(param("caller", ethereum.Value.fromAddress(OPERATOR)));
+    r.parameters.push(param("circleAdmin", ethereum.Value.fromAddress(ALICE)));
+    r.parameters.push(
+      param("amount", ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(500))),
+    );
+    handleCircleAdminP2PStakeReturned(r);
+    assert.entityCount("CircleAdminP2PStakeReturn", 1);
+    assert.fieldEquals(
+      "CircleAdminP2PStakeReturn",
+      r.transaction.hash.concatI32(r.logIndex.toI32()).toHexString(),
+      "amount",
+      "500",
+    );
+
+    const s = baseEvent<NonPoolTokenSwept>(INSURANCE);
+    s.parameters.push(param("token", ethereum.Value.fromAddress(ALICE)));
+    s.parameters.push(param("to", ethereum.Value.fromAddress(OPERATOR)));
+    s.parameters.push(
+      param("amount", ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(9))),
+    );
+    handleNonPoolTokenSwept(s);
+    assert.fieldEquals(
+      "InsuranceNonPoolTokenSweep",
+      s.transaction.hash.concatI32(s.logIndex.toI32()).toHexString(),
+      "to",
+      OPERATOR.toHexString(),
+    );
+  });
+});
+
+describe("R4 blacklist rate limit", () => {
+  afterEach(() => {
+    clearStore();
+  });
+
+  test("is stored on the auth state singleton", () => {
+    const e = baseEvent<BlacklistRateLimitSet>(RM);
+    e.parameters.push(
+      param(
+        "windowSeconds",
+        ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(3600)),
+      ),
+    );
+    e.parameters.push(
+      param(
+        "maxPerWindow",
+        ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(20)),
+      ),
+    );
+    handleBlacklistRateLimitSet(e);
+    assert.fieldEquals(
+      "ProtocolAuthState",
+      AUTH_ID,
+      "blacklistWindowSeconds",
+      "3600",
+    );
+    assert.fieldEquals(
+      "ProtocolAuthState",
+      AUTH_ID,
+      "blacklistMaxPerWindow",
+      "20",
+    );
+    assert.fieldEquals(
+      "ProtocolAuthState",
+      AUTH_ID,
+      "legacyAuthEnabled",
+      "true",
+    );
+  });
+});
+
+describe("Diamond ownership — R7 WS-3.5", () => {
+  afterEach(() => {
+    clearStore();
+  });
+
+  test("tracks the current owner per diamond", () => {
+    const e = baseEvent<OwnershipTransferred>(DIAMOND);
+    e.parameters.push(
+      param("previousOwner", ethereum.Value.fromAddress(OPERATOR)),
+    );
+    e.parameters.push(param("newOwner", ethereum.Value.fromAddress(TIMELOCK)));
+    handleOwnershipTransferred(e);
+
+    const i = baseEvent<OwnershipTransferred>(INSURANCE);
+    i.parameters.push(
+      param("previousOwner", ethereum.Value.fromAddress(OPERATOR)),
+    );
+    i.parameters.push(param("newOwner", ethereum.Value.fromAddress(ALICE)));
+    handleOwnershipTransferred(i);
+
+    assert.fieldEquals(
+      "DiamondOwnership",
+      DIAMOND.toHexString(),
+      "owner",
+      TIMELOCK.toHexString(),
+    );
+    assert.fieldEquals(
+      "DiamondOwnership",
+      DIAMOND.toHexString(),
+      "transferCount",
+      "1",
+    );
+    assert.fieldEquals(
+      "DiamondOwnership",
+      INSURANCE.toHexString(),
+      "owner",
+      ALICE.toHexString(),
+    );
+    assert.entityCount("DiamondOwnershipTransfer", 2);
+  });
+});
+
+describe("LeadTimelock — reschedule after cancel", () => {
+  afterEach(() => {
+    clearStore();
+  });
+
+  test("the same operation id scheduled again after Cancelled is pending once more", () => {
+    handleCallScheduled(scheduled(0, 172800));
+    const c = baseEvent<Cancelled>(TIMELOCK);
+    c.parameters.push(param("id", ethereum.Value.fromFixedBytes(OP_ID)));
+    handleCancelled(c);
+
+    handleCallScheduled(scheduled(0, 172800));
+
+    const opId = TIMELOCK.concat(OP_ID).toHexString();
+    assert.fieldEquals("TimelockOperation", opId, "status", "PENDING");
+    assert.fieldEquals("TimelockOperation", opId, "callCount", "1");
+    assert.fieldEquals("TimelockOperation", opId, "executedCallCount", "0");
+    assert.fieldEquals(
+      "LeadTimelock",
+      TIMELOCK.toHexString(),
+      "operationCount",
+      "1",
+    );
+    assert.fieldEquals(
+      "LeadTimelock",
+      TIMELOCK.toHexString(),
+      "pendingCount",
+      "1",
+    );
+
+    handleCallExecuted(executed(0));
+    assert.fieldEquals("TimelockOperation", opId, "status", "EXECUTED");
+    assert.fieldEquals(
+      "LeadTimelock",
+      TIMELOCK.toHexString(),
+      "pendingCount",
+      "0",
     );
   });
 });

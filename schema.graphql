@@ -1279,6 +1279,10 @@ type ProtocolAuthState @entity(immutable: false) {
   emergencyPaused: Boolean!
   emergencyPausedBy: Bytes
   emergencyPausedAt: BigInt
+  # R4 fraud-manager blacklist rate limit (ReputationManager / RpHelper)
+  blacklistWindowSeconds: BigInt
+  blacklistMaxPerWindow: BigInt
+  blacklistRateLimitSetAt: BigInt
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -1513,6 +1517,62 @@ type InsuranceClaimContestActivity @entity(immutable: true) {
   by: Bytes!
   # Set on CONTEST_REMOVED: the fresh 48h window's release timestamp
   newEligibleAt: BigInt
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# DIAMOND OWNERSHIP
+# Current owner of each Diamond proxy (main, insurance). R7 WS-3.5 moves the
+# main Diamond's ownership — and with it every facet re-cut — behind DevTimelock.
+type DiamondOwnership @entity(immutable: false) {
+  id: Bytes! # diamond address
+  diamond: Bytes!
+  owner: Bytes!
+  previousOwner: Bytes!
+  transferredAt: BigInt!
+  transferCount: Int!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# DIAMOND OWNERSHIP TRANSFER
+type DiamondOwnershipTransfer @entity(immutable: true) {
+  id: Bytes! # txHash ++ logIndex
+  diamond: Bytes!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CIRCLE ADMIN P2P STAKE RETURN
+# R1 fund-custody drain: an admin's entire circle $P2P stake returned to them
+# (circle-admin staking is retired at R7 and its entrypoints removed at R8)
+type CircleAdminP2PStakeReturn @entity(immutable: true) {
+  id: Bytes! # txHash ++ logIndex
+  caller: Bytes!
+  circleAdmin: Bytes!
+  amount: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# INSURANCE NON-POOL TOKEN SWEEP
+# R1: recovery of an ERC20 the insurance pool does not account for (seized
+# $P2P boost stakes land here); destination is fixed to the Governance Diamond
+type InsuranceNonPoolTokenSweep @entity(immutable: true) {
+  id: Bytes! # txHash ++ logIndex
+  token: Bytes!
+  to: Bytes!
+  amount: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

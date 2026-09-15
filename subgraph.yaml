@@ -48,6 +48,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - CircleFacet
+        - CircleAdminP2PStakeReturn
       abis:
         - name: CircleFacet
           file: ./abis/CircleFacet.json
@@ -60,6 +61,9 @@ dataSources:
           handler: handleCircleCommunityUrlUpdated
         - event: CircleAdminCommunityUrlUpdated(indexed uint256,string)
           handler: handleCircleAdminCommunityUrlUpdated
+        # R1 fund-custody drain (roles & permissions rollout)
+        - event: CircleAdminP2PStakeReturned(indexed address,indexed address,uint256)
+          handler: handleCircleAdminP2PStakeReturned
         # - event: CircleProtocolTokenStaked(indexed uint256,indexed address,uint256)
         #   handler: handleCircleProtocolTokenStaked
       file: ./src/circle-facet.ts
@@ -386,6 +390,9 @@ dataSources:
         # Roles & permissions shadow mode (emitted via the RpHelpers)
         - event: LegacyAuthUsed(indexed address,indexed bytes4)
           handler: handleLegacyAuthUsed
+        # R4 fraud-manager blacklist rate limit
+        - event: BlacklistRateLimitSet(uint256,uint256)
+          handler: handleBlacklistRateLimitSet
       file: ./src/reputation-manager.ts
   - kind: ethereum
     name: P2PStakeBoostFacet
@@ -559,6 +566,7 @@ dataSources:
         - InsuranceCurrencyConfig
         - CircleAdminCALR
         - CALRActivity
+        - InsuranceNonPoolTokenSweep
       abis:
         - name: InsurancePoolFacet
           file: ./abis/InsurancePoolFacet.json
@@ -581,6 +589,9 @@ dataSources:
           handler: handleCALRUnlocked
         - event: CALRLockReverted(indexed uint256,indexed address,uint256,uint256)
           handler: handleCALRLockReverted
+        # R1 non-pool token recovery (roles & permissions rollout)
+        - event: NonPoolTokenSwept(indexed address,indexed address,uint256)
+          handler: handleNonPoolTokenSwept
       file: ./src/insurance-pool.ts
   - kind: ethereum
     name: InsuranceSinkFacet
@@ -765,6 +776,50 @@ dataSources:
         - event: CoSignCancelled(indexed bytes32,indexed address)
           handler: handleCoSignCancelled
       file: ./src/role-registry.ts
+  # DIAMOND OWNERSHIP — the key that can re-cut facets; moved behind
+  # DevTimelock at R7 (WS-3.5)
+  - kind: ethereum
+    name: DiamondOwnership
+    network: base
+    source:
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      abi: OwnershipFacet
+      startBlock: 29875200
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - DiamondOwnership
+        - DiamondOwnershipTransfer
+      abis:
+        - name: OwnershipFacet
+          file: ./abis/OwnershipFacet.json
+      eventHandlers:
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+      file: ./src/ownership.ts
+  - kind: ethereum
+    name: InsuranceDiamondOwnership
+    network: base
+    source:
+      address: "0x17192bd2E8893E4eA0Ab5DB67AdbF38aE42e9931"
+      abi: OwnershipFacet
+      startBlock: 45338444
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - DiamondOwnership
+        - DiamondOwnershipTransfer
+      abis:
+        - name: OwnershipFacet
+          file: ./abis/OwnershipFacet.json
+      eventHandlers:
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+      file: ./src/ownership.ts
 templates:
   # Per-lead OpenZeppelin TimelockController (R7). Instantiated when
   # RoleAdminFacet.setRoleTimelock binds an instance to a role.

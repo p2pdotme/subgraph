@@ -18,8 +18,9 @@ import {
   RewardClaimed1 as RewardClaimedWithHashEvent,
   UserVoted as UserVotedEvent,
   LegacyAuthUsed as LegacyAuthUsedEvent,
+  BlacklistRateLimitSet as BlacklistRateLimitSetEvent,
 } from "../generated/ReputationManager/ReputationManager";
-import { recordLegacyAuthUsed } from "./lib";
+import { loadProtocolAuthState, recordLegacyAuthUsed } from "./lib";
 import { AUTH_SOURCE_REPUTATION_MANAGER } from "./constants/roles";
 import { CampaignRewardRedeemed } from "../generated/schema";
 import {
@@ -385,4 +386,16 @@ export function handleLegacyAuthUsed(event: LegacyAuthUsedEvent): void {
     event.params.caller,
     event.params.selector,
   );
+}
+
+// R4 (plan WS-5.4): the Fraud Manager's blacklist rate limit — at most
+// `maxPerWindow` blacklists per `windowSeconds` — configured on the RpHelper.
+export function handleBlacklistRateLimitSet(
+  event: BlacklistRateLimitSetEvent,
+): void {
+  const state = loadProtocolAuthState(event);
+  state.blacklistWindowSeconds = event.params.windowSeconds;
+  state.blacklistMaxPerWindow = event.params.maxPerWindow;
+  state.blacklistRateLimitSetAt = event.block.timestamp;
+  state.save();
 }
