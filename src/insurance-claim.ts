@@ -4,6 +4,7 @@ import {
   ClaimApproved as ClaimApprovedEvent,
   ClaimRejected as ClaimRejectedEvent,
   ClaimForceRejected as ClaimForceRejectedEvent,
+  ApprovedClaimCancelled as ApprovedClaimCancelledEvent,
   ClaimWithdrawn as ClaimWithdrawnEvent,
   ClaimSettled as ClaimSettledEvent,
   SuperAdminLargeClaimApproved as SuperAdminLargeClaimApprovedEvent,
@@ -97,6 +98,27 @@ export function handleClaimForceRejected(event: ClaimForceRejectedEvent): void {
   // ClaimStatus.REJECTED = 3
   entity.status = 3;
   entity.resolver = event.params.superAdmin;
+  entity.reviewedAt = event.block.timestamp;
+
+  entity.save();
+}
+
+// A currency approver cancels a claim that reached APPROVED but has not
+// settled yet. Same APPROVED -> REJECTED teardown as ClaimForceRejected, but
+// an approver-level reversal rather than a super-admin escape hatch. The
+// contract overwrites resolver with the canceller, who is not necessarily the
+// approver who originally approved the claim.
+export function handleApprovedClaimCancelled(
+  event: ApprovedClaimCancelledEvent,
+): void {
+  const entity = loadInsuranceClaim(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.claimId)),
+    event,
+  );
+
+  // ClaimStatus.REJECTED = 3
+  entity.status = 3;
+  entity.resolver = event.params.approver;
   entity.reviewedAt = event.block.timestamp;
 
   entity.save();
