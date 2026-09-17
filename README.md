@@ -72,6 +72,15 @@ Contract addresses per network are defined in `networks.json`:
 | ------- | -------------------------------------------- | -------------------------------------------- |
 | `base`  | `0x4cad6eC90e65baBec9335cAd728DDC610c316368` | `0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D` |
 
+To index a local `contracts-v4` stack (`npx hardhat local:deploy --network
+localhost`, see that repo's `docs/runbooks/local-stack.md`), import its output
+and build for `localhost`:
+
+```bash
+node scripts/import-local-stack.mjs ../contracts-v4/deployments/1337/local-stack.json
+npx graph build --network localhost
+```
+
 All main-protocol data sources point to the same diamond proxy contract; the
 Insurance Diamond and the Governance Diamond have their own addresses. The
 `LeadTimelock` data-source **template** has no fixed address: an instance is
@@ -113,6 +122,12 @@ Notes:
   ```bash
   node scripts/generate-selectors.mjs ../contracts-v4/artifacts
   ```
+
+  Policy rows outlive their selectors (R8 removes `failSafe`, the circle
+  staking entrypoints, `setSuperAdmin`, …, but their `SelectorPolicySet`
+  events stay indexed), so pass the artifacts of earlier releases as extra
+  arguments to keep those names resolvable — the committed map was built from
+  the r8, r7 and main trees.
 
 - A timelock's `MinDelayChange` is emitted in its constructor, before the
   template exists, so `LeadTimelock.minDelay` stays null unless the delay is

@@ -25,6 +25,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Legacy `superAdmin` / `admin` / `globalAdmin` stores replayed into
   `LegacyAdmin` so the R8 `RetirementInit` address lists can be produced from
   the subgraph
+- `scripts/import-local-stack.mjs`: writes the `localhost` network from a
+  contracts-v4 `local:deploy` output so the subgraph can be built and tested
+  against the local post-R8 stack
 - `scripts/generate-selectors.mjs` + generated `src/constants/selectors.ts`:
   selector → `Contract.fn(types)` labels on policies, co-signs, legacy-auth
   usage and timelock calls
