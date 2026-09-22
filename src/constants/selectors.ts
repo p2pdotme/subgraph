@@ -1,6 +1,21 @@
 // GENERATED FILE — do not edit by hand.
 // Regenerate with: node scripts/generate-selectors.mjs <contracts-v4>/artifacts
 // Sources: 225 contract artifacts, 701 unique selectors.
+//   a6934309759fe439f9a8517ef39363cea6653bcd (remotes/origin/claude/r8-retirement)
+//   d02697acf0e560b17df321787e5583ba4b2d8c68 (remotes/origin/claude/r7-cutover)
+//   c1f578f4561b09ea9ec261d361f2fce62b0ad35c (remotes/origin/main)
+// Digest: 717f643e23e3586130a34ab6693b05cf1d50d370834def1ade6c795bb4ac7282
+
+/** contracts-v4 commits this map was generated from. */
+export const SELECTOR_SOURCE_COMMITS: string[] = [
+  "a6934309759fe439f9a8517ef39363cea6653bcd",
+  "d02697acf0e560b17df321787e5583ba4b2d8c68",
+  "c1f578f4561b09ea9ec261d361f2fce62b0ad35c",
+];
+
+/** sha256 over the sorted `<selector> <name>` pairs below. */
+export const SELECTOR_MAP_DIGEST =
+  "717f643e23e3586130a34ab6693b05cf1d50d370834def1ade6c795bb4ac7282";
 
 const SELECTOR_KEYS: string[] = [
   "0x014a4bc6",

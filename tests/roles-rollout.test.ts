@@ -102,6 +102,26 @@ const GRANT_CALLDATA = Bytes.fromHexString(
 );
 const AUTH_ID = Bytes.fromUTF8("auth").toHexString();
 
+const DAY_SEL = Bytes.fromHexString("0x5d5664e1");
+
+function legacyAuthUsedOn(timestamp: i32, address: Address): void {
+  if (address.equals(RM)) {
+    const e = baseEvent<RmLegacyAuthUsed>(address);
+    e.block.timestamp = BigInt.fromI32(timestamp);
+    e.parameters.push(param("caller", ethereum.Value.fromAddress(ALICE)));
+    e.parameters.push(
+      param("selector", ethereum.Value.fromFixedBytes(DAY_SEL)),
+    );
+    handleRmLegacyAuthUsed(e);
+    return;
+  }
+  const e = baseEvent<InsuranceLegacyAuthUsed>(address);
+  e.block.timestamp = BigInt.fromI32(timestamp);
+  e.parameters.push(param("caller", ethereum.Value.fromAddress(ALICE)));
+  e.parameters.push(param("selector", ethereum.Value.fromFixedBytes(DAY_SEL)));
+  handleInsuranceLegacyAuthUsed(e);
+}
+
 function scheduled(index: i32, delay: i32): CallScheduled {
   const e = baseEvent<CallScheduled>(TIMELOCK);
   e.parameters.push(param("id", ethereum.Value.fromFixedBytes(OP_ID)));
@@ -607,6 +627,51 @@ describe("LeadTimelock — reschedule after cancel", () => {
       TIMELOCK.toHexString(),
       "pendingCount",
       "0",
+    );
+  });
+});
+
+describe("LegacyAuthDay — the retirement histogram bucket", () => {
+  afterEach(() => {
+    clearStore();
+  });
+
+  test("buckets by UTC day and splits the count per emitter", () => {
+    // Day 3 (86400 * 3 = 259200): two insurance emissions and one RM one.
+    legacyAuthUsedOn(259200, INSURANCE);
+    legacyAuthUsedOn(300000, INSURANCE);
+    legacyAuthUsedOn(302000, RM);
+    // Day 5: a single emission, so a separate row.
+    legacyAuthUsedOn(432000, INSURANCE);
+
+    const day3 = Bytes.fromUTF8("3").toHexString();
+    assert.fieldEquals("LegacyAuthDay", day3, "count", "3");
+    assert.fieldEquals("LegacyAuthDay", day3, "insuranceDiamondCount", "2");
+    assert.fieldEquals("LegacyAuthDay", day3, "reputationManagerCount", "1");
+    assert.fieldEquals("LegacyAuthDay", day3, "mainDiamondCount", "0");
+    assert.fieldEquals("LegacyAuthDay", day3, "dayStart", "259200");
+    assert.fieldEquals("LegacyAuthDay", day3, "firstUsedAt", "259200");
+    assert.fieldEquals("LegacyAuthDay", day3, "lastUsedAt", "302000");
+
+    const day5 = Bytes.fromUTF8("5").toHexString();
+    assert.fieldEquals("LegacyAuthDay", day5, "count", "1");
+    assert.fieldEquals("LegacyAuthDay", day5, "day", "5");
+
+    // Quiet day 4 has no row at all — absence IS the zero, which is what the
+    // histogram must fill client-side.
+    assert.notInStore("LegacyAuthDay", Bytes.fromUTF8("4").toHexString());
+    assert.entityCount("LegacyAuthDay", 2);
+    assert.fieldEquals(
+      "ProtocolAuthState",
+      AUTH_ID,
+      "legacyAuthUsedCount",
+      "4",
+    );
+    assert.fieldEquals(
+      "ProtocolAuthState",
+      AUTH_ID,
+      "lastLegacyAuthUsedAt",
+      "432000",
     );
   });
 });

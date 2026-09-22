@@ -9,6 +9,7 @@ import {
   InsuranceClaimContestActivity,
   LeadTimelock,
   LegacyAdmin,
+  LegacyAuthDay,
   LegacyAuthSelectorStats,
   LegacyAuthUsage,
   ProtocolAuthState,
@@ -20,7 +21,9 @@ import {
   TimelockOperation,
 } from "../../generated/schema";
 import {
+  AUTH_SOURCE_INSURANCE_DIAMOND,
   AUTH_SOURCE_MAIN_DIAMOND,
+  AUTH_SOURCE_REPUTATION_MANAGER,
   COSIGN_STATUS_PROPOSED,
   TIMELOCK_OP_PENDING,
   roleName,
@@ -29,6 +32,9 @@ import {
 } from "../constants/roles";
 import { selectorFunctionName } from "../constants/selectors";
 import { bytes32ToAscii, bytesFromU8, logKey, maskToBits } from "../utils";
+import { getDayNumber } from "./circle.lib";
+
+const SECONDS_PER_DAY = 86400;
 
 // ─────────────────────────── singleton ───────────────────────────────────
 
@@ -333,6 +339,41 @@ export function recordLegacyAuthUsed(
   stats.blockTimestamp = event.block.timestamp;
   stats.transactionHash = event.transaction.hash;
   stats.save();
+
+  // Daily bucket: one row per UTC day, so the retirement histogram is a
+  // single ordered query instead of a paginated scan of every usage row.
+  const dayNumber = getDayNumber(event.block.timestamp);
+  const dayId = Bytes.fromUTF8(dayNumber.toString());
+  let day = LegacyAuthDay.load(dayId);
+  if (!day) {
+    day = new LegacyAuthDay(dayId);
+    day.day = dayNumber;
+    day.dayStart = BigInt.fromI32(dayNumber).times(
+      BigInt.fromI32(SECONDS_PER_DAY),
+    );
+    day.count = BigInt.zero();
+    day.mainDiamondCount = BigInt.zero();
+    day.insuranceDiamondCount = BigInt.zero();
+    day.reputationManagerCount = BigInt.zero();
+    day.firstUsedAt = event.block.timestamp;
+  }
+  day.count = day.count.plus(BigInt.fromI32(1));
+  if (source == AUTH_SOURCE_MAIN_DIAMOND) {
+    day.mainDiamondCount = day.mainDiamondCount.plus(BigInt.fromI32(1));
+  } else if (source == AUTH_SOURCE_INSURANCE_DIAMOND) {
+    day.insuranceDiamondCount = day.insuranceDiamondCount.plus(
+      BigInt.fromI32(1),
+    );
+  } else if (source == AUTH_SOURCE_REPUTATION_MANAGER) {
+    day.reputationManagerCount = day.reputationManagerCount.plus(
+      BigInt.fromI32(1),
+    );
+  }
+  day.lastUsedAt = event.block.timestamp;
+  day.blockNumber = event.block.number;
+  day.blockTimestamp = event.block.timestamp;
+  day.transactionHash = event.transaction.hash;
+  day.save();
 
   const state = loadProtocolAuthState(event);
   state.legacyAuthUsedCount = state.legacyAuthUsedCount.plus(BigInt.fromI32(1));

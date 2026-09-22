@@ -348,6 +348,7 @@ dataSources:
         - UserVoted
         - LegacyAuthUsage
         - LegacyAuthSelectorStats
+        - LegacyAuthDay
         - ProtocolAuthState
       abis:
         - name: ReputationManager
@@ -521,6 +522,7 @@ dataSources:
         - InsuranceClaimContestActivity
         - LegacyAuthUsage
         - LegacyAuthSelectorStats
+        - LegacyAuthDay
         - ProtocolAuthState
       abis:
         - name: InsuranceClaimFacet
@@ -747,6 +749,7 @@ dataSources:
         - CoSign
         - LegacyAuthUsage
         - LegacyAuthSelectorStats
+        - LegacyAuthDay
         - LeadTimelock
       abis:
         - name: RoleAdminFacet

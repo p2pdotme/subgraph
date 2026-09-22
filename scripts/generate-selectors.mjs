@@ -19,6 +19,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { keccak_256 } from "@noble/hashes/sha3.js";
 
@@ -28,6 +30,37 @@ const dirs = process.argv.slice(2).length
   ? process.argv.slice(2)
   : [path.join(root, "abis")];
 const outFile = path.join(root, "src", "constants", "selectors.ts");
+const metaFile = path.join(root, "src", "constants", "selectors.meta.json");
+
+/**
+ * Resolves the git commit of the repository a source directory belongs to, so
+ * the generated map records WHICH contracts it was built from. The console
+ * repo generates its own selector inventory from the same contracts; two
+ * generated inventories drift silently unless both are pinned to a ref and
+ * compared, so `selectors.meta.json` exists to make that comparison a CI
+ * check rather than an archaeology exercise.
+ */
+function gitRefOf(dir) {
+  try {
+    const commit = execFileSync("git", ["-C", dir, "rev-parse", "HEAD"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    let describe = "";
+    try {
+      describe = execFileSync(
+        "git",
+        ["-C", dir, "describe", "--all", "--always"],
+        { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      ).trim();
+    } catch {
+      /* a detached worktree with no ref name is fine */
+    }
+    return { commit, describe };
+  } catch {
+    return { commit: "unknown", describe: "" };
+  }
+}
 
 function* walk(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -95,6 +128,15 @@ const rows = [...candidates.entries()]
   .map(([selector, names]) => [selector, [...names].sort()[0]])
   .sort((a, b) => (a[0] < b[0] ? -1 : 1));
 
+const sources = dirs.map((dir) => {
+  const ref = gitRefOf(dir);
+  return { commit: ref.commit, ref: ref.describe };
+});
+const digest = crypto
+  .createHash("sha256")
+  .update(rows.map(([sel, name]) => `${sel} ${name}`).join("\n"))
+  .digest("hex");
+
 const lines = [];
 lines.push("// GENERATED FILE — do not edit by hand.");
 lines.push(
@@ -103,6 +145,20 @@ lines.push(
 lines.push(
   `// Sources: ${files} contract artifacts, ${rows.length} unique selectors.`,
 );
+for (const src of sources) {
+  lines.push(`//   ${src.commit}${src.ref ? ` (${src.ref})` : ""}`);
+}
+lines.push(`// Digest: ${digest}`);
+lines.push("");
+lines.push("/** contracts-v4 commits this map was generated from. */");
+lines.push(
+  `export const SELECTOR_SOURCE_COMMITS: string[] = [${sources
+    .map((src) => `"${src.commit}"`)
+    .join(", ")}];`,
+);
+lines.push("");
+lines.push("/** sha256 over the sorted `<selector> <name>` pairs below. */");
+lines.push(`export const SELECTOR_MAP_DIGEST = "${digest}";`);
 lines.push("");
 lines.push("const SELECTOR_KEYS: string[] = [");
 for (const [selector] of rows) lines.push(`  "${selector}",`);
@@ -131,6 +187,23 @@ lines.push("}");
 lines.push("");
 
 fs.writeFileSync(outFile, lines.join("\n"));
+fs.writeFileSync(
+  metaFile,
+  JSON.stringify(
+    {
+      selectorCount: rows.length,
+      artifactCount: files,
+      digest,
+      sources,
+      selectors: Object.fromEntries(rows),
+    },
+    null,
+    2,
+  ) + "\n",
+);
 console.log(
   `wrote ${rows.length} selectors from ${files} artifacts to ${path.relative(root, outFile)}`,
+);
+console.log(
+  `  sources: ${sources.map((src) => src.commit.slice(0, 10)).join(", ")} · digest ${digest.slice(0, 12)}`,
 );
