@@ -1477,6 +1477,31 @@ type LegacyAuthSelectorStats @entity(immutable: false) {
   transactionHash: Bytes!
 }
 
+# LEGACY AUTH DAY
+# Daily bucket of `LegacyAuthUsed` emissions across all three emitters — the
+# retirement dashboard's histogram and the "N consecutive quiet days" streak
+# that gates the R7 flip (zero for seven days).
+#
+# A quiet day has NO row: a subgraph only writes when an event fires, so
+# absence IS the zero. A fixed-width histogram must fill the gaps from `day`
+# (a unix day number, `timestamp / 86400`) rather than assume one row per bar.
+# Order by `day`, not `id`.
+type LegacyAuthDay @entity(immutable: false) {
+  id: Bytes! # decimal day number as UTF-8
+  day: Int!
+  dayStart: BigInt! # 00:00 UTC of the bucket
+  count: BigInt!
+  mainDiamondCount: BigInt!
+  insuranceDiamondCount: BigInt!
+  reputationManagerCount: BigInt!
+  firstUsedAt: BigInt!
+  lastUsedAt: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # LEGACY ADMIN
 # The pre-registry superAdmin / admin / globalAdmin stores. Replayed from
 # genesis so the R8 RetirementInit address lists can be produced from here;

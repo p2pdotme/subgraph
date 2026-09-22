@@ -95,17 +95,42 @@ in staged releases. The indexer follows every release's events so a UI or an ops
 dashboard can answer "who can call what, from where, and is anyone still relying
 on the legacy path":
 
-| Release              | Contract events                                                                                                                                                                                                                                                                                                   | Entities                                                                                                                                |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| R1 fund custody      | `CircleAdminP2PStakeReturned` (CircleFacet), `NonPoolTokenSwept` (InsurancePoolFacet)                                                                                                                                                                                                                             | `CircleAdminP2PStakeReturn`, `InsuranceNonPoolTokenSweep`                                                                               |
-| R2 role registry     | `RoleGranted`, `RoleRevoked`, `RoleTimelockSet`, `SelectorPolicySet`, `SelectorPolicyCleared`, `LegacyAuthToggled`, `LegacyExemptSet` (RoleAdminFacet)                                                                                                                                                            | `ProtocolRole`, `RoleMember`, `SelectorPolicy`, `RoleActivity`, `ProtocolAuthState`                                                     |
-| R3/R4 shadow re-gate | `LegacyAuthUsed` on the main Diamond, the Insurance Diamond and the ReputationManager; `BlacklistRateLimitSet` (RpHelper)                                                                                                                                                                                         | `LegacyAuthUsage`, `LegacyAuthSelectorStats`, counters and the blacklist rate limit on `ProtocolAuthState` / `SelectorPolicy`           |
-| R5 country scope     | `CountryActiveSet`, `CurrencyCountryBound` (CountryFacet), `CountryAssigned` (RoleAdminFacet)                                                                                                                                                                                                                     | `Country`, `Currency.country`, `AdminCountry`                                                                                           |
-| R6 claim contest     | `ClaimContested`, `ClaimContestRemoved` (InsuranceClaimFacet)                                                                                                                                                                                                                                                     | `InsuranceClaim.contested*`, `InsuranceClaimContestActivity`                                                                            |
-| R7 cutover           | `EmergencyPauseSet` (OrderProcessorFacet), `CoSignProposed` / `CoSignCancelled` (RoleAdminFacet), `CoSignConsumed` (LibAuth via B2BGatewayFacet), `LeadTimelock` template (`CallScheduled`, `CallSalt`, `CallExecuted`, `Cancelled`, `MinDelayChange`), `OwnershipTransferred` on the main and Insurance Diamonds | `EmergencyPauseActivity`, `CoSign`, `LeadTimelock`, `TimelockOperation`, `TimelockCall`, `DiamondOwnership`, `DiamondOwnershipTransfer` |
-| R8 retirement        | `SuperAdminUpdated`, `AdminStatusUpdated`, `GlobalAdminUpdated` replayed from genesis; `RetirementInit` re-emits them with `status=false`                                                                                                                                                                         | `LegacyAdmin`                                                                                                                           |
+| Release              | Contract events                                                                                                                                                                                                                                                                                                   | Entities                                                                                                                                       |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1 fund custody      | `CircleAdminP2PStakeReturned` (CircleFacet), `NonPoolTokenSwept` (InsurancePoolFacet)                                                                                                                                                                                                                             | `CircleAdminP2PStakeReturn`, `InsuranceNonPoolTokenSweep`                                                                                      |
+| R2 role registry     | `RoleGranted`, `RoleRevoked`, `RoleTimelockSet`, `SelectorPolicySet`, `SelectorPolicyCleared`, `LegacyAuthToggled`, `LegacyExemptSet` (RoleAdminFacet)                                                                                                                                                            | `ProtocolRole`, `RoleMember`, `SelectorPolicy`, `RoleActivity`, `ProtocolAuthState`                                                            |
+| R3/R4 shadow re-gate | `LegacyAuthUsed` on the main Diamond, the Insurance Diamond and the ReputationManager; `BlacklistRateLimitSet` (RpHelper)                                                                                                                                                                                         | `LegacyAuthUsage`, `LegacyAuthSelectorStats`, `LegacyAuthDay`, counters and the blacklist rate limit on `ProtocolAuthState` / `SelectorPolicy` |
+| R5 country scope     | `CountryActiveSet`, `CurrencyCountryBound` (CountryFacet), `CountryAssigned` (RoleAdminFacet)                                                                                                                                                                                                                     | `Country`, `Currency.country`, `AdminCountry`                                                                                                  |
+| R6 claim contest     | `ClaimContested`, `ClaimContestRemoved` (InsuranceClaimFacet)                                                                                                                                                                                                                                                     | `InsuranceClaim.contested*`, `InsuranceClaimContestActivity`                                                                                   |
+| R7 cutover           | `EmergencyPauseSet` (OrderProcessorFacet), `CoSignProposed` / `CoSignCancelled` (RoleAdminFacet), `CoSignConsumed` (LibAuth via B2BGatewayFacet), `LeadTimelock` template (`CallScheduled`, `CallSalt`, `CallExecuted`, `Cancelled`, `MinDelayChange`), `OwnershipTransferred` on the main and Insurance Diamonds | `EmergencyPauseActivity`, `CoSign`, `LeadTimelock`, `TimelockOperation`, `TimelockCall`, `DiamondOwnership`, `DiamondOwnershipTransfer`        |
+| R8 retirement        | `SuperAdminUpdated`, `AdminStatusUpdated`, `GlobalAdminUpdated` replayed from genesis; `RetirementInit` re-emits them with `status=false`                                                                                                                                                                         | `LegacyAdmin`                                                                                                                                  |
 
 Notes:
+
+- **Read history here, read authorization state from the chain.** The registry's
+  current state is indexed (`SelectorPolicy`, `ProtocolRole`, `RoleMember`,
+  `AdminCountry`, `DiamondOwnership`, `ProtocolAuthState.legacyAuthEnabled`),
+  but an index is minutes behind and a mapping bug is a silent authority error.
+  Anything that gates a signature or renders a permission decision should
+  `eth_call` the Diamond (`getSelectorPolicy`, `getRoleMembers`,
+  `roleTimelock`, `isOperationReady`, `getCoSign`, `owner`,
+  `isLegacyAuthEnabled`) and use these entities for what _happened_. Loading
+  both is a free cross-check: an indexed `roleMask` that disagrees with the
+  live call is itself worth surfacing.
+- `LegacyAuthDay` has **no row for a quiet day** — a subgraph only writes when
+  an event fires, so absence is the zero. A fixed-width histogram fills the
+  gaps from the `day` field (a unix day number); order by `day`, never by `id`.
+  The current quiet streak is `ProtocolAuthState.lastLegacyAuthUsedAt`.
+- `LegacyAuthSelectorStats` is keyed per **(emitter, selector)**, so a
+  protocol-wide per-selector total means summing the three emitter rows.
+- `ProtocolAuthState.configuredSelectorCount` counts selectors whose policy is
+  configured, which is **not** the `SelectorPolicy` entity count: setting
+  `legacyExempt` on a selector with no policy yet creates a row with
+  `configured: false`. Filter on `configured: true` when comparing counts.
+- `CoSign` has no `paramsHash` field because the event never carries one. Its
+  `id` is the contract's key, `keccak256(selector ‖ keccak256(args))`, so a
+  caller can compute the key for the exact call it is about to submit and look
+  the standing co-sign up directly.
 
 - `ProtocolAuthState` (id `"auth"`) is a singleton: the legacy switch (defaults
   to **enabled** — it is stored inverted on-chain), the `LegacyAuthUsed`
@@ -122,6 +147,12 @@ Notes:
   ```bash
   node scripts/generate-selectors.mjs ../contracts-v4/artifacts
   ```
+
+  The generator also writes `src/constants/selectors.meta.json`, recording the
+  contracts-v4 commits it read and a sha256 digest of the selector→name pairs.
+  Any other repo generating its own inventory from the same contracts (the ops
+  console does) should compare that digest in CI — two generated inventories
+  off one set of contracts drift silently otherwise.
 
   Policy rows outlive their selectors (R8 removes `failSafe`, the circle
   staking entrypoints, `setSuperAdmin`, …, but their `SelectorPolicySet`

@@ -25,6 +25,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Legacy `superAdmin` / `admin` / `globalAdmin` stores replayed into
   `LegacyAdmin` so the R8 `RetirementInit` address lists can be produced from
   the subgraph
+- `LegacyAuthDay`: per-UTC-day buckets of `LegacyAuthUsed` with a per-emitter
+  split, so the retirement histogram is one ordered query instead of a
+  paginated scan (a quiet day has no row — absence is the zero)
+- `src/constants/selectors.meta.json`: contracts-v4 commits and a sha256 digest
+  of the generated selector map, so a second inventory generated elsewhere can
+  be diffed against it in CI
 - `scripts/import-local-stack.mjs`: writes the `localhost` network from a
   contracts-v4 `local:deploy` output so the subgraph can be built and tested
   against the local post-R8 stack
