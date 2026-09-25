@@ -152,9 +152,20 @@ Notes:
   to **enabled** — it is stored inverted on-chain), the `LegacyAuthUsed`
   counters that gate the R7 flip (zero for seven days across all three emitters),
   the configured-selector count and the break-glass pause.
-- Roles are bit positions (`0 DEV_LEAD … 9 ADMIN_VALUE`, see
+- Roles are bit positions (`0 DEV_LEAD … 8 CAPABILITY_GRANTEE`, see
   `src/constants/roles.ts`); `SelectorPolicy.roles` / `roleNames` expand the
   on-chain bitmask.
+- **Bit 9 (`ADMIN_VALUE_RETIRED`) is retired and authorizes nothing.** Its
+  order/fiat powers moved to `DEV_LEAD` and its claim powers to `ADMIN`. The
+  bit was not reused and the others were not renumbered — renumbering would
+  re-point every live grant — and `MAX_ROLE` stays 9 so anyone still holding it
+  stays revocable. So bit 9 can still appear in `RoleMember` and `RoleActivity`
+  rows until the registry is drained of it; it will not appear in any
+  `SelectorPolicy.roles` mask. Render it as retired, never as authority.
+- `AdminCountry` covers **`ADMIN` only** — it is now the single country-scoped
+  role. Revoking `ADMIN` drops that member's assignments, and the contract
+  emits one `CountryAssigned(…, false)` per country as it does, so the rows
+  clear by replay rather than by any inference in the mapping.
 - `SelectorPolicy.functionName`, `CoSign.functionName`, `LegacyAuthUsage
 .functionName` and `TimelockCall.functionName` resolve selectors through
   `src/constants/selectors.ts`, a generated map. Regenerate it after each
