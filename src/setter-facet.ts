@@ -11,6 +11,7 @@ import {
   MerchantWithdrawFeePercentage as MerchantWithdrawFeePercentageEvent,
   SuperAdminUpdated as SuperAdminUpdatedEvent,
   AdminStatusUpdated as AdminStatusUpdatedEvent,
+  MinFiatAmountUpdated as MinFiatAmountUpdatedEvent,
 } from "../generated/SetterFacet/SetterFacet";
 import { loadLegacyAdmin } from "./lib";
 import { CurrencyConfig, PaymentChannelConfig } from "../generated/schema";
@@ -154,6 +155,16 @@ export function handleCurrencyAddedUpdate(
 ): void {
   const currency = loadCurrency(event.params.currency, event);
   currency.isActive = event.params.isActive;
+  currency.save();
+}
+
+// Per-currency minimum fiat order amount. `current` is the authoritative value
+// after the change; 0 means the floor was cleared, not that orders are blocked.
+export function handleMinFiatAmountUpdated(
+  event: MinFiatAmountUpdatedEvent,
+): void {
+  const currency = loadCurrency(event.params.currency, event);
+  currency.minFiatAmount = event.params.current;
   currency.save();
 }
 

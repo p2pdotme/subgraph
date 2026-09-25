@@ -28,6 +28,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `LegacyAuthDay`: per-UTC-day buckets of `LegacyAuthUsed` with a per-emitter
   split, so the retirement histogram is one ordered query instead of a
   paginated scan (a quiet day has no row — absence is the zero)
+- `ApprovedClaimCancelled`: a currency approver's reversal of an already-APPROVED
+  insurance claim. Without it a cancelled claim sat at `APPROVED` in the index
+  for good. All three reject paths land on `status = 3`, so the new
+  `InsuranceClaim.rejectionKind` is what keeps them apart (1 = reviewer,
+  2 = super-admin force reject, 3 = approver cancel)
+- `MinFiatAmountUpdated`: the per-currency minimum fiat order amount, on
+  `Currency.minFiatAmount`. 0 means no floor, never "block every order"
 - `src/constants/selectors.meta.json`: contracts-v4 commits and a sha256 digest
   of the generated selector map, so a second inventory generated elsewhere can
   be diffed against it in CI

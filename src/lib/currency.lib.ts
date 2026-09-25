@@ -13,6 +13,7 @@ export function loadCurrency(key: Bytes, event: ethereum.Event): Currency {
     currency = new Currency(key);
     currency.currency = key;
     currency.isActive = false;
+    currency.minFiatAmount = BigInt.zero();
   }
 
   currency.blockNumber = event.block.number;

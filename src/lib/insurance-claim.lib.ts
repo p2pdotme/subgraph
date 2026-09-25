@@ -37,6 +37,7 @@ export function loadInsuranceClaim(
     claim.contestedBy = null;
     claim.contestedAt = null;
     claim.contestCount = 0;
+    claim.rejectionKind = 0;
     claim.settledAt = BigInt.zero();
     claim.settledUsdcAmount = BigInt.zero();
     claim.fromCAIP = BigInt.zero();

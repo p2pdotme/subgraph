@@ -1,21 +1,16 @@
 // GENERATED FILE — do not edit by hand.
 // Regenerate with: node scripts/generate-selectors.mjs <contracts-v4>/artifacts
-// Sources: 225 contract artifacts, 701 unique selectors.
-//   a6934309759fe439f9a8517ef39363cea6653bcd (remotes/origin/claude/r8-retirement)
-//   d02697acf0e560b17df321787e5583ba4b2d8c68 (remotes/origin/claude/r7-cutover)
-//   c1f578f4561b09ea9ec261d361f2fce62b0ad35c (remotes/origin/main)
-// Digest: 717f643e23e3586130a34ab6693b05cf1d50d370834def1ade6c795bb4ac7282
+// Sources: 225 contract artifacts, 705 unique selectors.
+//   ffed50dcd3b558cb12c1b7bda3b636e258e762ec (remotes/origin/claude/r8-retirement)
+//   ecb8088edb940cdc4c54343b750015a20d9678bf (remotes/origin/claude/r7-cutover)
+//   7dd2e81a3a69cf7d4e1cac20ec456599df6a573a (remotes/origin/dev)
+// Digest: f4cb2b744c64e5918b4adc727da81bf4915d0fe5a7231dde70b29d61f6fcaf40
 
 /** contracts-v4 commits this map was generated from. */
-export const SELECTOR_SOURCE_COMMITS: string[] = [
-  "a6934309759fe439f9a8517ef39363cea6653bcd",
-  "d02697acf0e560b17df321787e5583ba4b2d8c68",
-  "c1f578f4561b09ea9ec261d361f2fce62b0ad35c",
-];
+export const SELECTOR_SOURCE_COMMITS: string[] = ["ffed50dcd3b558cb12c1b7bda3b636e258e762ec", "ecb8088edb940cdc4c54343b750015a20d9678bf", "7dd2e81a3a69cf7d4e1cac20ec456599df6a573a"];
 
 /** sha256 over the sorted `<selector> <name>` pairs below. */
-export const SELECTOR_MAP_DIGEST =
-  "717f643e23e3586130a34ab6693b05cf1d50d370834def1ade6c795bb4ac7282";
+export const SELECTOR_MAP_DIGEST = "f4cb2b744c64e5918b4adc727da81bf4915d0fe5a7231dde70b29d61f6fcaf40";
 
 const SELECTOR_KEYS: string[] = [
   "0x014a4bc6",
@@ -126,6 +121,7 @@ const SELECTOR_KEYS: string[] = [
   "0x2a083ca3",
   "0x2a3958e4",
   "0x2a7f59df",
+  "0x2aa05a94",
   "0x2ab0f529",
   "0x2acf7aa3",
   "0x2add0f95",
@@ -657,6 +653,7 @@ const SELECTOR_KEYS: string[] = [
   "0xe46bf834",
   "0xe48083fe",
   "0xe597e1ad",
+  "0xe5f971e9",
   "0xe607c1f6",
   "0xe630c935",
   "0xe63f21c1",
@@ -703,6 +700,8 @@ const SELECTOR_KEYS: string[] = [
   "0xf5d469ff",
   "0xf6067dd1",
   "0xf6220698",
+  "0xf656ff97",
+  "0xf69b6e97",
   "0xf82d8d1d",
   "0xf8570170",
   "0xfa502270",
@@ -830,6 +829,7 @@ const SELECTOR_NAMES: string[] = [
   "GovernorFacet.MAX_TIMELOCK_DELAY()",
   "ReputationManager.campaignManagerClaims(uint256,address)",
   "GetterFacet.getMonthlyBuyOrderLimitByCurrency(bytes32)",
+  "InsuranceClaimFacet.cancelApprovedClaim(uint256)",
   "LeadTimelock.isOperationDone(bytes32)",
   "ReputationManager.minRpToVote()",
   "RoleAdminFacet.shadowAuthPassesForCurrency(bytes4,address,bytes32)",
@@ -1361,6 +1361,7 @@ const SELECTOR_NAMES: string[] = [
   "B2BGatewayFacet.isActiveIntegrator(address)",
   "GovernorFacet.MIN_VOTING_DELAY()",
   "GetterFacet.getUserBoostUsd(address,bytes32)",
+  "OrderFlowFacet.setSellOrderUpiWithFiat(uint256,string,uint256)",
   "ReputationManager.isEligibleToClaimReferralRewards(address,uint256)",
   "ReputationManager.claimCampaignUsdc()",
   "RpHelper1.setBvnSigner(address)",
@@ -1407,6 +1408,8 @@ const SELECTOR_NAMES: string[] = [
   "MerchantRegistryFacet.blacklistInactiveMerchants(address[])",
   "SetterFacet.setMaxSellTxLimit(bytes32,uint256)",
   "InsurancePoolFacet.getCAIPFeeBps(bytes32)",
+  "SetterFacet.setMinFiatAmount(bytes32,uint256)",
+  "GetterFacet.getMinFiatAmount(bytes32)",
   "GetterFacet.getInsuranceDebt(address,uint256)",
   "GovernorFacet.setGovernanceToken(address)",
   "ReputationManager.xMinYearGap()",
