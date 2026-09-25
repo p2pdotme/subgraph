@@ -9,7 +9,9 @@ import {
   OrderDispute as OrderDisputeWithFaultTypeEvent,
   CircleStatusUpdated as CircleStatusUpdatedEvent,
   OrderAppealed as OrderAppealedEvent,
+  EmergencyPauseSet as EmergencyPauseSetEvent,
 } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
+import { loadProtocolAuthState, newEmergencyPauseActivity } from "./lib";
 import {
   backfillMerchantCircle,
   loadAssignedMerchants,
@@ -1369,4 +1371,16 @@ export function handleCircleStatusUpdated(
 
   circleMetrics.save();
   scoreState.save();
+}
+
+// ─────────────────────────── R7 break-glass pause ────────────────────────
+
+export function handleEmergencyPauseSet(event: EmergencyPauseSetEvent): void {
+  const state = loadProtocolAuthState(event);
+  state.emergencyPaused = event.params.paused;
+  state.emergencyPausedBy = event.params.by;
+  state.emergencyPausedAt = event.block.timestamp;
+  state.save();
+
+  newEmergencyPauseActivity(event, event.params.by, event.params.paused).save();
 }

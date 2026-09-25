@@ -9,7 +9,10 @@ import {
   CALRLocked as CALRLockedEvent,
   CALRUnlocked as CALRUnlockedEvent,
   CALRLockReverted as CALRLockRevertedEvent,
+  NonPoolTokenSwept as NonPoolTokenSweptEvent,
 } from "../generated/InsurancePoolFacet/InsurancePoolFacet";
+import { InsuranceNonPoolTokenSweep } from "../generated/schema";
+import { logKey } from "./utils";
 import {
   InsuranceApprover,
   InsuranceCurrencyConfig,
@@ -194,4 +197,20 @@ export function handleCALRLockReverted(event: CALRLockRevertedEvent): void {
   activity.orderId = event.params.orderId;
   activity.snapshotAmount = event.params.snapshot;
   activity.save();
+}
+
+// ─────────────────────────── R1 non-pool token recovery ──────────────────
+// Seized $P2P boost stakes arrive at the Insurance Diamond address but are
+// not pool assets; `sweepNonPoolToken` moves them to the Governance Diamond.
+export function handleNonPoolTokenSwept(event: NonPoolTokenSweptEvent): void {
+  const entity = new InsuranceNonPoolTokenSweep(
+    logKey(event.transaction.hash, event.logIndex),
+  );
+  entity.token = event.params.token;
+  entity.to = event.params.to;
+  entity.amount = event.params.amount;
+  entity.blockNumber = event.block.number;
+  entity.blockTimestamp = event.block.timestamp;
+  entity.transactionHash = event.transaction.hash;
+  entity.save();
 }

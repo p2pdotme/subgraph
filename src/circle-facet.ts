@@ -5,8 +5,11 @@ import {
   CircleCommunityUrlUpdated as CircleCommunityUrlUpdatedEvent,
   CircleAdminCommunityUrlUpdated as CircleAdminCommunityUrlUpdatedEvent,
   // CircleProtocolTokenStaked as CircleProtocolTokenStakedEvent,
+  CircleAdminP2PStakeReturned as CircleAdminP2PStakeReturnedEvent,
 } from "../generated/CircleFacet/CircleFacet";
+import { CircleAdminP2PStakeReturn } from "../generated/schema";
 import { loadCircle, loadCircleMetrics } from "./lib";
+import { logKey } from "./utils";
 
 export function handleCircleCreated(event: CircleCreatedEvent): void {
   const key = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
@@ -114,3 +117,23 @@ export function handleCircleAdminCommunityUrlUpdated(
 
 //   circleMetrics.save();
 // }
+
+// ─────────────────────────── R1 fund-custody drain ───────────────────────
+// `returnCircleAdminP2PStake` hands an admin their whole circle $P2P stake
+// back (cancelling any pending unstake first). It is the only exit left once
+// circle-admin staking is retired at R7 / removed at R8; the R8 runbook
+// enumerates these events against the remaining stake balances.
+export function handleCircleAdminP2PStakeReturned(
+  event: CircleAdminP2PStakeReturnedEvent,
+): void {
+  const entity = new CircleAdminP2PStakeReturn(
+    logKey(event.transaction.hash, event.logIndex),
+  );
+  entity.caller = event.params.caller;
+  entity.circleAdmin = event.params.circleAdmin;
+  entity.amount = event.params.amount;
+  entity.blockNumber = event.block.number;
+  entity.blockTimestamp = event.block.timestamp;
+  entity.transactionHash = event.transaction.hash;
+  entity.save();
+}

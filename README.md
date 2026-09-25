@@ -68,13 +68,128 @@ Deploys to The Graph Studio at `https://thegraph.com/studio/`.
 
 Contract addresses per network are defined in `networks.json`:
 
-| Network | Diamond Proxy | ReputationManager |
-|---------|--------------|-------------------|
-| `base` | `0x4cad6eC90e65baBec9335cAd728DDC610c316368` | `0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D` |
+| Network | Diamond Proxy                                | ReputationManager                            |
+| ------- | -------------------------------------------- | -------------------------------------------- |
+| `base`  | `0x4cad6eC90e65baBec9335cAd728DDC610c316368` | `0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D` |
 
-All data sources (except ReputationManager) point to the same diamond proxy contract.
+To index a local `contracts-v4` stack (`npx hardhat local:deploy --network
+localhost`, see that repo's `docs/runbooks/local-stack.md`), import its output
+and build for `localhost`:
+
+```bash
+node scripts/import-local-stack.mjs ../contracts-v4/deployments/1337/local-stack.json
+npx graph build --network localhost
+```
+
+All main-protocol data sources point to the same diamond proxy contract; the
+Insurance Diamond and the Governance Diamond have their own addresses. The
+`LeadTimelock` data-source **template** has no fixed address: an instance is
+created for every timelock that `RoleAdminFacet.setRoleTimelock` binds to a role.
 
 ---
+
+## Roles & Permissions (contracts-v4 rollout R2 → R8)
+
+The selector-level role registry replaced the flat `superAdmin` / `admin` model
+in staged releases. The indexer follows every release's events so a UI or an ops
+dashboard can answer "who can call what, from where, and is anyone still relying
+on the legacy path":
+
+| Release              | Contract events                                                                                                                                                                                                                                                                                                     | Entities                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1 fund custody      | `CircleAdminP2PStakeReturned` (CircleFacet), `NonPoolTokenSwept` (InsurancePoolFacet)                                                                                                                                                                                                                               | `CircleAdminP2PStakeReturn`, `InsuranceNonPoolTokenSweep`                                                                                      |
+| R2 role registry     | `RoleGranted`, `RoleRevoked`, `RoleTimelockSet`, `SelectorPolicySet`, `SelectorPolicyCleared`, `LegacyAuthToggled`, `LegacyExemptSet` (RoleAdminFacet)                                                                                                                                                              | `ProtocolRole`, `RoleMember`, `SelectorPolicy`, `RoleActivity`, `ProtocolAuthState`                                                            |
+| R3/R4 shadow re-gate | `LegacyAuthUsed` on the main Diamond, the Insurance Diamond and the ReputationManager; `BlacklistRateLimitSet` (RpHelper)                                                                                                                                                                                           | `LegacyAuthUsage`, `LegacyAuthSelectorStats`, `LegacyAuthDay`, counters and the blacklist rate limit on `ProtocolAuthState` / `SelectorPolicy` |
+| R5 country scope     | `CountryActiveSet`, `CurrencyCountryBound` (CountryFacet), `CountryAssigned` (RoleAdminFacet)                                                                                                                                                                                                                       | `Country`, `Currency.country`, `AdminCountry`                                                                                                  |
+| R6 claim contest     | `ClaimContested`, `ClaimContestRemoved` (InsuranceClaimFacet)                                                                                                                                                                                                                                                       | `InsuranceClaim.contested*`, `InsuranceClaimContestActivity`                                                                                   |
+| R7 cutover           | `EmergencyPauseSet` (OrderProcessorFacet), `CoSignProposed` / `CoSignCancelled` (RoleAdminFacet), `CoSignConsumed` (LibAuth via B2BGatewayFacet), `LeadTimelock` template (`CallScheduled`, `CallSalt`, `CallExecuted`, `Cancelled`, `MinDelayChange`), `OwnershipTransferred` on the main and Insurance Diamonds   | `EmergencyPauseActivity`, `CoSign`, `LeadTimelock`, `TimelockOperation`, `TimelockCall`, `DiamondOwnership`, `DiamondOwnershipTransfer`        |
+| R8 retirement        | `SuperAdminUpdated`, `AdminStatusUpdated`, `GlobalAdminUpdated` replayed from genesis. R8's `RetirementInit` drains only the global-admin set (`GlobalAdminUpdated(…, false)`); the super-admin and admin clear is **deferred past R8** to `LegacyAdminClearInit`, which re-emits the other two with `status=false` | `LegacyAdmin`                                                                                                                                  |
+
+Notes:
+
+- **Read history here, read authorization state from the chain.** The registry's
+  current state is indexed (`SelectorPolicy`, `ProtocolRole`, `RoleMember`,
+  `AdminCountry`, `DiamondOwnership`, `ProtocolAuthState.legacyAuthEnabled`),
+  but an index is minutes behind and a mapping bug is a silent authority error.
+  Anything that gates a signature or renders a permission decision should
+  `eth_call` the Diamond (`getSelectorPolicy`, `getRoleMembers`,
+  `roleTimelock`, `isOperationReady`, `getCoSign`, `owner`,
+  `isLegacyAuthEnabled`) and use these entities for what _happened_. Loading
+  both is a free cross-check: an indexed `roleMask` that disagrees with the
+  live call is itself worth surfacing.
+- `LegacyAuthDay` has **no row for a quiet day** — a subgraph only writes when
+  an event fires, so absence is the zero. A fixed-width histogram fills the
+  gaps from the `day` field (a unix day number); order by `day`, never by `id`.
+  The current quiet streak is `ProtocolAuthState.lastLegacyAuthUsedAt`.
+- `LegacyAuthSelectorStats` is keyed per **(emitter, selector)**, so a
+  protocol-wide per-selector total means summing the three emitter rows.
+- `ProtocolAuthState.configuredSelectorCount` counts selectors whose policy is
+  configured, which is **not** the `SelectorPolicy` entity count: setting
+  `legacyExempt` on a selector with no policy yet creates a row with
+  `configured: false`. Filter on `configured: true` when comparing counts.
+- **R8 does not empty the legacy admin stores.** It drains `globalAdminSet`
+  only. `updateAdmin` / `setSuperAdmin` survive R8 on `SetterFacet` because a
+  store must not lose its last writer before the release that empties it — a
+  populated-but-unrevocable mapping is worse than a live one. So after the R8
+  cut, `LegacyAdmin` rows for super admins and admins are still `status: true`
+  by design; they go false when `LegacyAdminClearInit` ships. Read the
+  global-admin rows as retired at R8, the other two as still pending.
+- `InsuranceClaim.rejectionKind` separates the three routes to
+  `status = 3` (REJECTED), which are otherwise indistinguishable: `1` a reviewer
+  rejected a SUBMITTED claim, `2` the super admin force-rejected an APPROVED one
+  (`ClaimForceRejected`), `3` a currency approver cancelled an APPROVED one
+  (`ApprovedClaimCancelled`, added on `main` after R6). Filtering on `status`
+  alone cannot tell an approver-level reversal from the break-glass path.
+- `Currency.minFiatAmount` is `0` when no floor is configured. The contract
+  appends this per-currency setting by upgrade and reads `0` as "no minimum", so
+  a Diamond that never set one must not be rendered as "orders blocked".
+- `CoSign` has no `paramsHash` field because the event never carries one. Its
+  `id` is the contract's key, `keccak256(selector ‖ keccak256(args))`, so a
+  caller can compute the key for the exact call it is about to submit and look
+  the standing co-sign up directly.
+
+- `ProtocolAuthState` (id `"auth"`) is a singleton: the legacy switch (defaults
+  to **enabled** — it is stored inverted on-chain), the `LegacyAuthUsed`
+  counters that gate the R7 flip (zero for seven days across all three emitters),
+  the configured-selector count and the break-glass pause.
+- Roles are bit positions (`0 DEV_LEAD … 8 CAPABILITY_GRANTEE`, see
+  `src/constants/roles.ts`); `SelectorPolicy.roles` / `roleNames` expand the
+  on-chain bitmask.
+- **Bit 9 (`ADMIN_VALUE_RETIRED`) is retired and authorizes nothing.** Its
+  order/fiat powers moved to `DEV_LEAD` and its claim powers to `ADMIN`. The
+  bit was not reused and the others were not renumbered — renumbering would
+  re-point every live grant — and `MAX_ROLE` stays 9 so anyone still holding it
+  stays revocable. So bit 9 can still appear in `RoleMember` and `RoleActivity`
+  rows until the registry is drained of it; it will not appear in any
+  `SelectorPolicy.roles` mask. Render it as retired, never as authority.
+- `AdminCountry` covers **`ADMIN` only** — it is now the single country-scoped
+  role. Revoking `ADMIN` drops that member's assignments, and the contract
+  emits one `CountryAssigned(…, false)` per country as it does, so the rows
+  clear by replay rather than by any inference in the mapping.
+- `SelectorPolicy.functionName`, `CoSign.functionName`, `LegacyAuthUsage
+.functionName` and `TimelockCall.functionName` resolve selectors through
+  `src/constants/selectors.ts`, a generated map. Regenerate it after each
+  contracts release from a compiled contracts-v4 checkout:
+
+  ```bash
+  node scripts/generate-selectors.mjs ../contracts-v4/artifacts
+  ```
+
+  The generator also writes `src/constants/selectors.meta.json`, recording the
+  contracts-v4 commits it read and a sha256 digest of the selector→name pairs.
+  Any other repo generating its own inventory from the same contracts (the ops
+  console does) should compare that digest in CI — two generated inventories
+  off one set of contracts drift silently otherwise.
+
+  Policy rows outlive their selectors (R8 removes `failSafe`, the circle
+  staking entrypoints, `setSuperAdmin`, …, but their `SelectorPolicySet`
+  events stay indexed), so pass the artifacts of earlier releases as extra
+  arguments to keep those names resolvable — the committed map was built from
+  the r8, r7 and main trees.
+
+- A timelock's `MinDelayChange` is emitted in its constructor, before the
+  template exists, so `LeadTimelock.minDelay` stays null unless the delay is
+  changed later; the 48h policy minimum lives in the contracts runbook.
 
 ## Entity Relationship Diagram
 
@@ -268,11 +383,11 @@ erDiagram
 
 ## Available Scripts
 
-| Command | Description |
-|---------|-------------|
+| Command           | Description                                    |
+| ----------------- | ---------------------------------------------- |
 | `npm run codegen` | Generate TypeScript types from ABIs and schema |
-| `npm run build` | Compile AssemblyScript to WebAssembly |
-| `npm run deploy` | Deploy to The Graph Studio |
+| `npm run build`   | Compile AssemblyScript to WebAssembly          |
+| `npm run deploy`  | Deploy to The Graph Studio                     |
 
 ---
 
@@ -330,9 +445,9 @@ When a circle is first created, it enters **bootstrap** with a default score of 
 
 **Graduation to active** happens when either threshold is met:
 
-| Threshold | Value |
-|-----------|-------|
-| Lifetime orders | ≥ 40 |
+| Threshold            | Value         |
+| -------------------- | ------------- |
+| Lifetime orders      | ≥ 40          |
 | Lifetime USDC volume | ≥ 20,000 USDC |
 
 **Weight cap** — Bootstrap circles have their score capped at 25 (`BOOTSTRAP_MAX_WEIGHT`), regardless of the calculated score. This prevents unproven circles from dominating order routing.
@@ -342,6 +457,7 @@ When a circle is first created, it enters **bootstrap** with a default score of 
 ### Step 3: Circle Score Calculation (0–100)
 
 The score is only computed when:
+
 - Circle is **not rejected**
 - Circle has completed at least **10 orders** (MIN_ORDERS_FOR_SCORE)
 
@@ -363,13 +479,13 @@ speed = clamp(100 × (150 - avg_settlement_seconds) / (150 - 45), 0, 100)
 - 150 seconds = worst case (score 0)
 
 | Avg Settlement | Speed Score |
-|---------------|-------------|
-| 45s | 100 |
-| 60s | ~86 |
-| 75s | ~71 |
-| 90s | ~57 |
-| 120s | ~29 |
-| 150s+ | 0 |
+| -------------- | ----------- |
+| 45s            | 100         |
+| 60s            | ~86         |
+| 75s            | ~71         |
+| 90s            | ~57         |
+| 120s           | ~29         |
+| 150s+          | 0           |
 
 #### 3b. Dispute Score (30% weight)
 
@@ -380,14 +496,14 @@ dispute = max(0, 100 - (dispute_rate × 1800))
 ```
 
 | Dispute % | Score |
-|-----------|-------|
-| 0.0% | 100 |
-| 0.5% | 91 |
-| 1.0% | 82 |
-| 2.0% | 64 |
-| 3.0% | 46 |
-| 5.0% | 10 |
-| ≥5.6% | 0 |
+| --------- | ----- |
+| 0.0%      | 100   |
+| 0.5%      | 91    |
+| 1.0%      | 82    |
+| 2.0%      | 64    |
+| 3.0%      | 46    |
+| 5.0%      | 10    |
+| ≥5.6%     | 0     |
 
 #### 3c. Merchants Score (20% weight)
 
@@ -408,13 +524,13 @@ volume = min(100, total_volume_usdc / 10,000)
 ```
 
 | Total Volume (USDC) | Volume Score |
-|--------------------|-------------|
-| 0 | 0 |
-| 50,000 | 5 |
-| 100,000 | 10 |
-| 250,000 | 25 |
-| 500,000 | 50 |
-| ≥1,000,000 | 100 |
+| ------------------- | ------------ |
+| 0                   | 0            |
+| 50,000              | 5            |
+| 100,000             | 10           |
+| 250,000             | 25           |
+| 500,000             | 50           |
+| ≥1,000,000          | 100          |
 
 ### Note: Order Routing
 
@@ -438,18 +554,19 @@ Let's walk through two circles with different performance profiles to see how th
 
 #### Raw Metrics
 
-| Metric | Circle Alpha | Circle Beta |
-|--------|-------------|------------|
-| Avg Settlement Time | 60s | 120s |
-| Dispute Rate | 1.0% | 4.0% |
-| Active Merchants | 25 | 8 |
-| 30d Volume (USDC) | 500,000 | 50,000 |
-| Lifetime Orders | 200 | 15 |
-| Status | active | bootstrap |
+| Metric              | Circle Alpha | Circle Beta |
+| ------------------- | ------------ | ----------- |
+| Avg Settlement Time | 60s          | 120s        |
+| Dispute Rate        | 1.0%         | 4.0%        |
+| Active Merchants    | 25           | 8           |
+| 30d Volume (USDC)   | 500,000      | 50,000      |
+| Lifetime Orders     | 200          | 15          |
+| Status              | active       | bootstrap   |
 
 #### Sub-Score Breakdown
 
 **Circle Alpha:**
+
 ```
 speed    = clamp(100 × (150 - 60) / (150 - 45), 0, 100)  = 85.7  ≈ 86
 dispute  = max(0, 100 - (0.01 × 1800))                    = 82
@@ -458,6 +575,7 @@ volume   = min(100, 500,000 / 10,000)                      = 50
 ```
 
 **Circle Beta:**
+
 ```
 speed    = clamp(100 × (150 - 120) / (150 - 45), 0, 100)  = 28.6  ≈ 29
 dispute  = max(0, 100 - (0.04 × 1800))                     = 28
@@ -489,5 +607,6 @@ xychart-beta
 ```
 
 **What this means:**
+
 - Circle Alpha scores 67 vs Circle Beta's 21 — Alpha dominates because it settles 2x faster (60s vs 120s), has 4x fewer disputes (1% vs 4%), has 3x more merchants, and 10x more volume.
 - Circle Beta can improve its score by: reducing settlement time, lowering disputes, onboarding more merchants, or increasing volume. The score recalculates on every completed order, so improvements are reflected immediately.

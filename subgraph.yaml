@@ -48,6 +48,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - CircleFacet
+        - CircleAdminP2PStakeReturn
       abis:
         - name: CircleFacet
           file: ./abis/CircleFacet.json
@@ -60,6 +61,9 @@ dataSources:
           handler: handleCircleCommunityUrlUpdated
         - event: CircleAdminCommunityUrlUpdated(indexed uint256,string)
           handler: handleCircleAdminCommunityUrlUpdated
+        # R1 fund-custody drain (roles & permissions rollout)
+        - event: CircleAdminP2PStakeReturned(indexed address,indexed address,uint256)
+          handler: handleCircleAdminP2PStakeReturned
         # - event: CircleProtocolTokenStaked(indexed uint256,indexed address,uint256)
         #   handler: handleCircleProtocolTokenStaked
       file: ./src/circle-facet.ts
@@ -135,6 +139,8 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - OrderProcessorFacet
+        - ProtocolAuthState
+        - EmergencyPauseActivity
       abis:
         - name: OrderProcessorFacet
           file: ./abis/OrderProcessorFacet.json
@@ -145,6 +151,9 @@ dataSources:
           handler: handleCircleStatusUpdated
         - event: OrderAppealed(indexed uint256,indexed address,uint128)
           handler: handleOrderAppealed
+        # R7 break-glass pause (roles & permissions rollout)
+        - event: EmergencyPauseSet(indexed address,bool)
+          handler: handleEmergencyPauseSet
       file: ./src/order.ts
   - kind: ethereum
     name: OrderFlowFacet
@@ -299,6 +308,7 @@ dataSources:
       entities:
         - PaymentChannelConfig
         - Currency
+        - Country
       abis:
         - name: CountryFacet
           file: ./abis/CountryFacet.json
@@ -307,6 +317,11 @@ dataSources:
           handler: handlePaymentChannelConfigChanged
         - event: CurrencyToggled(indexed bytes32,indexed bool)
           handler: handleCurrencyToggled
+        # R5 country scope
+        - event: CountryActiveSet(indexed bytes32,bool)
+          handler: handleCountryActiveSet
+        - event: CurrencyCountryBound(indexed bytes32,indexed bytes32,bytes32)
+          handler: handleCurrencyCountryBound
       file: ./src/country-facet.ts
   - kind: ethereum
     name: ReputationManager
@@ -331,6 +346,10 @@ dataSources:
         - MerchantReferralRevenueClaimed
         - CampaignCreated
         - UserVoted
+        - LegacyAuthUsage
+        - LegacyAuthSelectorStats
+        - LegacyAuthDay
+        - ProtocolAuthState
       abis:
         - name: ReputationManager
           file: ./abis/ReputationManager.json
@@ -369,6 +388,12 @@ dataSources:
           handler: handleRewardClaimedWithHash
         - event: UserVoted(indexed address,indexed address)
           handler: handleUserVoted
+        # Roles & permissions shadow mode (emitted via the RpHelpers)
+        - event: LegacyAuthUsed(indexed address,indexed bytes4)
+          handler: handleLegacyAuthUsed
+        # R4 fraud-manager blacklist rate limit
+        - event: BlacklistRateLimitSet(uint256,uint256)
+          handler: handleBlacklistRateLimitSet
       file: ./src/reputation-manager.ts
   - kind: ethereum
     name: P2PStakeBoostFacet
@@ -417,6 +442,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - CircleCreatedUpdate
+        - LegacyAdmin
       abis:
         - name: SetterFacet
           file: ./abis/SetterFacet.json
@@ -439,6 +465,13 @@ dataSources:
           handler: handleMerchantClaimableRewardsUpdate
         - event: MerchantWithdrawFeePercentage(bytes32,uint256)
           handler: handleMerchantWithdrawFeePercentage
+        # Legacy admin stores (retired at R8; replayed for RetirementInit)
+        - event: SuperAdminUpdated(indexed address,indexed address,bool)
+          handler: handleSuperAdminUpdated
+        - event: AdminStatusUpdated(indexed address,bool)
+          handler: handleAdminStatusUpdated
+        - event: MinFiatAmountUpdated(indexed bytes32,uint256,uint256)
+          handler: handleMinFiatAmountUpdated
       file: ./src/setter-facet.ts
   - kind: ethereum
     name: CapabilityFacet
@@ -454,6 +487,7 @@ dataSources:
       entities:
         - CirclePermission
         - CommunityAdmin
+        - LegacyAdmin
       abis:
         - name: CapabilityFacet
           file: ./abis/CapabilityFacet.json
@@ -468,6 +502,9 @@ dataSources:
           handler: handleCommunityAdminAdded
         - event: CommunityAdminRemoved(indexed address,indexed address)
           handler: handleCommunityAdminRemoved
+        # Legacy global-admin set (retired at R8)
+        - event: GlobalAdminUpdated(indexed address,indexed address,bool)
+          handler: handleGlobalAdminUpdated
       file: ./src/capability.ts
   - kind: ethereum
     name: InsuranceClaimFacet
@@ -484,6 +521,11 @@ dataSources:
         - InsuranceClaim
         - CircleAdminCALR
         - CALRActivity
+        - InsuranceClaimContestActivity
+        - LegacyAuthUsage
+        - LegacyAuthSelectorStats
+        - LegacyAuthDay
+        - ProtocolAuthState
       abis:
         - name: InsuranceClaimFacet
           file: ./abis/InsuranceClaimFacet.json
@@ -496,12 +538,22 @@ dataSources:
           handler: handleClaimRejected
         - event: ClaimForceRejected(indexed uint256,indexed uint256,indexed address)
           handler: handleClaimForceRejected
+        - event: ApprovedClaimCancelled(indexed uint256,indexed uint256,indexed address)
+          handler: handleApprovedClaimCancelled
         - event: ClaimWithdrawn(indexed uint256,indexed uint256,indexed address)
           handler: handleClaimWithdrawn
         - event: ClaimSettled(indexed uint256,indexed uint256,uint256,uint256,uint256)
           handler: handleClaimSettled
         - event: SuperAdminLargeClaimApproved(indexed uint256,indexed address)
           handler: handleSuperAdminLargeClaimApproved
+        # R6 Ops contest window
+        - event: ClaimContested(indexed uint256,indexed address)
+          handler: handleClaimContested
+        - event: ClaimContestRemoved(indexed uint256,indexed address,uint64)
+          handler: handleClaimContestRemoved
+        # Roles & permissions shadow mode (Insurance Diamond emission point)
+        - event: LegacyAuthUsed(indexed address,indexed bytes4)
+          handler: handleLegacyAuthUsed
       file: ./src/insurance-claim.ts
   - kind: ethereum
     name: InsurancePoolFacet
@@ -520,6 +572,7 @@ dataSources:
         - InsuranceCurrencyConfig
         - CircleAdminCALR
         - CALRActivity
+        - InsuranceNonPoolTokenSweep
       abis:
         - name: InsurancePoolFacet
           file: ./abis/InsurancePoolFacet.json
@@ -542,6 +595,9 @@ dataSources:
           handler: handleCALRUnlocked
         - event: CALRLockReverted(indexed uint256,indexed address,uint256,uint256)
           handler: handleCALRLockReverted
+        # R1 non-pool token recovery (roles & permissions rollout)
+        - event: NonPoolTokenSwept(indexed address,indexed address,uint256)
+          handler: handleNonPoolTokenSwept
       file: ./src/insurance-pool.ts
   - kind: ethereum
     name: InsuranceSinkFacet
@@ -591,6 +647,7 @@ dataSources:
         - Integrator
         - B2BOrder
         - B2BIntegratorCallbackFailure
+        - CoSign
       abis:
         - name: B2BGatewayFacet
           file: ./abis/B2BGatewayFacet.json
@@ -609,6 +666,9 @@ dataSources:
           handler: handleB2BOrderCancelled
         - event: B2BIntegratorCallbackFailed(indexed uint256,indexed address,bytes)
           handler: handleB2BIntegratorCallbackFailed
+        # R7 dual-sign consumption (emitted via LibAuth from the main Diamond)
+        - event: CoSignConsumed(indexed bytes4,indexed bytes32,indexed address,address)
+          handler: handleCoSignConsumed
       file: ./src/b2b-gateway.ts
   # LEGACY (Pre-COT) Order Data Sources
   - kind: ethereum
@@ -669,3 +729,132 @@ dataSources:
         - event: OrderDispute(indexed address,indexed uint256,(uint256,uint256,uint256,uint256,uint256,address,address,address,string,string,bool,uint8,uint8,(uint8,uint8,uint256,uint256),uint256,string,string,uint256,uint256[],bytes32,uint256),uint8)
           handler: handleLegacyOrderDisputeV2
       file: ./src/legacy-order.ts
+  # ROLES & PERMISSIONS — selector-level role registry (R2+), country scope
+  # (R5), dual-sign + timelocks (R7), retirement (R8)
+  - kind: ethereum
+    name: RoleAdminFacet
+    network: base
+    source:
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      abi: RoleAdminFacet
+      startBlock: 29875200
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ProtocolAuthState
+        - ProtocolRole
+        - RoleMember
+        - AdminCountry
+        - Country
+        - SelectorPolicy
+        - RoleActivity
+        - CoSign
+        - LegacyAuthUsage
+        - LegacyAuthSelectorStats
+        - LegacyAuthDay
+        - LeadTimelock
+      abis:
+        - name: RoleAdminFacet
+          file: ./abis/RoleAdminFacet.json
+      eventHandlers:
+        - event: RoleGranted(indexed address,indexed uint8,indexed address)
+          handler: handleRoleGranted
+        - event: RoleRevoked(indexed address,indexed uint8,indexed address)
+          handler: handleRoleRevoked
+        - event: CountryAssigned(indexed address,indexed address,indexed bytes32,bool)
+          handler: handleCountryAssigned
+        - event: RoleTimelockSet(indexed uint8,indexed address,indexed address)
+          handler: handleRoleTimelockSet
+        - event: SelectorPolicySet(indexed bytes4,(uint256,bool,uint8,uint8,bool,bool,uint256,bool))
+          handler: handleSelectorPolicySet
+        - event: SelectorPolicyCleared(indexed bytes4)
+          handler: handleSelectorPolicyCleared
+        - event: LegacyAuthToggled(indexed address,bool)
+          handler: handleLegacyAuthToggled
+        - event: LegacyExemptSet(indexed bytes4,bool)
+          handler: handleLegacyExemptSet
+        # Emitted via LibAuth from every re-gated facet on the main Diamond
+        - event: LegacyAuthUsed(indexed address,indexed bytes4)
+          handler: handleLegacyAuthUsed
+        - event: CoSignProposed(indexed bytes4,indexed bytes32,indexed address,uint8,uint64)
+          handler: handleCoSignProposed
+        - event: CoSignCancelled(indexed bytes32,indexed address)
+          handler: handleCoSignCancelled
+      file: ./src/role-registry.ts
+  # DIAMOND OWNERSHIP — the key that can re-cut facets; moved behind
+  # DevTimelock at R7 (WS-3.5)
+  - kind: ethereum
+    name: DiamondOwnership
+    network: base
+    source:
+      address: "0x4cad6eC90e65baBec9335cAd728DDC610c316368"
+      abi: OwnershipFacet
+      startBlock: 29875200
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - DiamondOwnership
+        - DiamondOwnershipTransfer
+      abis:
+        - name: OwnershipFacet
+          file: ./abis/OwnershipFacet.json
+      eventHandlers:
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+      file: ./src/ownership.ts
+  - kind: ethereum
+    name: InsuranceDiamondOwnership
+    network: base
+    source:
+      address: "0x17192bd2E8893E4eA0Ab5DB67AdbF38aE42e9931"
+      abi: OwnershipFacet
+      startBlock: 45338444
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - DiamondOwnership
+        - DiamondOwnershipTransfer
+      abis:
+        - name: OwnershipFacet
+          file: ./abis/OwnershipFacet.json
+      eventHandlers:
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+      file: ./src/ownership.ts
+templates:
+  # Per-lead OpenZeppelin TimelockController (R7). Instantiated when
+  # RoleAdminFacet.setRoleTimelock binds an instance to a role.
+  - kind: ethereum
+    name: LeadTimelock
+    network: base
+    source:
+      abi: LeadTimelock
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LeadTimelock
+        - TimelockOperation
+        - TimelockCall
+      abis:
+        - name: LeadTimelock
+          file: ./abis/LeadTimelock.json
+      eventHandlers:
+        - event: CallScheduled(indexed bytes32,indexed uint256,address,uint256,bytes,bytes32,uint256)
+          handler: handleCallScheduled
+        - event: CallSalt(indexed bytes32,bytes32)
+          handler: handleCallSalt
+        - event: CallExecuted(indexed bytes32,indexed uint256,address,uint256,bytes)
+          handler: handleCallExecuted
+        - event: Cancelled(indexed bytes32)
+          handler: handleCancelled
+        - event: MinDelayChange(uint256,uint256)
+          handler: handleMinDelayChange
+      file: ./src/lead-timelock.ts
