@@ -35,6 +35,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   2 = super-admin force reject, 3 = approver cancel)
 - `MinFiatAmountUpdated`: the per-currency minimum fiat order amount, on
   `Currency.minFiatAmount`. 0 means no floor, never "block every order"
+
+### Fixed
+
+- `scripts/generate-selectors.mjs` dropped every contract named `Legacy*`, a
+  rule meant only for the deprecated `Legacy*Facet` shims. It now skips just
+  those, so `LegacyAdminClearInit` — the deferred half of the R8 retirement —
+  keeps a readable name instead of surfacing as a bare selector
 - `src/constants/selectors.meta.json`: contracts-v4 commits and a sha256 digest
   of the generated selector map, so a second inventory generated elsewhere can
   be diffed against it in CI

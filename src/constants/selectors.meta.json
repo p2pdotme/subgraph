@@ -1,10 +1,10 @@
 {
   "selectorCount": 705,
-  "artifactCount": 225,
-  "digest": "f4cb2b744c64e5918b4adc727da81bf4915d0fe5a7231dde70b29d61f6fcaf40",
+  "artifactCount": 226,
+  "digest": "a677136c9045743a7bb484875cce92a3bf5e54f10ab11a8c91453a13e83adc39",
   "sources": [
     {
-      "commit": "ffed50dcd3b558cb12c1b7bda3b636e258e762ec",
+      "commit": "b072e9d5dad37c9cc8ea79ef3875c48d9a1ca704",
       "ref": "remotes/origin/claude/r8-retirement"
     },
     {
@@ -72,7 +72,7 @@
     "0x164de6e4": "GetterFacet.getOrderFixedFeePaid(uint256)",
     "0x169070eb": "GovernorFacet.MIN_TIMELOCK_DELAY()",
     "0x17353447": "B2BGatewayFacet.getIntegratorConfig(address)",
-    "0x17b01001": "RetirementInit.init(address[],address[])",
+    "0x17b01001": "LegacyAdminClearInit.init(address[],address[])",
     "0x17d80ac9": "InsurancePoolFacet.approvePipRefill(uint256)",
     "0x18160ddd": "P2PGov.totalSupply()",
     "0x1838cf0d": "ReputationManager.updateLyingUserRp(address,bool)",

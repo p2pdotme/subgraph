@@ -14,8 +14,10 @@
  * regenerate from the contracts repo after each release).
  *
  * Third-party sources (anything outside `contracts/`), test contracts
- * (`contracts/test/**`) and interfaces (`**\/interfaces/**`) are skipped; when several contracts share a selector the alphabetically first
- * non-Legacy contract name wins (the signature is identical either way).
+ * (`contracts/test/**`), interfaces (`**\/interfaces/**`) and the deprecated
+ * `Legacy*Facet` shims are skipped; when several contracts share a selector the
+ * alphabetically first remaining contract name wins (the signature is identical
+ * either way, so the label is cosmetic).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -91,7 +93,12 @@ function skip(sourceName, contractName) {
   if (!sourceName.startsWith("contracts/")) return true;
   if (sourceName.startsWith("contracts/test/")) return true;
   if (sourceName.includes("/interfaces/")) return true;
-  if (contractName.startsWith("Legacy")) return true;
+  // The deprecated `Legacy*Facet` shims duplicate the live facets' selectors,
+  // so the live name must win the tie. Scoped to facets on purpose: a contract
+  // merely NAMED Legacy* is not a shim (LegacyAdminClearInit is the deferred
+  // half of the R8 retirement, and its selector still needs a readable name).
+  if (contractName.startsWith("Legacy") && contractName.endsWith("Facet"))
+    return true;
   return false;
 }
 
