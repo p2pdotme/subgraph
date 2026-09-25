@@ -1,19 +1,19 @@
 {
-  "selectorCount": 701,
+  "selectorCount": 705,
   "artifactCount": 225,
-  "digest": "717f643e23e3586130a34ab6693b05cf1d50d370834def1ade6c795bb4ac7282",
+  "digest": "f4cb2b744c64e5918b4adc727da81bf4915d0fe5a7231dde70b29d61f6fcaf40",
   "sources": [
     {
-      "commit": "a6934309759fe439f9a8517ef39363cea6653bcd",
+      "commit": "ffed50dcd3b558cb12c1b7bda3b636e258e762ec",
       "ref": "remotes/origin/claude/r8-retirement"
     },
     {
-      "commit": "d02697acf0e560b17df321787e5583ba4b2d8c68",
+      "commit": "ecb8088edb940cdc4c54343b750015a20d9678bf",
       "ref": "remotes/origin/claude/r7-cutover"
     },
     {
-      "commit": "c1f578f4561b09ea9ec261d361f2fce62b0ad35c",
-      "ref": "remotes/origin/main"
+      "commit": "7dd2e81a3a69cf7d4e1cac20ec456599df6a573a",
+      "ref": "remotes/origin/dev"
     }
   ],
   "selectors": {
@@ -125,6 +125,7 @@
     "0x2a083ca3": "GovernorFacet.MAX_TIMELOCK_DELAY()",
     "0x2a3958e4": "ReputationManager.campaignManagerClaims(uint256,address)",
     "0x2a7f59df": "GetterFacet.getMonthlyBuyOrderLimitByCurrency(bytes32)",
+    "0x2aa05a94": "InsuranceClaimFacet.cancelApprovedClaim(uint256)",
     "0x2ab0f529": "LeadTimelock.isOperationDone(bytes32)",
     "0x2acf7aa3": "ReputationManager.minRpToVote()",
     "0x2add0f95": "RoleAdminFacet.shadowAuthPassesForCurrency(bytes4,address,bytes32)",
@@ -656,6 +657,7 @@
     "0xe46bf834": "B2BGatewayFacet.isActiveIntegrator(address)",
     "0xe48083fe": "GovernorFacet.MIN_VOTING_DELAY()",
     "0xe597e1ad": "GetterFacet.getUserBoostUsd(address,bytes32)",
+    "0xe5f971e9": "OrderFlowFacet.setSellOrderUpiWithFiat(uint256,string,uint256)",
     "0xe607c1f6": "ReputationManager.isEligibleToClaimReferralRewards(address,uint256)",
     "0xe630c935": "ReputationManager.claimCampaignUsdc()",
     "0xe63f21c1": "RpHelper1.setBvnSigner(address)",
@@ -702,6 +704,8 @@
     "0xf5d469ff": "MerchantRegistryFacet.blacklistInactiveMerchants(address[])",
     "0xf6067dd1": "SetterFacet.setMaxSellTxLimit(bytes32,uint256)",
     "0xf6220698": "InsurancePoolFacet.getCAIPFeeBps(bytes32)",
+    "0xf656ff97": "SetterFacet.setMinFiatAmount(bytes32,uint256)",
+    "0xf69b6e97": "GetterFacet.getMinFiatAmount(bytes32)",
     "0xf82d8d1d": "GetterFacet.getInsuranceDebt(address,uint256)",
     "0xf8570170": "GovernorFacet.setGovernanceToken(address)",
     "0xfa502270": "ReputationManager.xMinYearGap()",

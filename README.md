@@ -127,6 +127,15 @@ Notes:
   configured, which is **not** the `SelectorPolicy` entity count: setting
   `legacyExempt` on a selector with no policy yet creates a row with
   `configured: false`. Filter on `configured: true` when comparing counts.
+- `InsuranceClaim.rejectionKind` separates the three routes to
+  `status = 3` (REJECTED), which are otherwise indistinguishable: `1` a reviewer
+  rejected a SUBMITTED claim, `2` the super admin force-rejected an APPROVED one
+  (`ClaimForceRejected`), `3` a currency approver cancelled an APPROVED one
+  (`ApprovedClaimCancelled`, added on `main` after R6). Filtering on `status`
+  alone cannot tell an approver-level reversal from the break-glass path.
+- `Currency.minFiatAmount` is `0` when no floor is configured. The contract
+  appends this per-currency setting by upgrade and reads `0` as "no minimum", so
+  a Diamond that never set one must not be rendered as "orders blocked".
 - `CoSign` has no `paramsHash` field because the event never carries one. Its
   `id` is the contract's key, `keccak256(selector ‖ keccak256(args))`, so a
   caller can compute the key for the exact call it is about to submit and look

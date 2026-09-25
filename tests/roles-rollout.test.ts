@@ -13,13 +13,16 @@ import {
 } from "../generated/CountryFacet/CountryFacet";
 import {
   AdminStatusUpdated,
+  MinFiatAmountUpdated,
   SuperAdminUpdated,
 } from "../generated/SetterFacet/SetterFacet";
 import { GlobalAdminUpdated } from "../generated/CapabilityFacet/CapabilityFacet";
 import { EmergencyPauseSet } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
 import {
+  ApprovedClaimCancelled,
   ClaimContested,
   ClaimContestRemoved,
+  ClaimForceRejected,
   LegacyAuthUsed as InsuranceLegacyAuthUsed,
 } from "../generated/InsuranceClaimFacet/InsuranceClaimFacet";
 import {
@@ -42,13 +45,16 @@ import {
 } from "../src/country-facet";
 import {
   handleAdminStatusUpdated,
+  handleMinFiatAmountUpdated,
   handleSuperAdminUpdated,
 } from "../src/setter-facet";
 import { handleGlobalAdminUpdated } from "../src/capability";
 import { handleEmergencyPauseSet } from "../src/order";
 import {
+  handleApprovedClaimCancelled,
   handleClaimContestRemoved,
   handleClaimContested,
+  handleClaimForceRejected,
   handleLegacyAuthUsed as handleInsuranceLegacyAuthUsed,
 } from "../src/insurance-claim";
 import {
@@ -673,5 +679,127 @@ describe("LegacyAuthDay — the retirement histogram bucket", () => {
       "lastLegacyAuthUsedAt",
       "432000",
     );
+  });
+});
+
+describe("InsuranceClaimFacet — approver cancel of an APPROVED claim", () => {
+  afterEach(() => {
+    clearStore();
+  });
+
+  test("cancel rejects the claim and stays apart from the super-admin path", () => {
+    const claimId = BigInt.fromI32(11);
+    const claimKey = Bytes.fromByteArray(Bytes.fromBigInt(claimId));
+    const seed = baseEvent<ApprovedClaimCancelled>(INSURANCE);
+    const claim = loadInsuranceClaim(claimKey, seed);
+    claim.claimId = claimId;
+    // ClaimStatus.APPROVED = 2, and the ops contest window is still open.
+    claim.status = 2;
+    claim.contested = true;
+    claim.save();
+
+    const c = baseEvent<ApprovedClaimCancelled>(INSURANCE);
+    c.block.timestamp = BigInt.fromI32(9000);
+    c.parameters.push(
+      param("claimId", ethereum.Value.fromUnsignedBigInt(claimId)),
+    );
+    c.parameters.push(
+      param("circleId", ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(3))),
+    );
+    c.parameters.push(param("approver", ethereum.Value.fromAddress(OPERATOR)));
+    handleApprovedClaimCancelled(c);
+
+    const id = claimKey.toHexString();
+    // ClaimStatus.REJECTED = 3 — the same status ClaimForceRejected lands on…
+    assert.fieldEquals("InsuranceClaim", id, "status", "3");
+    // …so rejectionKind is what tells the two apart (3 = approver cancel).
+    assert.fieldEquals("InsuranceClaim", id, "rejectionKind", "3");
+    assert.fieldEquals(
+      "InsuranceClaim",
+      id,
+      "resolver",
+      OPERATOR.toHexString(),
+    );
+    assert.fieldEquals("InsuranceClaim", id, "reviewedAt", "9000");
+    // The teardown clears the whole contest record, not just the flag: a dead
+    // claim must not leave a stale contested marker or payout clock behind.
+    assert.fieldEquals("InsuranceClaim", id, "contested", "false");
+    assert.fieldEquals("InsuranceClaim", id, "payoutEligibleAt", "0");
+  });
+
+  test("the super-admin force reject clears the same contest record", () => {
+    const claimId = BigInt.fromI32(12);
+    const claimKey = Bytes.fromByteArray(Bytes.fromBigInt(claimId));
+    const seed = baseEvent<ClaimForceRejected>(INSURANCE);
+    const claim = loadInsuranceClaim(claimKey, seed);
+    claim.claimId = claimId;
+    claim.status = 2;
+    claim.contested = true;
+    claim.contestedBy = OPERATOR;
+    claim.payoutEligibleAt = BigInt.fromI32(1000);
+    claim.save();
+
+    const f = baseEvent<ClaimForceRejected>(INSURANCE);
+    f.parameters.push(
+      param("claimId", ethereum.Value.fromUnsignedBigInt(claimId)),
+    );
+    f.parameters.push(
+      param("circleId", ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(3))),
+    );
+    f.parameters.push(param("superAdmin", ethereum.Value.fromAddress(ALICE)));
+    handleClaimForceRejected(f);
+
+    const id = claimKey.toHexString();
+    assert.fieldEquals("InsuranceClaim", id, "status", "3");
+    // 2 = super-admin force reject, so it never reads as an approver cancel.
+    assert.fieldEquals("InsuranceClaim", id, "rejectionKind", "2");
+    assert.fieldEquals("InsuranceClaim", id, "resolver", ALICE.toHexString());
+    assert.fieldEquals("InsuranceClaim", id, "contested", "false");
+    assert.fieldEquals("InsuranceClaim", id, "payoutEligibleAt", "0");
+  });
+});
+
+describe("SetterFacet — per-currency minimum fiat amount", () => {
+  afterEach(() => {
+    clearStore();
+  });
+
+  test("the floor is set, then cleared back to no-floor", () => {
+    const set = baseEvent<MinFiatAmountUpdated>(DIAMOND);
+    set.parameters.push(
+      param("currency", ethereum.Value.fromFixedBytes(CURRENCY_INR)),
+    );
+    set.parameters.push(
+      param("previous", ethereum.Value.fromUnsignedBigInt(BigInt.zero())),
+    );
+    set.parameters.push(
+      param(
+        "current",
+        ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(50000)),
+      ),
+    );
+    handleMinFiatAmountUpdated(set);
+
+    const id = CURRENCY_INR.toHexString();
+    assert.fieldEquals("Currency", id, "minFiatAmount", "50000");
+
+    // Clearing the floor means 0 = no minimum, not "block every order".
+    const clear = baseEvent<MinFiatAmountUpdated>(DIAMOND);
+    clear.parameters.push(
+      param("currency", ethereum.Value.fromFixedBytes(CURRENCY_INR)),
+    );
+    clear.parameters.push(
+      param(
+        "previous",
+        ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(50000)),
+      ),
+    );
+    clear.parameters.push(
+      param("current", ethereum.Value.fromUnsignedBigInt(BigInt.zero())),
+    );
+    handleMinFiatAmountUpdated(clear);
+
+    assert.fieldEquals("Currency", id, "minFiatAmount", "0");
+    assert.entityCount("Currency", 1);
   });
 });

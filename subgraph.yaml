@@ -470,6 +470,8 @@ dataSources:
           handler: handleSuperAdminUpdated
         - event: AdminStatusUpdated(indexed address,bool)
           handler: handleAdminStatusUpdated
+        - event: MinFiatAmountUpdated(indexed bytes32,uint256,uint256)
+          handler: handleMinFiatAmountUpdated
       file: ./src/setter-facet.ts
   - kind: ethereum
     name: CapabilityFacet
@@ -536,6 +538,8 @@ dataSources:
           handler: handleClaimRejected
         - event: ClaimForceRejected(indexed uint256,indexed uint256,indexed address)
           handler: handleClaimForceRejected
+        - event: ApprovedClaimCancelled(indexed uint256,indexed uint256,indexed address)
+          handler: handleApprovedClaimCancelled
         - event: ClaimWithdrawn(indexed uint256,indexed uint256,indexed address)
           handler: handleClaimWithdrawn
         - event: ClaimSettled(indexed uint256,indexed uint256,uint256,uint256,uint256)

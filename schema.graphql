@@ -689,6 +689,11 @@ type Currency @entity(immutable: false) {
   isActive: Boolean!
   # R5 country scope: the country this currency is bound to (null until bound)
   country: Country
+  # Minimum fiat order amount for this currency, in the currency's own fiat
+  # units (same scale as Orders.fiatAmount). 0 means no floor: the contract
+  # appends this per-currency setting by upgrade, so a Diamond that never
+  # configured one reads 0, which must not be read as "block every order".
+  minFiatAmount: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -1063,6 +1068,13 @@ type InsuranceClaim @entity(immutable: false) {
   contestedBy: Bytes
   contestedAt: BigInt
   contestCount: Int!
+
+  # Which path took the claim to REJECTED. All three land in status 3, so the
+  # kind is what keeps an approver-level reversal apart from the super-admin
+  # escape hatch: 0 = not rejected, 1 = reviewer rejected (ClaimRejected),
+  # 2 = super admin force-rejected (ClaimForceRejected), 3 = currency approver
+  # cancelled an already-APPROVED claim (ApprovedClaimCancelled).
+  rejectionKind: Int!
 
   # Settlement breakdown
   settledUsdcAmount: BigInt!
