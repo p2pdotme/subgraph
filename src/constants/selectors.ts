@@ -2,12 +2,12 @@
 // Regenerate with: node scripts/generate-selectors.mjs <contracts-v4>/artifacts
 // Sources: 226 contract artifacts, 705 unique selectors.
 //   b072e9d5dad37c9cc8ea79ef3875c48d9a1ca704 (remotes/origin/claude/r8-retirement)
-//   b230b48a1a007a399f782113d535647ea745cc65 (remotes/origin/claude/r7-cutover)
+//   bc958c3448d741f1b211b43250667d440b14ed5c (remotes/origin/claude/r7-cutover)
 //   7dd2e81a3a69cf7d4e1cac20ec456599df6a573a (remotes/origin/dev)
 // Digest: a677136c9045743a7bb484875cce92a3bf5e54f10ab11a8c91453a13e83adc39
 
 /** contracts-v4 commits this map was generated from. */
-export const SELECTOR_SOURCE_COMMITS: string[] = ["b072e9d5dad37c9cc8ea79ef3875c48d9a1ca704", "b230b48a1a007a399f782113d535647ea745cc65", "7dd2e81a3a69cf7d4e1cac20ec456599df6a573a"];
+export const SELECTOR_SOURCE_COMMITS: string[] = ["b072e9d5dad37c9cc8ea79ef3875c48d9a1ca704", "bc958c3448d741f1b211b43250667d440b14ed5c", "7dd2e81a3a69cf7d4e1cac20ec456599df6a573a"];
 
 /** sha256 over the sorted `<selector> <name>` pairs below. */
 export const SELECTOR_MAP_DIGEST = "a677136c9045743a7bb484875cce92a3bf5e54f10ab11a8c91453a13e83adc39";
