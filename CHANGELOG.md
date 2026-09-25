@@ -36,6 +36,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `MinFiatAmountUpdated`: the per-currency minimum fiat order amount, on
   `Currency.minFiatAmount`. 0 means no floor, never "block every order"
 
+### Changed
+
+- Role bit 9 is labelled `ADMIN_VALUE_RETIRED`: contracts retired it, moving its
+  order/fiat powers to `DEV_LEAD` and its claim powers to `ADMIN`. The bit is
+  not reused and nothing is renumbered, and it stays grantable so holders
+  remain revocable — so it can still appear in `RoleMember` / `RoleActivity`
+  while authorizing nothing. `ADMIN` is now the only country-scoped role
+
 ### Fixed
 
 - `scripts/generate-selectors.mjs` dropped every contract named `Legacy*`, a

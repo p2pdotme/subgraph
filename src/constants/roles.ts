@@ -11,7 +11,15 @@ export const ROLE_CIRCLE_ADMIN: i32 = 5;
 export const ROLE_COMMUNITY_ADMIN: i32 = 6;
 export const ROLE_PRICE_UPDATER: i32 = 7;
 export const ROLE_CAPABILITY_GRANTEE: i32 = 8;
-export const ROLE_ADMIN_VALUE: i32 = 9;
+// Bit 9 is RETIRED: its order/fiat powers moved to DEV_LEAD and its
+// insurance-claim powers to ADMIN (which keeps the country binding claim
+// review needs). The bit is deliberately not reused and the others are not
+// renumbered, because renumbering would silently re-point every live on-chain
+// grant. MAX_ROLE stays 9 so a member still holding the retired bit remains
+// revocable — bit 9 appears in no policy mask, so membership authorizes
+// nothing, but it can still be granted and revoked until the registry is
+// drained of it. Expect grants on it to keep appearing until then.
+export const ROLE_ADMIN_VALUE_RETIRED: i32 = 9;
 export const MAX_ROLE: i32 = 9;
 
 const ROLE_NAMES: string[] = [
@@ -24,7 +32,9 @@ const ROLE_NAMES: string[] = [
   "COMMUNITY_ADMIN",
   "PRICE_UPDATER",
   "CAPABILITY_GRANTEE",
-  "ADMIN_VALUE",
+  // Labelled retired so a consumer rendering roleNames cannot show bit 9 as
+  // live authority: it is still holdable, but grants nothing.
+  "ADMIN_VALUE_RETIRED",
 ];
 
 // SCOPE_* — which binding check applies on top of the role mask.
