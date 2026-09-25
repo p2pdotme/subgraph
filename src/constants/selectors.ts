@@ -1,16 +1,16 @@
 // GENERATED FILE — do not edit by hand.
 // Regenerate with: node scripts/generate-selectors.mjs <contracts-v4>/artifacts
-// Sources: 225 contract artifacts, 705 unique selectors.
-//   ffed50dcd3b558cb12c1b7bda3b636e258e762ec (remotes/origin/claude/r8-retirement)
+// Sources: 226 contract artifacts, 705 unique selectors.
+//   b072e9d5dad37c9cc8ea79ef3875c48d9a1ca704 (remotes/origin/claude/r8-retirement)
 //   ecb8088edb940cdc4c54343b750015a20d9678bf (remotes/origin/claude/r7-cutover)
 //   7dd2e81a3a69cf7d4e1cac20ec456599df6a573a (remotes/origin/dev)
-// Digest: f4cb2b744c64e5918b4adc727da81bf4915d0fe5a7231dde70b29d61f6fcaf40
+// Digest: a677136c9045743a7bb484875cce92a3bf5e54f10ab11a8c91453a13e83adc39
 
 /** contracts-v4 commits this map was generated from. */
-export const SELECTOR_SOURCE_COMMITS: string[] = ["ffed50dcd3b558cb12c1b7bda3b636e258e762ec", "ecb8088edb940cdc4c54343b750015a20d9678bf", "7dd2e81a3a69cf7d4e1cac20ec456599df6a573a"];
+export const SELECTOR_SOURCE_COMMITS: string[] = ["b072e9d5dad37c9cc8ea79ef3875c48d9a1ca704", "ecb8088edb940cdc4c54343b750015a20d9678bf", "7dd2e81a3a69cf7d4e1cac20ec456599df6a573a"];
 
 /** sha256 over the sorted `<selector> <name>` pairs below. */
-export const SELECTOR_MAP_DIGEST = "f4cb2b744c64e5918b4adc727da81bf4915d0fe5a7231dde70b29d61f6fcaf40";
+export const SELECTOR_MAP_DIGEST = "a677136c9045743a7bb484875cce92a3bf5e54f10ab11a8c91453a13e83adc39";
 
 const SELECTOR_KEYS: string[] = [
   "0x014a4bc6",
@@ -776,7 +776,7 @@ const SELECTOR_NAMES: string[] = [
   "GetterFacet.getOrderFixedFeePaid(uint256)",
   "GovernorFacet.MIN_TIMELOCK_DELAY()",
   "B2BGatewayFacet.getIntegratorConfig(address)",
-  "RetirementInit.init(address[],address[])",
+  "LegacyAdminClearInit.init(address[],address[])",
   "InsurancePoolFacet.approvePipRefill(uint256)",
   "P2PGov.totalSupply()",
   "ReputationManager.updateLyingUserRp(address,bool)",
