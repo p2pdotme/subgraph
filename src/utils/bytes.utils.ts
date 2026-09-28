@@ -36,8 +36,9 @@ export function logKey(txHash: Bytes, logIndex: BigInt): Bytes {
 
 /**
  * Expands a role bitmask (uint256) into the list of set bit positions. Roles
- * live in the low bits (MAX_ROLE = 9); we scan 32 to leave headroom for roles
- * added in later releases without a mapping change.
+ * live in the low bits (MAX_ROLE = 10); we scan 32 to leave headroom for roles
+ * added in later releases without a mapping change — INSURANCE_ADMIN (bit 10)
+ * arrived that way, needing only a name in `roles.ts`.
  */
 export function maskToBits(mask: BigInt): i32[] {
   const bits: i32[] = [];
