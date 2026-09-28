@@ -1572,8 +1572,10 @@ type InsuranceClaimContestActivity @entity(immutable: true) {
 }
 
 # DIAMOND OWNERSHIP
-# Current owner of each Diamond proxy (main, insurance). R7 WS-3.5 moves the
-# main Diamond's ownership — and with it every facet re-cut — behind DevTimelock.
+# Current owner of each Diamond proxy — main, insurance and governance, one row
+# apiece. `diamondCut` is owner-gated on all three and each carries its own
+# owner, so R7 WS-3.5 is three transfers and "every facet re-cut is behind
+# DevTimelock" holds only once all three rows say so.
 type DiamondOwnership @entity(immutable: false) {
   id: Bytes! # diamond address
   diamond: Bytes!
@@ -1629,7 +1631,10 @@ type InsuranceNonPoolTokenSweep @entity(immutable: true) {
 
 # LEAD TIMELOCK
 # A per-lead OpenZeppelin TimelockController bound via RoleAdminFacet
-# .setRoleTimelock (R7). Instantiated as a data-source template on binding.
+# .setRoleTimelock (R7). Instantiated as a data-source template on binding, so
+# the count follows the bindings: R7 ships three (Dev, Ops and Marketing, the
+# last required because grantRole is timelocked and COMMUNITY_ADMIN is
+# Marketing's alone to seat), and a later lead needs no mapping change.
 type LeadTimelock @entity(immutable: false) {
   id: Bytes! # timelock address
   address: Bytes!
