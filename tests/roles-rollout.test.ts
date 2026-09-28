@@ -83,6 +83,9 @@ const DIAMOND = Address.fromString(
 const INSURANCE = Address.fromString(
   "0x17192bd2E8893E4eA0Ab5DB67AdbF38aE42e9931",
 );
+const GOVERNANCE = Address.fromString(
+  "0x0daE40ECA6C5BF01860Ba6E9397BdD088f7D9fba",
+);
 const RM = Address.fromString("0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D");
 const TIMELOCK = Address.fromString(
   "0x00000000000000000000000000000000000000c1",
@@ -559,7 +562,11 @@ describe("Diamond ownership — R7 WS-3.5", () => {
     clearStore();
   });
 
-  test("tracks the current owner per diamond", () => {
+  test("tracks the current owner per diamond, all three", () => {
+    // WS-3.5 is three transfers, not one: diamondCut is owner-gated on each
+    // proxy and each carries its own owner. Indexing only two would report the
+    // upgrade authority as settled while the third stayed cuttable by whoever
+    // deployed it — so all three addresses are asserted apart.
     const e = baseEvent<OwnershipTransferred>(DIAMOND);
     e.parameters.push(
       param("previousOwner", ethereum.Value.fromAddress(OPERATOR)),
@@ -573,6 +580,13 @@ describe("Diamond ownership — R7 WS-3.5", () => {
     );
     i.parameters.push(param("newOwner", ethereum.Value.fromAddress(ALICE)));
     handleOwnershipTransferred(i);
+
+    const g = baseEvent<OwnershipTransferred>(GOVERNANCE);
+    g.parameters.push(
+      param("previousOwner", ethereum.Value.fromAddress(OPERATOR)),
+    );
+    g.parameters.push(param("newOwner", ethereum.Value.fromAddress(TIMELOCK)));
+    handleOwnershipTransferred(g);
 
     assert.fieldEquals(
       "DiamondOwnership",
@@ -592,7 +606,14 @@ describe("Diamond ownership — R7 WS-3.5", () => {
       "owner",
       ALICE.toHexString(),
     );
-    assert.entityCount("DiamondOwnershipTransfer", 2);
+    assert.fieldEquals(
+      "DiamondOwnership",
+      GOVERNANCE.toHexString(),
+      "owner",
+      TIMELOCK.toHexString(),
+    );
+    assert.entityCount("DiamondOwnership", 3);
+    assert.entityCount("DiamondOwnershipTransfer", 3);
   });
 });
 

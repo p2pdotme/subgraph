@@ -827,6 +827,31 @@ dataSources:
         - event: OwnershipTransferred(indexed address,indexed address)
           handler: handleOwnershipTransferred
       file: ./src/ownership.ts
+  # The Governance Diamond owns its own upgrade path too: diamondCut is
+  # owner-gated on all three proxies and each has its OWN owner, so WS-3.5 is
+  # three transfers. Its cut facet additionally accepts a passed proposal
+  # executing against itself, so ownership is the emergency path there.
+  - kind: ethereum
+    name: GovernanceDiamondOwnership
+    network: base
+    source:
+      address: "0x0daE40ECA6C5BF01860Ba6E9397BdD088f7D9fba"
+      abi: OwnershipFacet
+      startBlock: 46279933
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - DiamondOwnership
+        - DiamondOwnershipTransfer
+      abis:
+        - name: OwnershipFacet
+          file: ./abis/OwnershipFacet.json
+      eventHandlers:
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+      file: ./src/ownership.ts
 templates:
   # Per-lead OpenZeppelin TimelockController (R7). Instantiated when
   # RoleAdminFacet.setRoleTimelock binds an instance to a role.

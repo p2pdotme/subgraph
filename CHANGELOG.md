@@ -10,6 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- `GovernanceDiamondOwnership`: `OwnershipTransferred` on the Governance
+  Diamond, which was the one proxy of the three whose owner went unindexed.
+  `diamondCut` is owner-gated on all three and each carries its own owner, so
+  R7 WS-3.5 is three transfers — indexing two would have shown the upgrade
+  authority as settled while the governance proxy stayed cuttable by its
+  deployer. Same handler and entities as the other two; rows are keyed by the
+  emitting address
 - Roles & permissions rollout (contracts-v4 R2 → R8): `RoleAdminFacet` data source
   (`ProtocolRole`, `RoleMember`, `SelectorPolicy`, `RoleActivity`, `CoSign`,
   `ProtocolAuthState`), `LegacyAuthUsed` indexing across the main Diamond,
