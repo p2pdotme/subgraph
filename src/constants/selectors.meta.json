@@ -1,14 +1,14 @@
 {
-  "selectorCount": 705,
+  "selectorCount": 707,
   "artifactCount": 226,
-  "digest": "a677136c9045743a7bb484875cce92a3bf5e54f10ab11a8c91453a13e83adc39",
+  "digest": "eeae7525f9642fef0d8d6758bbd1c9d2cdcd3ab52d593f19ac64ad976abbc58b",
   "sources": [
     {
       "commit": "b072e9d5dad37c9cc8ea79ef3875c48d9a1ca704",
       "ref": "remotes/origin/claude/r8-retirement"
     },
     {
-      "commit": "bc958c3448d741f1b211b43250667d440b14ed5c",
+      "commit": "dde85cdff0fbeb19c86de18017f816c13876d046",
       "ref": "remotes/origin/claude/r7-cutover"
     },
     {
@@ -97,6 +97,7 @@
     "0x215809ca": "GovernorFacet.MIN_VOTING_PERIOD()",
     "0x2177be25": "SetterFacet.setMonthlyVolumeLimit(bytes32,uint256)",
     "0x21c3e9ae": "ReputationManager.recommenderRewardUpdate(address,address,uint256,bool)",
+    "0x220ce960": "RoleAdminFacet.getFutarchyBridge()",
     "0x233c4f0f": "RpHelper.socialVerify(string,((string,string,string),((bytes32,address,uint32,uint32),bytes[]))[])",
     "0x23962f1a": "SetterFacet.deactivatePaymentChannel(uint256)",
     "0x23b872dd": "P2PGov.transferFrom(address,address,uint256)",
@@ -244,6 +245,7 @@
     "0x549f332a": "MerchantOnboardFacet.cancelUnstakeRequest(address)",
     "0x54dd7472": "ReputationManager.xRp()",
     "0x55a8069d": "GetterFacet.getMerchantMonthlyVolumeInfo(address,uint256)",
+    "0x55ed44f1": "RoleAdminFacet.setFutarchyBridge(address)",
     "0x564ed5ee": "InsurancePoolFacet.getReserveStatus()",
     "0x56781388": "GovernorFacet.castVote(uint256,uint8)",
     "0x5692dd55": "P2pConfigFacet.getComputedPricesWithTotalLiquidity(bytes32,uint256)",

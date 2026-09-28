@@ -98,7 +98,7 @@ on the legacy path":
 | Release              | Contract events                                                                                                                                                                                                                                                                                                                    | Entities                                                                                                                                       |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | R1 fund custody      | `CircleAdminP2PStakeReturned` (CircleFacet), `NonPoolTokenSwept` (InsurancePoolFacet)                                                                                                                                                                                                                                              | `CircleAdminP2PStakeReturn`, `InsuranceNonPoolTokenSweep`                                                                                      |
-| R2 role registry     | `RoleGranted`, `RoleRevoked`, `RoleTimelockSet`, `SelectorPolicySet`, `SelectorPolicyCleared`, `LegacyAuthToggled`, `LegacyExemptSet` (RoleAdminFacet)                                                                                                                                                                             | `ProtocolRole`, `RoleMember`, `SelectorPolicy`, `RoleActivity`, `ProtocolAuthState`                                                            |
+| R2 role registry     | `RoleGranted`, `RoleRevoked`, `RoleTimelockSet`, `SelectorPolicySet`, `SelectorPolicyCleared`, `LegacyAuthToggled`, `LegacyExemptSet`, `FutarchyBridgeUpdated` (RoleAdminFacet)                                                                                                                                                    | `ProtocolRole`, `RoleMember`, `SelectorPolicy`, `RoleActivity`, `ProtocolAuthState`                                                            |
 | R3/R4 shadow re-gate | `LegacyAuthUsed` on the main Diamond, the Insurance Diamond and the ReputationManager; `BlacklistRateLimitSet` (RpHelper)                                                                                                                                                                                                          | `LegacyAuthUsage`, `LegacyAuthSelectorStats`, `LegacyAuthDay`, counters and the blacklist rate limit on `ProtocolAuthState` / `SelectorPolicy` |
 | R5 country scope     | `CountryActiveSet`, `CurrencyCountryBound` (CountryFacet), `CountryAssigned` (RoleAdminFacet)                                                                                                                                                                                                                                      | `Country`, `Currency.country`, `AdminCountry`                                                                                                  |
 | R6 claim contest     | `ClaimContested`, `ClaimContestRemoved` (InsuranceClaimFacet)                                                                                                                                                                                                                                                                      | `InsuranceClaim.contested*`, `InsuranceClaimContestActivity`                                                                                   |
@@ -225,6 +225,22 @@ INSURANCE_ADMIN`) — `_qualifiesCircle` and
   executing against itself, so there ownership is the emergency path rather than
   the only one. A missing row means that Diamond has emitted no transfer yet,
   not that it is unowned.
+- **Who granted a role is now constrained, and one address escapes it.**
+  `grantRole` is a single selector covering every role bit, so its policy row
+  cannot say "Ops appoints Admins, Dev appoints Price Updaters". The contract
+  adds that as a second gate: the three leads self-rotate, `OPS_LEAD` appoints
+  ADMIN / INSURANCE_ADMIN / CIRCLE_ADMIN / CAPABILITY_GRANTEE, `MARKETING_LEAD`
+  appoints COMMUNITY_ADMIN, `DEV_LEAD` appoints PRICE_UPDATER, and either lead
+  may appoint FRAUD_MANAGER or drain the retired bit 9. Holding the role or
+  being the `LeadTimelock` bound to it both count, since `grantRole` is
+  timelocked while `revokeRole` is not. Two consequences for reading
+  `RoleActivity`: before the flip the matrix is **not enforced** (the seed grants
+  come from the legacy super admin, who holds no lead role), so early operators
+  will not fit it; and `ProtocolAuthState.futarchyBridge` — the root appointer
+  relaying an executed futarchy decision — bypasses both gates, so an operator
+  equal to that address took the root path and is the one case where any seat can
+  be granted or stripped. `null` there means never set, and the zero address
+  means deliberately cleared; either way there is no root path.
 - `SelectorPolicy.functionName`, `CoSign.functionName`, `LegacyAuthUsage
 .functionName` and `TimelockCall.functionName` resolve selectors through
   `src/constants/selectors.ts`, a generated map. Regenerate it after each

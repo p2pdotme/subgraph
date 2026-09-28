@@ -1,16 +1,21 @@
 // GENERATED FILE — do not edit by hand.
 // Regenerate with: node scripts/generate-selectors.mjs <contracts-v4>/artifacts
-// Sources: 226 contract artifacts, 705 unique selectors.
+// Sources: 226 contract artifacts, 707 unique selectors.
 //   b072e9d5dad37c9cc8ea79ef3875c48d9a1ca704 (remotes/origin/claude/r8-retirement)
-//   bc958c3448d741f1b211b43250667d440b14ed5c (remotes/origin/claude/r7-cutover)
+//   dde85cdff0fbeb19c86de18017f816c13876d046 (remotes/origin/claude/r7-cutover)
 //   7dd2e81a3a69cf7d4e1cac20ec456599df6a573a (remotes/origin/dev)
-// Digest: a677136c9045743a7bb484875cce92a3bf5e54f10ab11a8c91453a13e83adc39
+// Digest: eeae7525f9642fef0d8d6758bbd1c9d2cdcd3ab52d593f19ac64ad976abbc58b
 
 /** contracts-v4 commits this map was generated from. */
-export const SELECTOR_SOURCE_COMMITS: string[] = ["b072e9d5dad37c9cc8ea79ef3875c48d9a1ca704", "bc958c3448d741f1b211b43250667d440b14ed5c", "7dd2e81a3a69cf7d4e1cac20ec456599df6a573a"];
+export const SELECTOR_SOURCE_COMMITS: string[] = [
+  "b072e9d5dad37c9cc8ea79ef3875c48d9a1ca704",
+  "dde85cdff0fbeb19c86de18017f816c13876d046",
+  "7dd2e81a3a69cf7d4e1cac20ec456599df6a573a",
+];
 
 /** sha256 over the sorted `<selector> <name>` pairs below. */
-export const SELECTOR_MAP_DIGEST = "a677136c9045743a7bb484875cce92a3bf5e54f10ab11a8c91453a13e83adc39";
+export const SELECTOR_MAP_DIGEST =
+  "eeae7525f9642fef0d8d6758bbd1c9d2cdcd3ab52d593f19ac64ad976abbc58b";
 
 const SELECTOR_KEYS: string[] = [
   "0x014a4bc6",
@@ -93,6 +98,7 @@ const SELECTOR_KEYS: string[] = [
   "0x215809ca",
   "0x2177be25",
   "0x21c3e9ae",
+  "0x220ce960",
   "0x233c4f0f",
   "0x23962f1a",
   "0x23b872dd",
@@ -240,6 +246,7 @@ const SELECTOR_KEYS: string[] = [
   "0x549f332a",
   "0x54dd7472",
   "0x55a8069d",
+  "0x55ed44f1",
   "0x564ed5ee",
   "0x56781388",
   "0x5692dd55",
@@ -801,6 +808,7 @@ const SELECTOR_NAMES: string[] = [
   "GovernorFacet.MIN_VOTING_PERIOD()",
   "SetterFacet.setMonthlyVolumeLimit(bytes32,uint256)",
   "ReputationManager.recommenderRewardUpdate(address,address,uint256,bool)",
+  "RoleAdminFacet.getFutarchyBridge()",
   "RpHelper.socialVerify(string,((string,string,string),((bytes32,address,uint32,uint32),bytes[]))[])",
   "SetterFacet.deactivatePaymentChannel(uint256)",
   "P2PGov.transferFrom(address,address,uint256)",
@@ -948,6 +956,7 @@ const SELECTOR_NAMES: string[] = [
   "MerchantOnboardFacet.cancelUnstakeRequest(address)",
   "ReputationManager.xRp()",
   "GetterFacet.getMerchantMonthlyVolumeInfo(address,uint256)",
+  "RoleAdminFacet.setFutarchyBridge(address)",
   "InsurancePoolFacet.getReserveStatus()",
   "GovernorFacet.castVote(uint256,uint8)",
   "P2pConfigFacet.getComputedPricesWithTotalLiquidity(bytes32,uint256)",

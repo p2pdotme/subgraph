@@ -10,6 +10,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- `FutarchyBridgeUpdated` (RoleAdminFacet): the root appointer's address on
+  `ProtocolAuthState.futarchyBridge` / `futarchyBridgeSetBy` /
+  `futarchyBridgeSetAt`, plus a `FUTARCHY_BRIDGE_SET` `RoleActivity` carrying
+  `bridge` and `previousBridge`. It is the one caller that may grant or revoke
+  ANY role, bypassing both the selector policy and the new granter matrix, so it
+  is what makes an operator on a `RoleGranted` row readable: matching this
+  address means the root path, not the ordinary one. The zero address is stored
+  rather than treated as absent, because clearing the bridge removes the path
+  and that is a different fact from never having set one
+- `src/constants/selectors.ts` regenerated from r8 `b072e9d` / r7 `dde85cd` /
+  dev `7dd2e81`: 707 selectors (was 705), adding
+  `RoleAdminFacet.setFutarchyBridge(address)` (`0x55ed44f1`) and
+  `getFutarchyBridge()` (`0x220ce960`). Without them a policy row or timelocked
+  call on the root-appointer setter would render with an empty `functionName`
 - `GovernanceDiamondOwnership`: `OwnershipTransferred` on the Governance
   Diamond, which was the one proxy of the three whose owner went unindexed.
   `diamondCut` is owner-gated on all three and each carries its own owner, so

@@ -3,6 +3,7 @@ import {
   CoSignCancelled as CoSignCancelledEvent,
   CoSignProposed as CoSignProposedEvent,
   CountryAssigned as CountryAssignedEvent,
+  FutarchyBridgeUpdated as FutarchyBridgeUpdatedEvent,
   LegacyAuthToggled as LegacyAuthToggledEvent,
   LegacyAuthUsed as LegacyAuthUsedEvent,
   LegacyExemptSet as LegacyExemptSetEvent,
@@ -35,6 +36,7 @@ import {
   COSIGN_STATUS_PROPOSED,
   ROLE_ACTION_COUNTRY_ASSIGNED,
   ROLE_ACTION_COUNTRY_UNASSIGNED,
+  ROLE_ACTION_FUTARCHY_BRIDGE_SET,
   ROLE_ACTION_GRANTED,
   ROLE_ACTION_LEGACY_AUTH_TOGGLED,
   ROLE_ACTION_LEGACY_EXEMPT_SET,
@@ -287,6 +289,33 @@ export function handleLegacyAuthToggled(event: LegacyAuthToggledEvent): void {
     event.params.operator,
   );
   activity.flag = event.params.enabled;
+  activity.save();
+}
+
+// The futarchy bridge is the ROOT appointer: the only caller that may grant or
+// revoke ANY role, and the only one that bypasses both the selector's policy
+// and the granter matrix (which otherwise confines each role to its appointing
+// lead — Ops appoints Admins, Marketing appoints Community Admins, and the
+// three leads self-rotate). So this address is the answer to "who could take
+// any seat", and a `RoleActivity` whose operator equals it took that root path
+// rather than the ordinary one. address(0) removes the path entirely, so the
+// zero address here is a real value, not a missing one.
+export function handleFutarchyBridgeUpdated(
+  event: FutarchyBridgeUpdatedEvent,
+): void {
+  const state = loadProtocolAuthState(event);
+  state.futarchyBridge = event.params.bridge;
+  state.futarchyBridgeSetBy = event.params.updater;
+  state.futarchyBridgeSetAt = event.block.timestamp;
+  state.save();
+
+  const activity = newRoleActivity(
+    event,
+    ROLE_ACTION_FUTARCHY_BRIDGE_SET,
+    event.params.updater,
+  );
+  activity.bridge = event.params.bridge;
+  activity.previousBridge = event.params.old;
   activity.save();
 }
 

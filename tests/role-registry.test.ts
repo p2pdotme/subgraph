@@ -11,6 +11,7 @@ import {
   CoSignCancelled,
   CoSignProposed,
   CountryAssigned,
+  FutarchyBridgeUpdated,
   LegacyAuthToggled,
   LegacyAuthUsed,
   LegacyExemptSet,
@@ -25,6 +26,7 @@ import {
   handleCoSignCancelled,
   handleCoSignProposed,
   handleCountryAssigned,
+  handleFutarchyBridgeUpdated,
   handleLegacyAuthToggled,
   handleLegacyAuthUsed,
   handleLegacyExemptSet,
@@ -111,6 +113,17 @@ function policyEvent(
     ethereum.Value.fromBoolean(true),
   ]);
   e.parameters.push(param("policy", ethereum.Value.fromTuple(tuple)));
+  return e;
+}
+
+function bridgeEvent(
+  previous: Address,
+  bridge: Address,
+): FutarchyBridgeUpdated {
+  const e = baseEvent<FutarchyBridgeUpdated>();
+  e.parameters.push(param("updater", ethereum.Value.fromAddress(OPERATOR)));
+  e.parameters.push(param("old", ethereum.Value.fromAddress(previous)));
+  e.parameters.push(param("bridge", ethereum.Value.fromAddress(bridge)));
   return e;
 }
 
@@ -410,6 +423,45 @@ describe("RoleAdminFacet — shadow mode", () => {
     );
     // No policy row is invented for an unconfigured selector.
     assert.entityCount("SelectorPolicy", 0);
+  });
+});
+
+describe("RoleAdminFacet — futarchy bridge (root appointer)", () => {
+  afterEach(() => {
+    clearStore();
+  });
+
+  test("records the bridge on the singleton and logs the change", () => {
+    handleFutarchyBridgeUpdated(bridgeEvent(Address.zero(), ALICE));
+
+    assert.fieldEquals(
+      "ProtocolAuthState",
+      AUTH_ID,
+      "futarchyBridge",
+      ALICE.toHexString(),
+    );
+    assert.fieldEquals(
+      "ProtocolAuthState",
+      AUTH_ID,
+      "futarchyBridgeSetBy",
+      OPERATOR.toHexString(),
+    );
+    assert.entityCount("RoleActivity", 1);
+  });
+
+  test("clearing to the zero address is a value, not a gap", () => {
+    // address(0) removes the root path, so it must be stored rather than left
+    // looking like "never set" — the two mean different things.
+    handleFutarchyBridgeUpdated(bridgeEvent(Address.zero(), ALICE));
+    handleFutarchyBridgeUpdated(bridgeEvent(ALICE, Address.zero()));
+
+    assert.fieldEquals(
+      "ProtocolAuthState",
+      AUTH_ID,
+      "futarchyBridge",
+      Address.zero().toHexString(),
+    );
+    assert.entityCount("RoleActivity", 2);
   });
 });
 
