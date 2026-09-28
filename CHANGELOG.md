@@ -43,6 +43,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   not reused and nothing is renumbered, and it stays grantable so holders
   remain revocable — so it can still appear in `RoleMember` / `RoleActivity`
   while authorizing nothing. `ADMIN` is now the only country-scoped role
+- Documented that `SelectorPolicy.scope` names the check that runs, not a limit
+  on every role in the mask. Only `ADMIN`, `CIRCLE_ADMIN`, `CAPABILITY_GRANTEE`
+  and `PRICE_UPDATER` carry a binding; the four leads are unbound, so `LibAuth`
+  passes them on a COUNTRY / CIRCLE / CURRENCY row with nothing assigned. A
+  permission view that renders "country-scoped" as a per-holder limit understates
+  a lead's reach. Also documented that `timelocked` rows consult membership not
+  at all — only the bound `LeadTimelock` passes — and that `permissionless`
+  overrides both
 
 ### Fixed
 

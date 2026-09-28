@@ -166,6 +166,25 @@ Notes:
   role. Revoking `ADMIN` drops that member's assignments, and the contract
   emits one `CountryAssigned(…, false)` per country as it does, so the rows
   clear by replay rather than by any inference in the mapping.
+- **`SelectorPolicy.scope` names the check that runs, not a per-holder limit.**
+  Only four roles carry a binding: `ADMIN` per country, `CIRCLE_ADMIN` and
+  `CAPABILITY_GRANTEE` per circle, `PRICE_UPDATER` per currency. The four leads
+  (`DEV_LEAD`, `OPS_LEAD`, `MARKETING_LEAD`, `FRAUD_MANAGER`) are unbound, and
+  `LibAuth._qualifiesCountry` returns true as soon as the caller matched through
+  a role outside the scope's bound set — `_qualifiesCircle` and
+  `_qualifiesCurrency` short-circuit the same way. So a row with `scope: 1`
+  (COUNTRY) listing `DEV_LEAD` in `roles` does **not** confine that Dev Lead to
+  assigned countries; they pass everywhere, and the scope is there so the row
+  matches its gate variant. Cross `scope` with `AdminCountry` (or the circle /
+  currency binding) for the bound role only — never render "country-scoped" as a
+  limit on the leads.
+- **`timelocked: true` rows consult membership not at all.** The only caller that
+  passes is the `LeadTimelock` bound to some role in the mask
+  (`ProtocolRole.timelock`), so a `RoleMember` row on such a selector authorizes
+  no direct call however senior its holder — read those through
+  `TimelockOperation` / `TimelockCall`. `permissionless: true` is the one
+  override above everything here: it opens the selector to any caller, ahead of
+  both the timelock and the mask.
 - `SelectorPolicy.functionName`, `CoSign.functionName`, `LegacyAuthUsage
 .functionName` and `TimelockCall.functionName` resolve selectors through
   `src/constants/selectors.ts`, a generated map. Regenerate it after each
