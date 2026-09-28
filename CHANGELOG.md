@@ -38,6 +38,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- `INSURANCE_ADMIN` (role bit 10): contracts split claim review out of the
+  general country `ADMIN` into its own country-bound seat, taking the five
+  `InsuranceClaimFacet` policy rows with it (`approveClaim`,
+  `approveClaimWithAmount`, `rejectClaim`, `cancelApprovedClaim`,
+  `settleClaim`). `MAX_ROLE` is 10 and `roles.ts` names the bit, so grants and
+  policy masks on it index as `INSURANCE_ADMIN` instead of `UNKNOWN_ROLE_10`;
+  `maskToBits` already scanned 32 bits, so no mapping logic changed. Bit 10, not
+  the vacant retired 9, because reusing 9 would hand claim authority to anyone
+  still holding `ADMIN_VALUE`
+- `AdminCountry` now covers `ADMIN` **and** `INSURANCE_ADMIN`: both bind through
+  the same on-chain `adminCountries` set, so a row says an address is bound to a
+  country without saying for which role — cross it with `RoleMember`. On revoke
+  the contract clears the assignments only once the account holds neither role,
+  so a revoke of one of the two legitimately leaves the rows `assigned: true`
 - Role bit 9 is labelled `ADMIN_VALUE_RETIRED`: contracts retired it, moving its
   order/fiat powers to `DEV_LEAD` and its claim powers to `ADMIN`. The bit is
   not reused and nothing is renumbered, and it stays grantable so holders

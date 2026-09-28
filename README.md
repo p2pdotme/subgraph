@@ -152,26 +152,37 @@ Notes:
   to **enabled** — it is stored inverted on-chain), the `LegacyAuthUsed`
   counters that gate the R7 flip (zero for seven days across all three emitters),
   the configured-selector count and the break-glass pause.
-- Roles are bit positions (`0 DEV_LEAD … 8 CAPABILITY_GRANTEE`, see
-  `src/constants/roles.ts`); `SelectorPolicy.roles` / `roleNames` expand the
-  on-chain bitmask.
+- Roles are bit positions (`0 DEV_LEAD … 8 CAPABILITY_GRANTEE`, plus
+  `10 INSURANCE_ADMIN`, see `src/constants/roles.ts`); `SelectorPolicy.roles` /
+  `roleNames` expand the on-chain bitmask.
 - **Bit 9 (`ADMIN_VALUE_RETIRED`) is retired and authorizes nothing.** Its
-  order/fiat powers moved to `DEV_LEAD` and its claim powers to `ADMIN`. The
+  order/fiat powers moved to `DEV_LEAD` and its claim powers to `ADMIN`, and
+  from there to `INSURANCE_ADMIN` (bit 10) when claim review became its own
+  seat. The
   bit was not reused and the others were not renumbered — renumbering would
   re-point every live grant — and `MAX_ROLE` stays 9 so anyone still holding it
   stays revocable. So bit 9 can still appear in `RoleMember` and `RoleActivity`
   rows until the registry is drained of it; it will not appear in any
   `SelectorPolicy.roles` mask. Render it as retired, never as authority.
-- `AdminCountry` covers **`ADMIN` only** — it is now the single country-scoped
-  role. Revoking `ADMIN` drops that member's assignments, and the contract
-  emits one `CountryAssigned(…, false)` per country as it does, so the rows
-  clear by replay rather than by any inference in the mapping.
+- `AdminCountry` covers **`ADMIN` and `INSURANCE_ADMIN` together**. Both are
+  country-scoped and both resolve against the same on-chain `adminCountries`
+  set, so `CountryAssigned` carries no role and an `AdminCountry` row says only
+  that this address is bound to this country — for whichever of the two roles it
+  holds. Cross it with `RoleMember` to see which. The consequence on revoke:
+  `RoleAdminFacet` clears the assignments only once the account holds
+  **neither** role, because clearing on the first revoke would silently un-scope
+  the one that remains. It emits one `CountryAssigned(…, false)` per country
+  when it does, so the rows still clear by replay rather than by any inference
+  in the mapping — but a revoke of one of the two roles legitimately leaves the
+  rows `assigned: true`.
 - **`SelectorPolicy.scope` names the check that runs, not a per-holder limit.**
-  Only four roles carry a binding: `ADMIN` per country, `CIRCLE_ADMIN` and
-  `CAPABILITY_GRANTEE` per circle, `PRICE_UPDATER` per currency. The four leads
+  Only five roles carry a binding: `ADMIN` and `INSURANCE_ADMIN` per country
+  (sharing one set), `CIRCLE_ADMIN` and `CAPABILITY_GRANTEE` per circle,
+  `PRICE_UPDATER` per currency. The four leads
   (`DEV_LEAD`, `OPS_LEAD`, `MARKETING_LEAD`, `FRAUD_MANAGER`) are unbound, and
   `LibAuth._qualifiesCountry` returns true as soon as the caller matched through
-  a role outside the scope's bound set — `_qualifiesCircle` and
+  a role outside the scope's bound set (`COUNTRY_SCOPED_MASK` is `ADMIN |
+INSURANCE_ADMIN`) — `_qualifiesCircle` and
   `_qualifiesCurrency` short-circuit the same way. So a row with `scope: 1`
   (COUNTRY) listing `DEV_LEAD` in `roles` does **not** confine that Dev Lead to
   assigned countries; they pass everywhere, and the scope is there so the row

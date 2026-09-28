@@ -63,6 +63,7 @@ const KEY = Bytes.fromHexString(
 const ROLE_DEV_LEAD = 0;
 const ROLE_OPS_LEAD = 1;
 const ROLE_ADMIN = 4;
+const ROLE_INSURANCE_ADMIN = 10;
 
 let nextLogIndex = 0;
 
@@ -173,6 +174,20 @@ describe("RoleAdminFacet — membership", () => {
     assert.fieldEquals("RoleMember", memberId, "revokedAt", "1");
   });
 
+  test("INSURANCE_ADMIN (bit 10) is named, not UNKNOWN_ROLE_10", () => {
+    // Claim review was split off ADMIN onto its own country-bound bit. A role
+    // the mapping has no name for indexes as UNKNOWN_ROLE_<n>, which would
+    // reach every consumer rendering roleName — so the name is the assertion.
+    handleRoleGranted(roleEvent<RoleGranted>(ROLE_INSURANCE_ADMIN, ALICE));
+
+    const roleId = protocolRoleId(ROLE_INSURANCE_ADMIN).toHexString();
+    assert.fieldEquals("ProtocolRole", roleId, "name", "INSURANCE_ADMIN");
+    assert.fieldEquals("ProtocolRole", roleId, "role", "10");
+    const memberId = roleMemberId(ROLE_INSURANCE_ADMIN, ALICE).toHexString();
+    assert.fieldEquals("RoleMember", memberId, "roleName", "INSURANCE_ADMIN");
+    assert.fieldEquals("RoleMember", memberId, "isActive", "true");
+  });
+
   test("country assignment creates the Country and the AdminCountry link", () => {
     const e = baseEvent<CountryAssigned>();
     e.parameters.push(param("operator", ethereum.Value.fromAddress(OPERATOR)));
@@ -251,6 +266,26 @@ describe("RoleAdminFacet — selector policies", () => {
       "configuredSelectorCount",
       "1",
     );
+  });
+
+  test("a claim-review policy expands bit 10 to INSURANCE_ADMIN", () => {
+    // InsuranceClaimFacet.approveClaim: mask 1 << 10, COUNTRY scope, SENSITIVE.
+    // Bit 10 sits above the nine original roles, so this pins both halves of
+    // the expansion: maskToBits reaching it, and roleName knowing it.
+    const sel = Bytes.fromHexString("0x46e30135");
+    handleSelectorPolicySet(policyEvent(sel, 1 << 10, 1, 1, false, false, 0));
+
+    const id = sel.toHexString();
+    assert.fieldEquals(
+      "SelectorPolicy",
+      id,
+      "functionName",
+      "InsuranceClaimFacet.approveClaim(uint256)",
+    );
+    assert.fieldEquals("SelectorPolicy", id, "roles", "[10]");
+    assert.fieldEquals("SelectorPolicy", id, "roleNames", "[INSURANCE_ADMIN]");
+    assert.fieldEquals("SelectorPolicy", id, "scopeName", "COUNTRY");
+    assert.fieldEquals("SelectorPolicy", id, "tierName", "SENSITIVE");
   });
 
   test("dual-sign policy expands the co-sign mask", () => {
