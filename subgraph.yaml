@@ -775,6 +775,8 @@ dataSources:
           handler: handleLegacyAuthToggled
         - event: LegacyExemptSet(indexed bytes4,bool)
           handler: handleLegacyExemptSet
+        - event: FutarchyBridgeUpdated(indexed address,indexed address,indexed address)
+          handler: handleFutarchyBridgeUpdated
         # Emitted via LibAuth from every re-gated facet on the main Diamond
         - event: LegacyAuthUsed(indexed address,indexed bytes4)
           handler: handleLegacyAuthUsed

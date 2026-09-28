@@ -1295,6 +1295,14 @@ type ProtocolAuthState @entity(immutable: false) {
   blacklistWindowSeconds: BigInt
   blacklistMaxPerWindow: BigInt
   blacklistRateLimitSetAt: BigInt
+  # The futarchy bridge: root appointer, the one caller that may grant or
+  # revoke ANY role, bypassing both the selector policy and the granter
+  # matrix. `null` = never set, so there is no root path; the zero address =
+  # deliberately cleared, which also removes it. Non-null and non-zero means
+  # any RoleActivity whose operator is this address took the root path.
+  futarchyBridge: Bytes
+  futarchyBridgeSetAt: BigInt
+  futarchyBridgeSetBy: Bytes
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -1410,7 +1418,7 @@ type RoleActivity @entity(immutable: true) {
   id: Bytes! # txHash ++ logIndex
   # ROLE_GRANTED | ROLE_REVOKED | COUNTRY_ASSIGNED | COUNTRY_UNASSIGNED |
   # TIMELOCK_SET | POLICY_SET | POLICY_CLEARED | LEGACY_AUTH_TOGGLED |
-  # LEGACY_EXEMPT_SET
+  # LEGACY_EXEMPT_SET | FUTARCHY_BRIDGE_SET
   action: String!
   operator: Bytes!
   role: Int
@@ -1423,6 +1431,9 @@ type RoleActivity @entity(immutable: true) {
   timelock: Bytes
   previousTimelock: Bytes
   flag: Boolean
+  # FUTARCHY_BRIDGE_SET only
+  bridge: Bytes
+  previousBridge: Bytes
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
