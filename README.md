@@ -156,19 +156,22 @@ Notes:
   `10 INSURANCE_ADMIN`, see `src/constants/roles.ts`); `SelectorPolicy.roles` /
   `roleNames` expand the on-chain bitmask.
 - **Bit 9 (`ADMIN_VALUE_RETIRED`) is retired and authorizes nothing.** Its
-  order/fiat powers moved to `DEV_LEAD` and its claim powers to `ADMIN`, and
-  from there to `INSURANCE_ADMIN` (bit 10) when claim review became its own
-  seat. The
+  order/fiat powers moved to `DEV_LEAD` and its claim powers to `ADMIN`, and from
+  there to `INSURANCE_ADMIN` (bit 10) when claim review became its own seat. The
   bit was not reused and the others were not renumbered — renumbering would
-  re-point every live grant — and `MAX_ROLE` stays 9 so anyone still holding it
-  stays revocable. So bit 9 can still appear in `RoleMember` and `RoleActivity`
-  rows until the registry is drained of it; it will not appear in any
-  `SelectorPolicy.roles` mask. Render it as retired, never as authority.
+  re-point every live grant — and `MAX_ROLE` is 10, which still **admits** role
+  9, so anyone left holding it stays revocable. So bit 9 can still appear in
+  `RoleMember` and `RoleActivity` rows until the registry is drained of it; it
+  will not appear in any `SelectorPolicy.roles` mask. Render it as retired, never
+  as authority.
 - `AdminCountry` covers **`ADMIN` and `INSURANCE_ADMIN` together**. Both are
   country-scoped and both resolve against the same on-chain `adminCountries`
   set, so `CountryAssigned` carries no role and an `AdminCountry` row says only
   that this address is bound to this country — for whichever of the two roles it
-  holds. Cross it with `RoleMember` to see which. The consequence on revoke:
+  holds. Cross it with `RoleMember` to see which — and it matters which: claim
+  review is seated on `INSURANCE_ADMIN` alone, so a reviewer granted `ADMIN` by
+  mistake has an `AdminCountry` row that looks entirely correct (the binding half
+  is identical) while authorizing nothing on any claim. The consequence on revoke:
   `RoleAdminFacet` clears the assignments only once the account holds
   **neither** role, because clearing on the first revoke would silently un-scope
   the one that remains. It emits one `CountryAssigned(…, false)` per country
