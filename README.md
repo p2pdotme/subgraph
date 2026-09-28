@@ -185,6 +185,24 @@ Notes:
   `TimelockOperation` / `TimelockCall`. `permissionless: true` is the one
   override above everything here: it opens the selector to any caller, ahead of
   both the timelock and the mask.
+- **An absent `SelectorPolicy` row does not mean nobody can call the selector.**
+  Ten admin actions are gated by an exact capability record instead of the
+  registry and by design never get a policy row: `blacklistMerchant`,
+  `removeBlacklist`, `toggleOnlineOfflineByAdmin`, `adminSettleDispute`,
+  `delegateStakeToMerchant`, `undelegateStakeFromMerchant`,
+  `approveOrRejectPaymentChannel`, `updateMerchant`, `cancelUnstakeRequest`,
+  `approveOrRejectMigration`. Their authority lives in
+  `CirclePermission.selectors` (keyed `circleId-account`, maintained from
+  `PermissionGranted` / `PermissionRevoked`), so answer "who can blacklist a
+  merchant in circle 7?" from there, not from `SelectorPolicy`.
+  `LibCapability.checkPermission` tries the registry first, then that exact
+  record, then — while `legacyAuthEnabled` — a super admin, a global admin or the
+  circle's own admin, noting a `LegacyAuthUsed` as it goes. These selectors are
+  therefore where the legacy counters keep ticking until circle admins hold
+  explicit grants, and after the flip the capability record is the only path
+  left. The other never-configured families are genuinely unreachable through the
+  registry: retired or dying stubs removed at R8, futarchy-owned parameters the
+  Governance Diamond gates, and Diamond infrastructure gated by `owner`.
 - `SelectorPolicy.functionName`, `CoSign.functionName`, `LegacyAuthUsage
 .functionName` and `TimelockCall.functionName` resolve selectors through
   `src/constants/selectors.ts`, a generated map. Regenerate it after each

@@ -51,6 +51,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   a lead's reach. Also documented that `timelocked` rows consult membership not
   at all — only the bound `LeadTimelock` passes — and that `permissionless`
   overrides both
+- Documented that an absent `SelectorPolicy` row is not "nobody can call this".
+  Ten admin selectors (`blacklistMerchant`, `adminSettleDispute`,
+  `approveOrRejectPaymentChannel`, …) are capability-gated by design and never
+  get a policy row; their authority is `CirclePermission.selectors`, and
+  `LibCapability.checkPermission` still accepts a super admin, global admin or
+  circle admin while legacy auth is on, which is why the `LegacyAuthUsed`
+  counters keep ticking on exactly these until explicit grants exist
 
 ### Fixed
 
