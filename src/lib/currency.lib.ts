@@ -1,6 +1,15 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Currency, CurrencyMetricsByMonth, CurrencyMetricsByDay, LegacyStats } from "../../generated/schema";
-import { getYearMonthFromTimestamp, getDayFromTimestamp } from "../utils/date.utils";
+import {
+  Currency,
+  CurrencyConfig,
+  CurrencyMetricsByMonth,
+  CurrencyMetricsByDay,
+  LegacyStats,
+} from "../../generated/schema";
+import {
+  getYearMonthFromTimestamp,
+  getDayFromTimestamp,
+} from "../utils/date.utils";
 import {
   ORDER_TYPE_BUY,
   ORDER_TYPE_SELL,
@@ -105,9 +114,7 @@ export function updateCurrencyMetrics(
 ): void {
   // Monthly metrics
   const month = getYearMonthFromTimestamp(timestamp);
-  const monthKey = Bytes.fromUTF8(
-    `${currency.toHexString()}-${month}`,
-  );
+  const monthKey = Bytes.fromUTF8(`${currency.toHexString()}-${month}`);
   const m = loadCurrencyMetricsByMonth(monthKey, event);
   m.currency = currency;
   m.month = month;
@@ -115,8 +122,10 @@ export function updateCurrencyMetrics(
     m.completedBuyOrdersCount = m.completedBuyOrdersCount.plus(completedDelta);
     m.cancelledBuyOrdersCount = m.cancelledBuyOrdersCount.plus(cancelledDelta);
   } else if (orderType === ORDER_TYPE_SELL) {
-    m.completedSellOrdersCount = m.completedSellOrdersCount.plus(completedDelta);
-    m.cancelledSellOrdersCount = m.cancelledSellOrdersCount.plus(cancelledDelta);
+    m.completedSellOrdersCount =
+      m.completedSellOrdersCount.plus(completedDelta);
+    m.cancelledSellOrdersCount =
+      m.cancelledSellOrdersCount.plus(cancelledDelta);
   } else if (orderType === ORDER_TYPE_PAY) {
     m.completedPayOrdersCount = m.completedPayOrdersCount.plus(completedDelta);
     m.cancelledPayOrdersCount = m.cancelledPayOrdersCount.plus(cancelledDelta);
@@ -126,9 +135,7 @@ export function updateCurrencyMetrics(
 
   // Daily metrics
   const day = getDayFromTimestamp(timestamp);
-  const dayKey = Bytes.fromUTF8(
-    `${currency.toHexString()}-${day}`,
-  );
+  const dayKey = Bytes.fromUTF8(`${currency.toHexString()}-${day}`);
   const d = loadCurrencyMetricsByDay(dayKey, event);
   d.currency = currency;
   d.day = day;
@@ -136,12 +143,43 @@ export function updateCurrencyMetrics(
     d.completedBuyOrdersCount = d.completedBuyOrdersCount.plus(completedDelta);
     d.cancelledBuyOrdersCount = d.cancelledBuyOrdersCount.plus(cancelledDelta);
   } else if (orderType === ORDER_TYPE_SELL) {
-    d.completedSellOrdersCount = d.completedSellOrdersCount.plus(completedDelta);
-    d.cancelledSellOrdersCount = d.cancelledSellOrdersCount.plus(cancelledDelta);
+    d.completedSellOrdersCount =
+      d.completedSellOrdersCount.plus(completedDelta);
+    d.cancelledSellOrdersCount =
+      d.cancelledSellOrdersCount.plus(cancelledDelta);
   } else if (orderType === ORDER_TYPE_PAY) {
     d.completedPayOrdersCount = d.completedPayOrdersCount.plus(completedDelta);
     d.cancelledPayOrdersCount = d.cancelledPayOrdersCount.plus(cancelledDelta);
   }
   d.totalVolume = d.totalVolume.plus(volumeDelta);
   d.save();
+}
+
+/**
+ * Writes `CurrencyConfig.monthlyVolumeLimit` from the primary
+ * `MonthlyVolumeLimit(currency, limit)` event, which BOTH `SetterFacet` (the
+ * live setter) and `CountryFacet` (currency launch) emit with the same
+ * signature — hence one helper behind two thin handlers.
+ *
+ * Until this was wired the field was fed only by
+ * `CurrencyMonthlyVolumeLimitUpdate`, a replay-only event reachable through
+ * `emitMerchantWithdrawFeePercentageUpdates`, so the limit was as stale as the
+ * last replay. That selector is scheduled for removal, which would have left
+ * the field with no writer at all.
+ */
+export function applyMonthlyVolumeLimit(
+  currency: Bytes,
+  limit: BigInt,
+  event: ethereum.Event,
+): void {
+  let config = CurrencyConfig.load(currency);
+  if (!config) {
+    config = new CurrencyConfig(currency);
+    config.currency = currency;
+  }
+  config.monthlyVolumeLimit = limit;
+  config.blockNumber = event.block.number;
+  config.blockTimestamp = event.block.timestamp;
+  config.transactionHash = event.transaction.hash;
+  config.save();
 }

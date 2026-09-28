@@ -241,6 +241,29 @@ INSURANCE_ADMIN`) — `_qualifiesCircle` and
   equal to that address took the root path and is the one case where any seat can
   be granted or stripped. `null` there means never set, and the zero address
   means deliberately cleared; either way there is no root path.
+- **The `emit*` / `fix*` replay selectors: what this index still needs from
+  them.** contracts-v4 lists eleven selectors as scheduled for removal
+  (`CLAUDE.md`, "Scheduled removals") and asks that the indexer be checked
+  first, because the `emit*` family exists to let this subgraph replay state.
+  Checked: seven of the nine events that family emits have **no emitter
+  anywhere else** — `CurrencyAddedUpdate`,
+  `CurrencyMonthlyVolumeLimitUpdate`, `MerchantWithdrawFeePercentageUpdate`,
+  `PaymentChannelConfigUpdate`, `CircleMerchantDetailsAndConfigUpdate`,
+  `MerchantPaymentChannelUpdate`, `MerchantClaimableRewardsUpdate` (only
+  `PaymentChannelMigrationRequest` and `CircleCreated` are also emitted by the
+  real flows). Removing the selectors therefore makes those seven unemittable
+  for good, so any field written only from them would become permanently
+  unfillable. Every one of them now also has a primary path — `CurrencyToggled`
+  for `isActive`, `MonthlyVolumeLimit` for the volume limit,
+  `MerchantWithdrawFeePercentage` for the fee, `PaymentChannelConfigChanged` for
+  the channel config, and the merchant/reward flows for the rest — so **no, the
+  index does not need a replay path for steady-state correctness**, and the
+  removal is safe from this side. Two caveats worth keeping: a replay is still
+  the only way to backfill this state into a subgraph redeployed from a later
+  `startBlock`, and all eleven currently carry `SelectorPolicy` rows (OPS_LEAD,
+  GLOBAL) that stay indexed after the selectors are gone — so once they are
+  deleted from every release, regenerate the selector map with an earlier
+  release's artifacts as well, or those eleven rows lose their `functionName`.
 - `SelectorPolicy.functionName`, `CoSign.functionName`, `LegacyAuthUsage
 .functionName` and `TimelockCall.functionName` resolve selectors through
   `src/constants/selectors.ts`, a generated map. Regenerate it after each

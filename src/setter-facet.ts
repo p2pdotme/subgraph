@@ -5,6 +5,7 @@ import {
   MerchantPaymentChannelUpdate as MerchantPaymentChannelUpdateEvent,
   CurrencyAddedUpdate as CurrencyAddedUpdateEvent,
   CurrencyMonthlyVolumeLimitUpdate as CurrencyMonthlyVolumeLimitUpdateEvent,
+  MonthlyVolumeLimit as MonthlyVolumeLimitEvent,
   MerchantWithdrawFeePercentageUpdate as MerchantWithdrawFeePercentageUpdateEvent,
   PaymentChannelConfigUpdate as PaymentChannelConfigUpdateEvent,
   MerchantClaimableRewardsUpdate as MerchantClaimableRewardsUpdateEvent,
@@ -16,6 +17,7 @@ import {
 import { loadLegacyAdmin } from "./lib";
 import { CurrencyConfig, PaymentChannelConfig } from "../generated/schema";
 import {
+  applyMonthlyVolumeLimit,
   isMerchantActive,
   isMerchantAvailable,
   loadCircle,
@@ -168,20 +170,17 @@ export function handleMinFiatAmountUpdated(
   currency.save();
 }
 
+// The live setter's primary event. `CurrencyMonthlyVolumeLimitUpdate` below is
+// the replay-only mirror of the same field, kept because the rows it wrote are
+// already indexed — but this is the one that keeps the limit current.
+export function handleMonthlyVolumeLimit(event: MonthlyVolumeLimitEvent): void {
+  applyMonthlyVolumeLimit(event.params.currency, event.params.limit, event);
+}
+
 export function handleCurrencyMonthlyVolumeLimitUpdate(
   event: CurrencyMonthlyVolumeLimitUpdateEvent,
 ): void {
-  const id = event.params.currency;
-  let config = CurrencyConfig.load(id);
-  if (!config) {
-    config = new CurrencyConfig(id);
-    config.currency = event.params.currency;
-  }
-  config.monthlyVolumeLimit = event.params.newLimit;
-  config.blockNumber = event.block.number;
-  config.blockTimestamp = event.block.timestamp;
-  config.transactionHash = event.transaction.hash;
-  config.save();
+  applyMonthlyVolumeLimit(event.params.currency, event.params.newLimit, event);
 }
 
 export function handleMerchantWithdrawFeePercentageUpdate(

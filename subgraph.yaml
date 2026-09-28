@@ -307,6 +307,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - PaymentChannelConfig
+        - CurrencyConfig
         - Currency
         - Country
       abis:
@@ -322,6 +323,10 @@ dataSources:
           handler: handleCountryActiveSet
         - event: CurrencyCountryBound(indexed bytes32,indexed bytes32,bytes32)
           handler: handleCurrencyCountryBound
+        # Currency launch sets the monthly volume limit; same signature as
+        # SetterFacet's, so both write CurrencyConfig through one helper.
+        - event: MonthlyVolumeLimit(indexed bytes32,uint256)
+          handler: handleMonthlyVolumeLimit
       file: ./src/country-facet.ts
   - kind: ethereum
     name: ReputationManager
@@ -455,6 +460,10 @@ dataSources:
           handler: handleMerchantPaymentChannelUpdate
         - event: CurrencyAddedUpdate(indexed bytes32,bool)
           handler: handleCurrencyAddedUpdate
+        # The live setter's primary event; CurrencyMonthlyVolumeLimitUpdate
+        # above/below it is the replay-only mirror of the same field.
+        - event: MonthlyVolumeLimit(indexed bytes32,uint256)
+          handler: handleMonthlyVolumeLimit
         - event: CurrencyMonthlyVolumeLimitUpdate(indexed bytes32,uint256)
           handler: handleCurrencyMonthlyVolumeLimitUpdate
         - event: MerchantWithdrawFeePercentageUpdate(indexed bytes32,uint256)
