@@ -43,6 +43,7 @@ export {
   adjustUserMetricsByOrderType,
 } from "./user.lib";
 export {
+  applyMonthlyVolumeLimit,
   loadCurrency,
   loadCurrencyMetricsByMonth,
   loadCurrencyMetricsByDay,

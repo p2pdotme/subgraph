@@ -96,6 +96,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- `CurrencyConfig.monthlyVolumeLimit` was written only by
+  `CurrencyMonthlyVolumeLimitUpdate`, a replay-only event emitted by
+  `SetterFacet.emitMerchantWithdrawFeePercentageUpdates` — so every live limit
+  change went unindexed and the value was only as fresh as the last replay. The
+  primary `MonthlyVolumeLimit(currency, limit)` event was in both the
+  `SetterFacet` and `CountryFacet` ABIs with no handler; it is now wired on both
+  data sources through one shared helper, with the replay handler kept for the
+  rows it already wrote. The selector that emits the replay event is on
+  contracts-v4's scheduled-removal list, which would have left the field with no
+  writer at all
 - `scripts/generate-selectors.mjs` dropped every contract named `Legacy*`, a
   rule meant only for the deprecated `Legacy*Facet` shims. It now skips just
   those, so `LegacyAdminClearInit` — the deferred half of the R8 retirement —

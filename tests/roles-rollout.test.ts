@@ -10,6 +10,7 @@ import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   CountryActiveSet,
   CurrencyCountryBound,
+  MonthlyVolumeLimit,
 } from "../generated/CountryFacet/CountryFacet";
 import {
   AdminStatusUpdated,
@@ -42,6 +43,7 @@ import {
 import {
   handleCountryActiveSet,
   handleCurrencyCountryBound,
+  handleMonthlyVolumeLimit,
 } from "../src/country-facet";
 import {
   handleAdminStatusUpdated,
@@ -215,6 +217,50 @@ describe("CountryFacet — R5 country scope", () => {
       "country",
       countryId,
     );
+  });
+
+  test("a currency's monthly volume limit comes from the primary event", () => {
+    // Before this handler existed the field was written only by
+    // CurrencyMonthlyVolumeLimitUpdate — a replay-only event emitted by one of
+    // the selectors contracts has scheduled for removal — so a live limit
+    // change never reached the index and the value was as old as the last
+    // replay. Both SetterFacet and CountryFacet emit this same signature.
+    const e = baseEvent<MonthlyVolumeLimit>(DIAMOND);
+    e.parameters.push(
+      param("currency", ethereum.Value.fromFixedBytes(CURRENCY_INR)),
+    );
+    e.parameters.push(
+      param(
+        "limit",
+        ethereum.Value.fromUnsignedBigInt(BigInt.fromString("250000000000")),
+      ),
+    );
+    handleMonthlyVolumeLimit(e);
+
+    assert.fieldEquals(
+      "CurrencyConfig",
+      CURRENCY_INR.toHexString(),
+      "monthlyVolumeLimit",
+      "250000000000",
+    );
+
+    // A later change overwrites rather than accumulating.
+    const f = baseEvent<MonthlyVolumeLimit>(DIAMOND);
+    f.parameters.push(
+      param("currency", ethereum.Value.fromFixedBytes(CURRENCY_INR)),
+    );
+    f.parameters.push(
+      param("limit", ethereum.Value.fromUnsignedBigInt(BigInt.zero())),
+    );
+    handleMonthlyVolumeLimit(f);
+
+    assert.fieldEquals(
+      "CurrencyConfig",
+      CURRENCY_INR.toHexString(),
+      "monthlyVolumeLimit",
+      "0",
+    );
+    assert.entityCount("CurrencyConfig", 1);
   });
 });
 
