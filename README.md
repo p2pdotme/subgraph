@@ -244,11 +244,11 @@ INSURANCE_ADMIN`) — `_qualifiesCircle` and
   equal to that address took the root path and is the one case where any seat can
   be granted or stripped. `null` there means never set, and the zero address
   means deliberately cleared; either way there is no root path.
-- **The `emit*` / `fix*` replay selectors: what this index still needs from
-  them.** contracts-v4 lists eleven selectors as scheduled for removal
-  (`CLAUDE.md`, "Scheduled removals") and asks that the indexer be checked
-  first, because the `emit*` family exists to let this subgraph replay state.
-  Checked: seven of the nine events that family emits have **no emitter
+- **The `emit*` / `fix*` replay selectors are gone, and that is fine.**
+  contracts-v4 removed all eleven in R8 (`feat(r8): retire the eleven one-shot
+operational helpers`, which deleted `libraries/upgradeEmitEvents.sol` outright)
+  after asking that the indexer be checked first, because the `emit*` family
+  existed to let this subgraph replay state. Checked before the removal: seven of the nine events that family emits have **no emitter
   anywhere else** — `CurrencyAddedUpdate`,
   `CurrencyMonthlyVolumeLimitUpdate`, `MerchantWithdrawFeePercentageUpdate`,
   `PaymentChannelConfigUpdate`, `CircleMerchantDetailsAndConfigUpdate`,
@@ -259,14 +259,21 @@ INSURANCE_ADMIN`) — `_qualifiesCircle` and
   unfillable. Every one of them now also has a primary path — `CurrencyToggled`
   for `isActive`, `MonthlyVolumeLimit` for the volume limit,
   `MerchantWithdrawFeePercentage` for the fee, `PaymentChannelConfigChanged` for
-  the channel config, and the merchant/reward flows for the rest — so **no, the
-  index does not need a replay path for steady-state correctness**, and the
-  removal is safe from this side. Two caveats worth keeping: a replay is still
-  the only way to backfill this state into a subgraph redeployed from a later
-  `startBlock`, and all eleven currently carry `SelectorPolicy` rows (OPS_LEAD,
-  GLOBAL) that stay indexed after the selectors are gone — so once they are
-  deleted from every release, regenerate the selector map with an earlier
-  release's artifacts as well, or those eleven rows lose their `functionName`.
+  the channel config, and the merchant/reward flows for the rest — so the index
+  did not need a replay path for steady-state correctness. `CircleCreated` and
+  `PaymentChannelMigrationRequest` keep their real-flow emitters (`CircleFacet`,
+  `MerchantOnboardFacet`), so those two handlers stay live; **the other seven are
+  now historical-only** — they can never fire again, and their handlers exist
+  purely to keep the rows they already wrote. Two things this leaves behind. A
+  replay is still the only way to backfill that state into a subgraph redeployed
+  from a later `startBlock`, and it no longer exists. And all eleven selectors
+  carry `SelectorPolicy` rows (OPS_LEAD, GLOBAL) that outlive them, so the
+  generated map has to keep resolving names the current release no longer
+  contains: it does, because the map unions the r8, r7 and `dev` trees and the
+  pre-removal ones still carry them — regenerating after the removal produced a
+  byte-identical map (same 707 selectors, same digest), which is the check to
+  repeat when r7 and `dev` catch up. Drop the older artifacts from the generator
+  and those eleven rows lose their `functionName`.
 - `SelectorPolicy.functionName`, `CoSign.functionName`, `LegacyAuthUsage
 .functionName` and `TimelockCall.functionName` resolve selectors through
   `src/constants/selectors.ts`, a generated map. Regenerate it after each
