@@ -9,10 +9,181 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+
+- `FutarchyBridgeUpdated` (RoleAdminFacet): the root appointer's address on
+  `ProtocolAuthState.futarchyBridge` / `futarchyBridgeSetBy` /
+  `futarchyBridgeSetAt`, plus a `FUTARCHY_BRIDGE_SET` `RoleActivity` carrying
+  `bridge` and `previousBridge`. It is the one caller that may grant or revoke
+  ANY role, bypassing both the selector policy and the new granter matrix, so it
+  is what makes an operator on a `RoleGranted` row readable: matching this
+  address means the root path, not the ordinary one. The zero address is stored
+  rather than treated as absent, because clearing the bridge removes the path
+  and that is a different fact from never having set one
+- `src/constants/selectors.ts` regenerated from r8 `b072e9d` / r7 `dde85cd` /
+  dev `7dd2e81`: 707 selectors (was 705), adding
+  `RoleAdminFacet.setFutarchyBridge(address)` (`0x55ed44f1`) and
+  `getFutarchyBridge()` (`0x220ce960`). Without them a policy row or timelocked
+  call on the root-appointer setter would render with an empty `functionName`
+- `GovernanceDiamondOwnership`: `OwnershipTransferred` on the Governance
+  Diamond, which was the one proxy of the three whose owner went unindexed.
+  `diamondCut` is owner-gated on all three and each carries its own owner, so
+  R7 WS-3.5 is three transfers — indexing two would have shown the upgrade
+  authority as settled while the governance proxy stayed cuttable by its
+  deployer. Same handler and entities as the other two; rows are keyed by the
+  emitting address
+- Roles & permissions rollout (contracts-v4 R2 → R8): `RoleAdminFacet` data source
+  (`ProtocolRole`, `RoleMember`, `SelectorPolicy`, `RoleActivity`, `CoSign`,
+  `ProtocolAuthState`), `LegacyAuthUsed` indexing across the main Diamond,
+  Insurance Diamond and ReputationManager (`LegacyAuthUsage`,
+  `LegacyAuthSelectorStats`), R5 country scope (`Country`, `AdminCountry`,
+  `Currency.country`), R6 claim contests (`InsuranceClaim.contested*`,
+  `InsuranceClaimContestActivity`), R7 break-glass pause
+  (`EmergencyPauseActivity`), dual-sign consumption, and a `LeadTimelock`
+  data-source template (`LeadTimelock`, `TimelockOperation`, `TimelockCall`)
+- R1 fund custody (`CircleAdminP2PStakeReturn`, `InsuranceNonPoolTokenSweep`),
+  the R4 blacklist rate limit on `ProtocolAuthState`, and Diamond ownership
+  (`DiamondOwnership`, `DiamondOwnershipTransfer`) for the R7 move to DevTimelock
+- Legacy `superAdmin` / `admin` / `globalAdmin` stores replayed into
+  `LegacyAdmin` so the R8 `RetirementInit` address lists can be produced from
+  the subgraph
+- `LegacyAuthDay`: per-UTC-day buckets of `LegacyAuthUsed` with a per-emitter
+  split, so the retirement histogram is one ordered query instead of a
+  paginated scan (a quiet day has no row — absence is the zero)
+- `ApprovedClaimCancelled`: a currency approver's reversal of an already-APPROVED
+  insurance claim. Without it a cancelled claim sat at `APPROVED` in the index
+  for good. All three reject paths land on `status = 3`, so the new
+  `InsuranceClaim.rejectionKind` is what keeps them apart (1 = reviewer,
+  2 = super-admin force reject, 3 = approver cancel)
+- `MinFiatAmountUpdated`: the per-currency minimum fiat order amount, on
+  `Currency.minFiatAmount`. 0 means no floor, never "block every order"
+- `src/constants/selectors.ts` regenerated from r8 `848bc1f` / r7 `64da5b4` /
+  dev `7dd2e81`: 710 selectors (was 707), digest `07855e2b5b09`. The three adds
+  are the console-facing authorization views R8 publishes —
+  `getRoleCatalog()` (`0x01e830dc`),
+  `authorizationOf(bytes4,address,bytes32,uint256,bytes32)` (`0x93e888c7`) and
+  `authorizationsOf(address,bytes32,uint256,bytes32,uint256,uint256)`
+  (`0x363b36a5`) — exactly the `R8_MAIN_ADDS` set the retirement runbook
+  enumerates, less `getPermissionMap` which this map already carried. They are
+  views and emit nothing, so no handler, schema or ABI change follows; without
+  the names a `SelectorPolicy` row or a timelocked call on one would render with
+  an empty `functionName`
+
+### Changed
+
+- Documented that **`SelectorPolicy.scope` is a claim about the facet's gate that
+  the registry does not police**, and what that looks like from here. A row whose
+  `scope` disagrees with the `enforce*` / `passes*` variant its facet calls is
+  configurable and unrecorded: `enforce*` reverts `PolicyScopeMismatch`, while
+  `passes*` returns false and the caller falls through to legacy — so under
+  shadow mode the mismatch shows up as a `LegacyAuthUsed` counter that never
+  drains, on a `SelectorPolicy` row that still reads as correct. The R7 flip
+  criterion is exactly that counter reaching zero, so the failure mode was a
+  streak that could not start with nothing here to explain it. R8's new
+  `authorizationOf` separates the cases (it evaluates under the policy's own
+  scope, so `qualifies: true` against continuing `LegacyAuthUsed` is the mismatch
+  signature); the quiet-streak and `scope` notes now say so, and the previous
+  wording "the scope is there so the row matches its gate variant" is corrected
+  to the obligation it actually is
+- Roles prose no longer asks consumers to hard-code what `getRoleCatalog()`
+  publishes. `maxRole`, `validMask`, `retiredMask` and the three scoped-role
+  masks are now one live call, so the bit-9 retirement and the five bound roles
+  are read from the deployment rather than from this README, and a seat added,
+  split or retired after it was written surfaces on its own. The prose stays as
+  the explanation, and `src/constants/roles.ts` notes `RETIRED_ROLE_MASK` as the
+  authority its own bit-9 comment mirrors
+- Selector-map provenance moved to the post-R8 trees (r8 `a506bca`, r7
+  `64da5b4`, dev `7dd2e81`). R8 retired the eleven one-shot operational helpers
+  and deleted `libraries/upgradeEmitEvents.sol`, so the current release no longer
+  contains those selectors or the nine events that library emitted —
+  regenerating produced a **byte-identical** map (707 selectors, digest
+  `eeae7525f964`) because the generator unions the pre-removal r7 and dev trees,
+  which is what keeps the eleven `SelectorPolicy` rows resolving to a name. Of
+  the nine events, `CircleCreated` and `PaymentChannelMigrationRequest` keep
+  real-flow emitters; the other seven are now historical-only and can never fire
+  again. R8 also brought in the three events this subgraph already indexes
+  (`MinFiatAmountUpdated`, `FutarchyBridgeUpdated`, `ApprovedClaimCancelled`), so
+  no handler, schema or ABI change was needed
+- `INSURANCE_ADMIN` (role bit 10): contracts split claim review out of the
+  general country `ADMIN` into its own country-bound seat, taking the five
+  `InsuranceClaimFacet` policy rows with it (`approveClaim`,
+  `approveClaimWithAmount`, `rejectClaim`, `cancelApprovedClaim`,
+  `settleClaim`). `MAX_ROLE` is 10 and `roles.ts` names the bit, so grants and
+  policy masks on it index as `INSURANCE_ADMIN` instead of `UNKNOWN_ROLE_10`;
+  `maskToBits` already scanned 32 bits, so no mapping logic changed. Bit 10, not
+  the vacant retired 9, because reusing 9 would hand claim authority to anyone
+  still holding `ADMIN_VALUE`
+- `AdminCountry` now covers `ADMIN` **and** `INSURANCE_ADMIN`: both bind through
+  the same on-chain `adminCountries` set, so a row says an address is bound to a
+  country without saying for which role — cross it with `RoleMember`. On revoke
+  the contract clears the assignments only once the account holds neither role,
+  so a revoke of one of the two legitimately leaves the rows `assigned: true`
+- Role bit 9 is labelled `ADMIN_VALUE_RETIRED`: contracts retired it, moving its
+  order/fiat powers to `DEV_LEAD` and its claim powers to `ADMIN`. The bit is
+  not reused and nothing is renumbered, and it stays grantable so holders
+  remain revocable — so it can still appear in `RoleMember` / `RoleActivity`
+  while authorizing nothing. `ADMIN` is now the only country-scoped role
+- Documented that `SelectorPolicy.scope` names the check that runs, not a limit
+  on every role in the mask. Only `ADMIN`, `CIRCLE_ADMIN`, `CAPABILITY_GRANTEE`
+  and `PRICE_UPDATER` carry a binding; the four leads are unbound, so `LibAuth`
+  passes them on a COUNTRY / CIRCLE / CURRENCY row with nothing assigned. A
+  permission view that renders "country-scoped" as a per-holder limit understates
+  a lead's reach. Also documented that `timelocked` rows consult membership not
+  at all — only the bound `LeadTimelock` passes — and that `permissionless`
+  overrides both
+- Documented that an absent `SelectorPolicy` row is not "nobody can call this".
+  Ten admin selectors (`blacklistMerchant`, `adminSettleDispute`,
+  `approveOrRejectPaymentChannel`, …) are capability-gated by design and never
+  get a policy row; their authority is `CirclePermission.selectors`, and
+  `LibCapability.checkPermission` still accepts a super admin, global admin or
+  circle admin while legacy auth is on, which is why the `LegacyAuthUsed`
+  counters keep ticking on exactly these until explicit grants exist
+
+### Fixed
+
+- The capability-gated set is **twelve** selectors, not ten. contracts-v4 now
+  publishes `docs/roles-exclusions.json` — the machine-readable answer to which
+  of the four readings a zeroed `getSelectorPolicy` struct means (retired /
+  capability-gated / gated elsewhere / unexamined) — and its `capability` bucket
+  includes two this repo's README had missed: `InsurancePoolFacet.requestPipRefill`
+  and `cancelPipRefill`. Both are Insurance-Diamond entry points that check
+  capability cross-diamond against the main Diamond's `checkPermission`, so the
+  `PIPRefillRequest` rows written from the Insurance Diamond are authorized by
+  main-Diamond `CirclePermission` records. The README now points at that JSON as
+  authoritative rather than a hand-kept list. Cross-checked in passing: its
+  `roleBits` map (0–8 plus 10, no 9) matches `src/constants/roles.ts` exactly, and
+  both new selectors already resolve in the generated selector map
+- `CurrencyConfig.monthlyVolumeLimit` was written only by
+  `CurrencyMonthlyVolumeLimitUpdate`, a replay-only event emitted by
+  `SetterFacet.emitMerchantWithdrawFeePercentageUpdates` — so every live limit
+  change went unindexed and the value was only as fresh as the last replay. The
+  primary `MonthlyVolumeLimit(currency, limit)` event was in both the
+  `SetterFacet` and `CountryFacet` ABIs with no handler; it is now wired on both
+  data sources through one shared helper, with the replay handler kept for the
+  rows it already wrote. The selector that emits the replay event is on
+  contracts-v4's scheduled-removal list, which would have left the field with no
+  writer at all
+- `scripts/generate-selectors.mjs` dropped every contract named `Legacy*`, a
+  rule meant only for the deprecated `Legacy*Facet` shims. It now skips just
+  those, so `LegacyAdminClearInit` — the deferred half of the R8 retirement —
+  keeps a readable name instead of surfacing as a bare selector
+- `src/constants/selectors.meta.json`: contracts-v4 commits and a sha256 digest
+  of the generated selector map, so a second inventory generated elsewhere can
+  be diffed against it in CI
+- `scripts/import-local-stack.mjs`: writes the `localhost` network from a
+  contracts-v4 `local:deploy` output so the subgraph can be built and tested
+  against the local post-R8 stack
+- `scripts/generate-selectors.mjs` + generated `src/constants/selectors.ts`:
+  selector → `Contract.fn(types)` labels on policies, co-signs, legacy-auth
+  usage and timelock calls
 - MIT License and open-source community files (`CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`)
 - `.env.example` for local docker-compose setup
 
 ### Changed
+
+- Refreshed ABIs for `CircleFacet`, `CountryFacet`, `InsuranceClaimFacet`,
+  `InsurancePoolFacet`, `OrderProcessorFacet`, `SetterFacet`, `CapabilityFacet`,
+  `B2BGatewayFacet` from the R8 contracts; added `OwnershipFacet`;
+  `ReputationManager` ABI gains the `LegacyAuthUsed` event emitted via the RpHelpers
 - Replaced hardcoded postgres password in `docker-compose.yml` with `POSTGRES_PASSWORD` env var
 
 ---
@@ -20,6 +191,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.9.0] — 2025
 
 ### Added
+
 - `CapabilityFacet`: index `AccountNameUpdated`, `PermissionGranted`, `PermissionRevoked` events (#44)
 - ABI and subgraph config updated for security-check sync (#43)
 - RBAC (Role-Based Access Control) entity support (#37)
@@ -31,12 +203,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.8.0] — 2025
 
 ### Added
+
 - Campaign volume tracking (#35)
 - Per-order reward amounts indexed on the `Orders` entity (#33)
 - Monthly and daily stats per currency with legacy data support (#29)
 - Merchant and admin reward allocation entities (#28)
 
 ### Fixed
+
 - Reputation points double-count bug (#31)
 
 ---
@@ -44,12 +218,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.7.0] — 2024
 
 ### Added
+
 - Legacy order support (pre-COT data sources: `LegacyOrderFlowFacet`, `LegacyOrderProcessorFacet`)
 - `CircleOrderMetricsByMonth`: granular order-type counts
 - `CircleScoreState` entity extracted from `CircleMetrics`
 - User `totalVolume` and `ordersCount` tracking
 
 ### Fixed
+
 - Use actual settlement time in dispute rollback instead of average
 - Removed duplicate `AdditionalOrderDetails` handler
 - Merchant reassign nullable field fix
@@ -59,6 +235,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.6.0] — 2024
 
 ### Added
+
 - Circle score calculation and `CircleScore` entity (#9)
 - Campaign entities and reward claiming (#8)
 - Payment channel migration data and completed/cancelled order totals (#5)
@@ -67,6 +244,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - FCM token indexing for merchant notifications
 
 ### Fixed
+
 - Hex to UTF-8 conversion for string fields
 
 ---
@@ -74,6 +252,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.5.0] — 2024
 
 ### Added
+
 - Volume tracking entities (`OrderVolumeByMonth`, `OrderVolumeByDay`) (#4)
 - Rewards indexing: `MerchantReward`, `CircleAdminReward` (#2)
 - `paidAt` timestamp for sell/pay orders
@@ -85,6 +264,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.4.0] — 2024
 
 ### Added
+
 - COT (Change of Terms) order flow support
 - First-order-completed tracking per merchant
 - Active merchant count metric
@@ -94,6 +274,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.1.0] — 2024
 
 ### Added
+
 - Initial subgraph scaffold targeting Base Sepolia
 - `CircleFacet`, `USDCStakeDelegationFacet`, `OrderFlowFacet`, `OrderProcessorFacet` data sources
 - `MerchantOnboardFacet`, `MerchantRegistryFacet`, `RewardsFacet`, `CountryFacet` data sources

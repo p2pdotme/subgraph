@@ -33,6 +33,11 @@ export function loadInsuranceClaim(
     claim.circleAdminAtSubmit = Bytes.empty();
     claim.beneficiaryIsMerchant = false;
     claim.payoutEligibleAt = BigInt.zero();
+    claim.contested = false;
+    claim.contestedBy = null;
+    claim.contestedAt = null;
+    claim.contestCount = 0;
+    claim.rejectionKind = 0;
     claim.settledAt = BigInt.zero();
     claim.settledUsdcAmount = BigInt.zero();
     claim.fromCAIP = BigInt.zero();
