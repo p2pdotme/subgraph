@@ -1,26 +1,27 @@
 // GENERATED FILE — do not edit by hand.
 // Regenerate with: node scripts/generate-selectors.mjs <contracts-v4>/artifacts
-// Sources: 225 contract artifacts, 707 unique selectors.
-//   a506bca3b3141ea91ce26dbc1589aed1acfd4799 (remotes/origin/claude/r8-retirement)
+// Sources: 225 contract artifacts, 710 unique selectors.
+//   848bc1fe7816a64bb47649e7209c5803a4172ea1 (remotes/origin/claude/r8-retirement)
 //   64da5b416ec63e965a4945b27a9175a79d9f0870 (remotes/origin/claude/r7-cutover)
 //   7dd2e81a3a69cf7d4e1cac20ec456599df6a573a (remotes/origin/dev)
-// Digest: eeae7525f9642fef0d8d6758bbd1c9d2cdcd3ab52d593f19ac64ad976abbc58b
+// Digest: 07855e2b5b0985ca2b9f6eb9a7a7088e08373d84521eaf84f58b4b201acef81b
 
 /** contracts-v4 commits this map was generated from. */
 export const SELECTOR_SOURCE_COMMITS: string[] = [
-  "a506bca3b3141ea91ce26dbc1589aed1acfd4799",
+  "848bc1fe7816a64bb47649e7209c5803a4172ea1",
   "64da5b416ec63e965a4945b27a9175a79d9f0870",
   "7dd2e81a3a69cf7d4e1cac20ec456599df6a573a",
 ];
 
 /** sha256 over the sorted `<selector> <name>` pairs below. */
 export const SELECTOR_MAP_DIGEST =
-  "eeae7525f9642fef0d8d6758bbd1c9d2cdcd3ab52d593f19ac64ad976abbc58b";
+  "07855e2b5b0985ca2b9f6eb9a7a7088e08373d84521eaf84f58b4b201acef81b";
 
 const SELECTOR_KEYS: string[] = [
   "0x014a4bc6",
   "0x017a99ff",
   "0x01d5062a",
+  "0x01e830dc",
   "0x01ffc9a7",
   "0x028ebb10",
   "0x02c8fcaf",
@@ -162,6 +163,7 @@ const SELECTOR_KEYS: string[] = [
   "0x357e20d1",
   "0x359add75",
   "0x359c3c45",
+  "0x363b36a5",
   "0x3644e515",
   "0x3649ad6d",
   "0x36568abe",
@@ -447,6 +449,7 @@ const SELECTOR_KEYS: string[] = [
   "0x9382e786",
   "0x93a42939",
   "0x93d42fa1",
+  "0x93e888c7",
   "0x95d89b41",
   "0x96def709",
   "0x97575c8b",
@@ -731,6 +734,7 @@ const SELECTOR_NAMES: string[] = [
   "MerchantRegistryFacet.releaseVolumeHook(address,uint256,uint256,uint256,uint256,bool)",
   "MerchantRegistryFacet.removeNonEligibleMerchantsByCircleId(uint256,address[],address[])",
   "LeadTimelock.schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
+  "RoleAdminFacet.getRoleCatalog()",
   "DiamondLoupeFacet.supportsInterface(bytes4)",
   "GovernorFacet.castVoteBySig(uint256,uint8,address,uint8,bytes32,bytes32)",
   "MerchantOnboardFacet.register(uint256,uint256,string,bytes32)",
@@ -872,6 +876,7 @@ const SELECTOR_NAMES: string[] = [
   "USDCStakeDelegationFacet.delegateStakeToMerchant(uint256,address,uint256)",
   "ReputationManager.addOrUpdateCampaignManager(uint256,address,bytes32,uint256,bool)",
   "RpHelper.updateRecommenderRewardPercentage(uint256)",
+  "RoleAdminFacet.authorizationsOf(address,bytes32,uint256,bytes32,uint256,uint256)",
   "GovernorFacet.DOMAIN_SEPARATOR()",
   "ReputationManager.MAX_CAMPAIGN_USDC_REWARD()",
   "LeadTimelock.renounceRole(bytes32,address)",
@@ -1157,6 +1162,7 @@ const SELECTOR_NAMES: string[] = [
   "ReputationManager.hasVerified(uint256)",
   "GetterFacet.getMerchantConfig(address)",
   "CircleFacet.getCircleExchangeLiquidityBalance(uint256)",
+  "RoleAdminFacet.authorizationOf(bytes4,address,bytes32,uint256,bytes32)",
   "P2PGov.symbol()",
   "GovernorFacet.MAX_ACTIONS()",
   "GetterFacet.isCurrencySupported(bytes32)",
