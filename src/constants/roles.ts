@@ -18,7 +18,10 @@ export const ROLE_CAPABILITY_GRANTEE: i32 = 8;
 // stays within MAX_ROLE so a member still holding it remains revocable — bit 9
 // appears in no policy mask, so membership authorizes nothing, but it can
 // still be granted and revoked until the registry is drained of it. Expect
-// grants on it to keep appearing until then.
+// grants on it to keep appearing until then. Contracts publish the retirement
+// rather than leaving it to a mirror like this one: `RoleStorage
+// .RETIRED_ROLE_MASK`, surfaced by `RoleAdminFacet.getRoleCatalog()`, is the
+// authority for which bits at or below MAX_ROLE name no live role.
 export const ROLE_ADMIN_VALUE_RETIRED: i32 = 9;
 // Claim review as its own country-bound seat, split out of ADMIN so the
 // high-scrutiny value tier is separate from general country operations. It

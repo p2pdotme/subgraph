@@ -56,9 +56,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   2 = super-admin force reject, 3 = approver cancel)
 - `MinFiatAmountUpdated`: the per-currency minimum fiat order amount, on
   `Currency.minFiatAmount`. 0 means no floor, never "block every order"
+- `src/constants/selectors.ts` regenerated from r8 `848bc1f` / r7 `64da5b4` /
+  dev `7dd2e81`: 710 selectors (was 707), digest `07855e2b5b09`. The three adds
+  are the console-facing authorization views R8 publishes —
+  `getRoleCatalog()` (`0x01e830dc`),
+  `authorizationOf(bytes4,address,bytes32,uint256,bytes32)` (`0x93e888c7`) and
+  `authorizationsOf(address,bytes32,uint256,bytes32,uint256,uint256)`
+  (`0x363b36a5`) — exactly the `R8_MAIN_ADDS` set the retirement runbook
+  enumerates, less `getPermissionMap` which this map already carried. They are
+  views and emit nothing, so no handler, schema or ABI change follows; without
+  the names a `SelectorPolicy` row or a timelocked call on one would render with
+  an empty `functionName`
 
 ### Changed
 
+- Documented that **`SelectorPolicy.scope` is a claim about the facet's gate that
+  the registry does not police**, and what that looks like from here. A row whose
+  `scope` disagrees with the `enforce*` / `passes*` variant its facet calls is
+  configurable and unrecorded: `enforce*` reverts `PolicyScopeMismatch`, while
+  `passes*` returns false and the caller falls through to legacy — so under
+  shadow mode the mismatch shows up as a `LegacyAuthUsed` counter that never
+  drains, on a `SelectorPolicy` row that still reads as correct. The R7 flip
+  criterion is exactly that counter reaching zero, so the failure mode was a
+  streak that could not start with nothing here to explain it. R8's new
+  `authorizationOf` separates the cases (it evaluates under the policy's own
+  scope, so `qualifies: true` against continuing `LegacyAuthUsed` is the mismatch
+  signature); the quiet-streak and `scope` notes now say so, and the previous
+  wording "the scope is there so the row matches its gate variant" is corrected
+  to the obligation it actually is
+- Roles prose no longer asks consumers to hard-code what `getRoleCatalog()`
+  publishes. `maxRole`, `validMask`, `retiredMask` and the three scoped-role
+  masks are now one live call, so the bit-9 retirement and the five bound roles
+  are read from the deployment rather than from this README, and a seat added,
+  split or retired after it was written surfaces on its own. The prose stays as
+  the explanation, and `src/constants/roles.ts` notes `RETIRED_ROLE_MASK` as the
+  authority its own bit-9 comment mirrors
 - Selector-map provenance moved to the post-R8 trees (r8 `a506bca`, r7
   `64da5b4`, dev `7dd2e81`). R8 retired the eleven one-shot operational helpers
   and deleted `libraries/upgradeEmitEvents.sol`, so the current release no longer

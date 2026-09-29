@@ -1,10 +1,10 @@
 {
-  "selectorCount": 707,
+  "selectorCount": 710,
   "artifactCount": 225,
-  "digest": "eeae7525f9642fef0d8d6758bbd1c9d2cdcd3ab52d593f19ac64ad976abbc58b",
+  "digest": "07855e2b5b0985ca2b9f6eb9a7a7088e08373d84521eaf84f58b4b201acef81b",
   "sources": [
     {
-      "commit": "a506bca3b3141ea91ce26dbc1589aed1acfd4799",
+      "commit": "848bc1fe7816a64bb47649e7209c5803a4172ea1",
       "ref": "remotes/origin/claude/r8-retirement"
     },
     {
@@ -20,6 +20,7 @@
     "0x014a4bc6": "MerchantRegistryFacet.releaseVolumeHook(address,uint256,uint256,uint256,uint256,bool)",
     "0x017a99ff": "MerchantRegistryFacet.removeNonEligibleMerchantsByCircleId(uint256,address[],address[])",
     "0x01d5062a": "LeadTimelock.schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
+    "0x01e830dc": "RoleAdminFacet.getRoleCatalog()",
     "0x01ffc9a7": "DiamondLoupeFacet.supportsInterface(bytes4)",
     "0x028ebb10": "GovernorFacet.castVoteBySig(uint256,uint8,address,uint8,bytes32,bytes32)",
     "0x02c8fcaf": "MerchantOnboardFacet.register(uint256,uint256,string,bytes32)",
@@ -161,6 +162,7 @@
     "0x357e20d1": "USDCStakeDelegationFacet.delegateStakeToMerchant(uint256,address,uint256)",
     "0x359add75": "ReputationManager.addOrUpdateCampaignManager(uint256,address,bytes32,uint256,bool)",
     "0x359c3c45": "RpHelper.updateRecommenderRewardPercentage(uint256)",
+    "0x363b36a5": "RoleAdminFacet.authorizationsOf(address,bytes32,uint256,bytes32,uint256,uint256)",
     "0x3644e515": "GovernorFacet.DOMAIN_SEPARATOR()",
     "0x3649ad6d": "ReputationManager.MAX_CAMPAIGN_USDC_REWARD()",
     "0x36568abe": "LeadTimelock.renounceRole(bytes32,address)",
@@ -446,6 +448,7 @@
     "0x9382e786": "ReputationManager.hasVerified(uint256)",
     "0x93a42939": "GetterFacet.getMerchantConfig(address)",
     "0x93d42fa1": "CircleFacet.getCircleExchangeLiquidityBalance(uint256)",
+    "0x93e888c7": "RoleAdminFacet.authorizationOf(bytes4,address,bytes32,uint256,bytes32)",
     "0x95d89b41": "P2PGov.symbol()",
     "0x96def709": "GovernorFacet.MAX_ACTIONS()",
     "0x97575c8b": "GetterFacet.isCurrencySupported(bytes32)",

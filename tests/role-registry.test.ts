@@ -301,6 +301,30 @@ describe("RoleAdminFacet — selector policies", () => {
     assert.fieldEquals("SelectorPolicy", id, "tierName", "SENSITIVE");
   });
 
+  test("R8's console-facing authorization views resolve to names", () => {
+    // getRoleCatalog / authorizationOf / authorizationsOf are views, so they
+    // emit nothing and need no handler — but a `legacyExempt` flag or a
+    // timelocked call can still put one on a SelectorPolicy row, and an
+    // unresolved selector renders as an empty functionName rather than as an
+    // error. This pins the three R8_MAIN_ADDS selectors into the generated map.
+    const cases = [
+      "0x01e830dc|RoleAdminFacet.getRoleCatalog()",
+      "0x93e888c7|RoleAdminFacet.authorizationOf(bytes4,address,bytes32,uint256,bytes32)",
+      "0x363b36a5|RoleAdminFacet.authorizationsOf(address,bytes32,uint256,bytes32,uint256,uint256)",
+    ];
+    for (let i = 0; i < cases.length; i++) {
+      const parts = cases[i].split("|");
+      const sel = Bytes.fromHexString(parts[0]);
+      handleSelectorPolicySet(policyEvent(sel, 1, 0, 0, false, false, 0));
+      assert.fieldEquals(
+        "SelectorPolicy",
+        sel.toHexString(),
+        "functionName",
+        parts[1],
+      );
+    }
+  });
+
   test("dual-sign policy expands the co-sign mask", () => {
     // registerIntegrator: DEV_LEAD executes, MARKETING_LEAD (bit 2) co-signs
     const sel = Bytes.fromHexString("0x36ed9d14");

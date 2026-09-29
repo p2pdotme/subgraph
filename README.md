@@ -116,11 +116,22 @@ Notes:
   `roleTimelock`, `isOperationReady`, `getCoSign`, `owner`,
   `isLegacyAuthEnabled`) and use these entities for what _happened_. Loading
   both is a free cross-check: an indexed `roleMask` that disagrees with the
-  live call is itself worth surfacing.
+  live call is itself worth surfacing. For the decision rather than its inputs,
+  `authorizationOf(selector, account, country, circleId, currency)` returns
+  LibAuth's own answer plus the policy facts behind it, and
+  `authorizationsOf(...)` pages that over every configured selector — one call
+  for "what may this account call right now?", instead of re-deriving LibAuth's
+  rules off-chain from these entities.
 - `LegacyAuthDay` has **no row for a quiet day** — a subgraph only writes when
   an event fires, so absence is the zero. A fixed-width histogram fills the
   gaps from the `day` field (a unix day number); order by `day`, never by `id`.
-  The current quiet streak is `ProtocolAuthState.lastLegacyAuthUsedAt`.
+  The current quiet streak is `ProtocolAuthState.lastLegacyAuthUsedAt`. A streak
+  that will not start is not necessarily a caller still holding a legacy admin:
+  a misconfigured `scope` keeps `passes*` returning false forever, so the fall
+  through to legacy is structural and no amount of granting fixes it. Suspect it
+  when `LegacyAuthSelectorStats` concentrates on one (emitter, selector) pair
+  whose policy row looks correct — then check `authorizationOf` per the `scope`
+  note below.
 - `LegacyAuthSelectorStats` is keyed per **(emitter, selector)**, so a
   protocol-wide per-selector total means summing the three emitter rows.
 - `ProtocolAuthState.configuredSelectorCount` counts selectors whose policy is
@@ -163,7 +174,11 @@ Notes:
   9, so anyone left holding it stays revocable. So bit 9 can still appear in
   `RoleMember` and `RoleActivity` rows until the registry is drained of it; it
   will not appear in any `SelectorPolicy.roles` mask. Render it as retired, never
-  as authority.
+  as authority. Which bits are retired is no longer something a consumer has to
+  hard-code from prose like this: `getRoleCatalog()` returns `maxRole`,
+  `validMask`, `retiredMask` and the three scoped-role masks as this deployment
+  defines them, so read the retirement live and let a future seat that is added,
+  split or retired show up on its own.
 - `AdminCountry` covers **`ADMIN` and `INSURANCE_ADMIN` together**. Both are
   country-scoped and both resolve against the same on-chain `adminCountries`
   set, so `CountryAssigned` carries no role and an `AdminCountry` row says only
@@ -188,10 +203,24 @@ Notes:
 INSURANCE_ADMIN`) — `_qualifiesCircle` and
   `_qualifiesCurrency` short-circuit the same way. So a row with `scope: 1`
   (COUNTRY) listing `DEV_LEAD` in `roles` does **not** confine that Dev Lead to
-  assigned countries; they pass everywhere, and the scope is there so the row
-  matches its gate variant. Cross `scope` with `AdminCountry` (or the circle /
-  currency binding) for the bound role only — never render "country-scoped" as a
-  limit on the leads.
+  assigned countries; they pass everywhere, and the scope is there to be matched
+  by the gate variant the facet calls. Cross `scope` with `AdminCountry` (or the
+  circle / currency binding) for the bound role only — never render
+  "country-scoped" as a limit on the leads.
+- **`scope` is a claim about the facet's gate, and nothing in the registry keeps
+  the two in step.** A policy row whose `scope` disagrees with the `enforce*` /
+  `passes*` variant its facet actually calls is configurable, and the registry
+  neither rejects nor records it: `enforce*` reverts `PolicyScopeMismatch`
+  (`0xa2a481e6`) at call time, while `passes*` merely returns false and the
+  caller falls through to the legacy path. Under shadow mode that is the second
+  case, so the mismatch surfaces here as **a `LegacyAuthUsed` counter that never
+  drains** rather than as anything on the `SelectorPolicy` row, which keeps
+  looking correct. `authorizationOf` separates the two: it evaluates under the
+  policy's **own** scope, so `qualifies: true` on an account whose calls keep
+  emitting `LegacyAuthUsed` is the mismatch signature — the registry would admit
+  them, the facet's variant does not. (A `dualSign` row on an `enforce*`-gated
+  selector fails the same way but louder: `DualSignConsumeOnly`, always a
+  revert.)
 - **`timelocked: true` rows consult membership not at all.** The only caller that
   passes is the `LeadTimelock` bound to some role in the mask
   (`ProtocolRole.timelock`), so a `RoleMember` row on such a selector authorizes
