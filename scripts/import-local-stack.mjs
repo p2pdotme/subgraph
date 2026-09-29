@@ -9,10 +9,16 @@
  *
  * Every data source in subgraph.yaml is mapped to the address it lives at on
  * the local stack: main-Diamond facets → the Diamond, Insurance facets → the
- * Insurance Diamond, ReputationManager → itself. The GovernorFacet is not part
- * of the local stack, so it is left out (it keeps its manifest address).
- * LeadTimelocks need no entry: the template is instantiated from
- * RoleTimelockSet events.
+ * Insurance Diamond, ReputationManager → itself.
+ *
+ * Two sources are deliberately left out, and keep their manifest (mainnet)
+ * address on the localhost network, where they simply match nothing: the
+ * Governance Diamond's `GovernorFacet` and `GovernanceDiamondOwnership`, because
+ * `local:deploy` deploys no Governance Diamond. Nothing else needs an entry
+ * either — the lead timelocks (three at R7: dev, ops and marketing) arrive as
+ * template instances from `RoleTimelockSet`, and the futarchy bridge is learned
+ * from `FutarchyBridgeUpdated`. `local-stack.json` reports neither of those
+ * addresses, and this importer does not need them to.
  */
 import fs from "node:fs";
 import path from "node:path";
