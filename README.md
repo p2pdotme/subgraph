@@ -199,16 +199,30 @@ INSURANCE_ADMIN`) — `_qualifiesCircle` and
   `TimelockOperation` / `TimelockCall`. `permissionless: true` is the one
   override above everything here: it opens the selector to any caller, ahead of
   both the timelock and the mask.
-- **An absent `SelectorPolicy` row does not mean nobody can call the selector.**
-  Ten admin actions are gated by an exact capability record instead of the
-  registry and by design never get a policy row: `blacklistMerchant`,
+- **An absent `SelectorPolicy` row does not mean nobody can call the selector,
+  and contracts-v4 now publishes which of the four readings applies.**
+  `getSelectorPolicy` returns the same zeroed struct for "retired",
+  "capability-gated", "gated somewhere other than the registry" and "nobody has
+  looked at this yet" — and those readings are the difference between fine and
+  alarming. `docs/roles-exclusions.json` in contracts-v4 is the machine-readable
+  answer, keyed by selector with a bucket and a `why` per entry; prefer it over
+  any list hand-kept here. Governed selectors are deliberately absent from it:
+  read those live from `getConfiguredSelectors`, which is authoritative per
+  network.
+  Its `capability` bucket holds **twelve** selectors — `blacklistMerchant`,
   `removeBlacklist`, `toggleOnlineOfflineByAdmin`, `adminSettleDispute`,
   `delegateStakeToMerchant`, `undelegateStakeFromMerchant`,
   `approveOrRejectPaymentChannel`, `updateMerchant`, `cancelUnstakeRequest`,
-  `approveOrRejectMigration`. Their authority lives in
+  `approveOrRejectMigration`, plus `InsurancePoolFacet.requestPipRefill` and
+  `cancelPipRefill`. Authority for all twelve lives in
   `CirclePermission.selectors` (keyed `circleId-account`, maintained from
   `PermissionGranted` / `PermissionRevoked`), so answer "who can blacklist a
-  merchant in circle 7?" from there, not from `SelectorPolicy`.
+  merchant in circle 7?" from there, not from `SelectorPolicy`. The last two are
+  worth singling out: they are **Insurance**-Diamond entry points that check
+  capability **cross-diamond** against the main Diamond's `checkPermission`, so
+  the `PIPRefillRequest` rows this subgraph writes from the Insurance Diamond are
+  authorized by main-Diamond capability records — the two sides of that answer sit
+  on different proxies.
   `LibCapability.checkPermission` tries the registry first, then that exact
   record, then — while `legacyAuthEnabled` — a super admin, a global admin or the
   circle's own admin, noting a `LegacyAuthUsed` as it goes. These selectors are

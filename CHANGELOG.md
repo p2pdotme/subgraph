@@ -108,6 +108,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- The capability-gated set is **twelve** selectors, not ten. contracts-v4 now
+  publishes `docs/roles-exclusions.json` — the machine-readable answer to which
+  of the four readings a zeroed `getSelectorPolicy` struct means (retired /
+  capability-gated / gated elsewhere / unexamined) — and its `capability` bucket
+  includes two this repo's README had missed: `InsurancePoolFacet.requestPipRefill`
+  and `cancelPipRefill`. Both are Insurance-Diamond entry points that check
+  capability cross-diamond against the main Diamond's `checkPermission`, so the
+  `PIPRefillRequest` rows written from the Insurance Diamond are authorized by
+  main-Diamond `CirclePermission` records. The README now points at that JSON as
+  authoritative rather than a hand-kept list. Cross-checked in passing: its
+  `roleBits` map (0–8 plus 10, no 9) matches `src/constants/roles.ts` exactly, and
+  both new selectors already resolve in the generated selector map
 - `CurrencyConfig.monthlyVolumeLimit` was written only by
   `CurrencyMonthlyVolumeLimitUpdate`, a replay-only event emitted by
   `SetterFacet.emitMerchantWithdrawFeePercentageUpdates` — so every live limit
