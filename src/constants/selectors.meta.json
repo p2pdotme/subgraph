@@ -1,14 +1,14 @@
 {
   "selectorCount": 707,
-  "artifactCount": 226,
+  "artifactCount": 225,
   "digest": "eeae7525f9642fef0d8d6758bbd1c9d2cdcd3ab52d593f19ac64ad976abbc58b",
   "sources": [
     {
-      "commit": "b072e9d5dad37c9cc8ea79ef3875c48d9a1ca704",
+      "commit": "a506bca3b3141ea91ce26dbc1589aed1acfd4799",
       "ref": "remotes/origin/claude/r8-retirement"
     },
     {
-      "commit": "dde85cdff0fbeb19c86de18017f816c13876d046",
+      "commit": "64da5b416ec63e965a4945b27a9175a79d9f0870",
       "ref": "remotes/origin/claude/r7-cutover"
     },
     {

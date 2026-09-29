@@ -59,6 +59,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Selector-map provenance moved to the post-R8 trees (r8 `a506bca`, r7
+  `64da5b4`, dev `7dd2e81`). R8 retired the eleven one-shot operational helpers
+  and deleted `libraries/upgradeEmitEvents.sol`, so the current release no longer
+  contains those selectors or the nine events that library emitted —
+  regenerating produced a **byte-identical** map (707 selectors, digest
+  `eeae7525f964`) because the generator unions the pre-removal r7 and dev trees,
+  which is what keeps the eleven `SelectorPolicy` rows resolving to a name. Of
+  the nine events, `CircleCreated` and `PaymentChannelMigrationRequest` keep
+  real-flow emitters; the other seven are now historical-only and can never fire
+  again. R8 also brought in the three events this subgraph already indexes
+  (`MinFiatAmountUpdated`, `FutarchyBridgeUpdated`, `ApprovedClaimCancelled`), so
+  no handler, schema or ABI change was needed
 - `INSURANCE_ADMIN` (role bit 10): contracts split claim review out of the
   general country `ADMIN` into its own country-bound seat, taking the five
   `InsuranceClaimFacet` policy rows with it (`approveClaim`,
