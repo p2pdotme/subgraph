@@ -1640,6 +1640,33 @@ type EmergencyPauseActivity @entity(immutable: true) {
   transactionHash: Bytes!
 }
 
+# CIRCLE ADMIN HISTORY (R8.2)
+# The R8 cut seeds the circle-admin seats that `updateCircleAdmin` had already
+# replaced, because the contract never stored them and a dispute over a past
+# decision needs to know who held the seat at the time. Emitted by
+# `RetirementInit` as a `delegatecall` from the main Diamond, so the logs carry
+# the Diamond's address and the existing CircleFacet data source sees them.
+#
+# These are SEEDED rows, not observed ones: the seed is supplied as calldata to
+# the cut and validated against the Diamond's own circles (strictly increasing
+# `until`, non-zero admin, `until` in the past), so it is as good as whoever
+# assembled it. Rows for seats replaced AFTER the cut come from
+# `CircleAdminUpdated` instead, which is observed — do not treat the two as one
+# provenance.
+type CircleAdminHistory @entity(immutable: true) {
+  id: Bytes! # txHash ++ logIndex
+  circleId: BigInt!
+  admin: Bytes!
+  # When `updateCircleAdmin` replaced this admin (the CircleAdminUpdated block
+  # time). Strictly increasing per circle, so ordering by it reconstructs the
+  # succession.
+  until: BigInt!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
 # SEIZED STAKE (R8.2)
 # Mirrors the Insurance Diamond's own `getSeizedStake(token, country)` /
 # `getSeizedStakeTotal(token)` accounting: a force-recovered stake is credited to

@@ -6,8 +6,12 @@ import {
   CircleAdminCommunityUrlUpdated as CircleAdminCommunityUrlUpdatedEvent,
   // CircleProtocolTokenStaked as CircleProtocolTokenStakedEvent,
   CircleAdminP2PStakeReturned as CircleAdminP2PStakeReturnedEvent,
+  CircleAdminHistorySeeded as CircleAdminHistorySeededEvent,
 } from "../generated/CircleFacet/CircleFacet";
-import { CircleAdminP2PStakeReturn } from "../generated/schema";
+import {
+  CircleAdminHistory,
+  CircleAdminP2PStakeReturn,
+} from "../generated/schema";
 import { loadCircle, loadCircleMetrics } from "./lib";
 import { logKey } from "./utils";
 
@@ -136,4 +140,28 @@ export function handleCircleAdminP2PStakeReturned(
   entity.blockTimestamp = event.block.timestamp;
   entity.transactionHash = event.transaction.hash;
   entity.save();
+}
+
+// R8.2: the cut seeds the circle-admin seats `updateCircleAdmin` had already
+// replaced, which the contract never stored — a dispute over a past decision
+// needs to know who held the seat then. Emitted by `RetirementInit` as a
+// `delegatecall` from the Diamond, so the log arrives on this data source even
+// though the event is declared on the initializer.
+//
+// Seeded, not observed: the list is calldata to the cut, validated against the
+// Diamond's circles but otherwise as good as whoever assembled it. Seats
+// replaced after the cut come from `CircleAdminUpdated` instead.
+export function handleCircleAdminHistorySeeded(
+  event: CircleAdminHistorySeededEvent,
+): void {
+  const row = new CircleAdminHistory(
+    logKey(event.transaction.hash, event.logIndex),
+  );
+  row.circleId = event.params.circleId;
+  row.admin = event.params.admin;
+  row.until = event.params.until;
+  row.blockNumber = event.block.number;
+  row.blockTimestamp = event.block.timestamp;
+  row.transactionHash = event.transaction.hash;
+  row.save();
 }

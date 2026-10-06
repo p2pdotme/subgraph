@@ -10,6 +10,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- `CircleAdminHistorySeeded` as `CircleAdminHistory`: the R8 cut seeds the
+  circle-admin seats `updateCircleAdmin` had already replaced, which the contract
+  never stored, so a dispute over a past decision can establish who held the seat
+  then. The event is declared on `RetirementInit` and emitted as a `delegatecall`
+  from the Diamond, so the log arrives on the existing CircleFacet data source
+  once that ABI carries the event. These rows are **seeded, not observed** — the
+  list is calldata to the cut, validated against the Diamond's own circles but
+  otherwise as good as whoever assembled it — and seats replaced after the cut
+  come from `CircleAdminUpdated` instead, so the two provenances are not one. The
+  handler deliberately leaves `Circle.admin` alone; a test pins that, since
+  writing it from a seed would hand a circle back to a former admin
 - R8.2 **seized stake** (InsurancePoolFacet): `SeizedStakeRecorded` /
   `SeizedStakeReleased` onto a `SeizedStake` ledger per (token, country) mirroring
   the Diamond's own `getSeizedStake` / `getSeizedStakeTotal`, plus a
