@@ -23,6 +23,19 @@ export function loadCurrency(key: Bytes, event: ethereum.Event): Currency {
     currency.currency = key;
     currency.isActive = false;
     currency.minFiatAmount = BigInt.zero();
+    // R8.2 per-currency overrides. Zero is "follow the network default" for all
+    // of these except cashbackBps, where 0 also legitimately means "no cashback
+    // in this market" — the contract offers no un-set, so the two readings are
+    // indistinguishable from the value alone.
+    currency.cashbackBps = 0;
+    currency.minSellTxLimit = BigInt.zero();
+    currency.processingTimeBuyMin = BigInt.zero();
+    currency.processingTimeBuyMax = BigInt.zero();
+    currency.processingTimeSellMin = BigInt.zero();
+    currency.processingTimeSellMax = BigInt.zero();
+    currency.disputeAppealWindowSeconds = BigInt.zero();
+    currency.disputeDecisionSlaTier1 = BigInt.zero();
+    currency.disputeDecisionSlaTier2 = BigInt.zero();
   }
 
   currency.blockNumber = event.block.number;

@@ -48,6 +48,17 @@ export function loadOrders(key: Bytes, event: ethereum.Event): Orders {
     order.disputeSettledAt = BigInt.fromI32(0);
     order.appealedAt = BigInt.fromI32(0);
     order.appealedByMerchantAddress = Bytes.empty();
+    // R8.2 tiered disputes. Tier 0 and decisionTier 0 are "no tier yet", which
+    // is why the nullable timestamps carry "has this happened" rather than a
+    // sentinel: a real tier-0 decision exists and must not read as absent.
+    order.disputeTier = 0;
+    order.disputeDecisionTier = 0;
+    order.disputeDecidedBy = null;
+    order.disputeDecidedAt = null;
+    order.disputeAppealableUntil = null;
+    order.disputeAppealCount = 0;
+    order.disputeLastAppealedBy = null;
+    order.disputeLastAppealedAt = null;
   }
 
   order.blockNumber = event.block.number;

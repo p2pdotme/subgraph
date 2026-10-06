@@ -286,8 +286,31 @@ type Orders @entity(immutable: false) {
   disputeFaultType: Int!
   disputePlacedAt: BigInt!
   disputeSettledAt: BigInt!
+  # R8.2 tiered disputes. A decision is RECORDED first and executes only once
+  # `disputeAppealableUntil` passes with no appeal, so a decided dispute is not
+  # a settled one: cross `disputeDecidedAt` with `disputeSettledAt` before
+  # reporting an outcome. An appeal moves the dispute up a tier; an UNDECIDED
+  # dispute whose tier missed its decision SLA can also be appealed, so an
+  # appeal is not evidence that anyone decided anything.
+  # Current tier (0 until the first appeal moves it).
+  disputeTier: Int!
+  # The tier the latest decision was recorded at, and its fault finding.
+  disputeDecisionTier: Int!
+  disputeDecidedBy: Bytes
+  disputeDecidedAt: BigInt
+  # When the recorded decision stops being appealable and executes. Null when
+  # nothing is pending.
+  disputeAppealableUntil: BigInt
+  disputeAppealCount: Int!
+  disputeLastAppealedBy: Bytes
+  disputeLastAppealedAt: BigInt
 
   # APPEAL DETAILS
+  # A DIFFERENT appeal from the dispute-tier one above, and the two sit next to
+  # each other in the same facet: `OrderAppealed` is a merchant appealing an
+  # order whose status blocked them (once only — the contract reverts
+  # `OrderAlreadyAppealed` on a second), while `DisputeAppealed` escalates an
+  # open dispute's tier and can happen repeatedly. Do not join or sum them.
   appealedAt: BigInt!
   appealedByMerchantAddress: Bytes!
 
@@ -694,6 +717,31 @@ type Currency @entity(immutable: false) {
   # appends this per-currency setting by upgrade, so a Diamond that never
   # configured one reads 0, which must not be read as "block every order".
   minFiatAmount: BigInt!
+  # R8.2 per-currency overrides of network defaults. EVERY ONE OF THESE READS 0
+  # UNTIL SET, and 0 means "follow the network default", never "zero". There is
+  # no un-set on any of them: to follow the default again the setter is called
+  # with the default's value, so a row equal to the default is indistinguishable
+  # from one that was never touched — the activity log is where "when was this
+  # changed" lives, not here.
+  # Cashback rate in basis points (max 1000 = 10%); 0 switches cashback off in
+  # this market, which IS a meaningful value rather than a default here.
+  cashbackBps: Int!
+  # Minimum sell order amount (USDC-side floor), 0 = default.
+  minSellTxLimit: BigInt!
+  # Processing-time bounds in seconds; all four 0 = default bounds.
+  processingTimeBuyMin: BigInt!
+  processingTimeBuyMax: BigInt!
+  processingTimeSellMin: BigInt!
+  processingTimeSellMax: BigInt!
+  # How long a recorded dispute decision stays appealable, in seconds.
+  # 0 = the 24h default.
+  disputeAppealWindowSeconds: BigInt!
+  # Decision SLAs per dispute tier, in seconds. Missing a tier's SLA is itself
+  # grounds to appeal an UNDECIDED dispute, which is what makes these two
+  # settings part of the dispute path rather than cosmetic. 0 = the defaults
+  # (24h tier 1, 72h tier 2).
+  disputeDecisionSlaTier1: BigInt!
+  disputeDecisionSlaTier2: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -1580,6 +1628,47 @@ type EmergencyPauseActivity @entity(immutable: true) {
   id: Bytes! # txHash ++ logIndex
   by: Bytes!
   paused: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# DISPUTE ACTIVITY
+# Immutable log of R8.2's tiered dispute path. A DECIDED row is a decision
+# RECORDED, not executed — it executes at `appealableUntil` unless appealed —
+# and an APPEALED row can follow either a decision or a missed decision SLA on
+# an undecided dispute, so the two are not a strict alternation.
+type DisputeActivity @entity(immutable: true) {
+  id: Bytes! # txHash ++ logIndex
+  orderId: BigInt!
+  order: Orders!
+  # DECIDED | APPEALED
+  action: String!
+  by: Bytes!
+  # DECIDED: the tier the decision was recorded at, plus its fault finding
+  # (0 DEFAULT, 1 USER, 2 MERCHANT, 3 BANK) and when it stops being appealable.
+  decisionTier: Int
+  faultType: Int
+  appealableUntil: BigInt
+  # APPEALED: the tier the dispute moved TO.
+  tier: Int
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# CIRCLE DISPUTE-REJECTION SUPPRESSION
+# R8.2: a circle's dispute-rejection counter was suppressed by an operator.
+# Immutable, because the suppression is the event — the counter it names is a
+# value at that moment, not a running total to keep updating.
+type CircleDisputeRejectionSuppression @entity(immutable: true) {
+  id: Bytes! # txHash ++ logIndex
+  circleId: BigInt!
+  by: Bytes!
+  # The circle's dispute counter at the moment of suppression.
+  disputeCounter: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

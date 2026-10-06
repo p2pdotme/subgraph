@@ -10,6 +10,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- R8.2 **tiered disputes** (OrderProcessorFacet): `DisputeDecided` and
+  `DisputeAppealed` onto `Orders.disputeTier` / `disputeDecisionTier` /
+  `disputeDecidedBy` / `disputeDecidedAt` / `disputeAppealableUntil` /
+  `disputeAppealCount` / `disputeLastAppealedBy` / `disputeLastAppealedAt`, plus a
+  `DisputeActivity` log. A decision is **recorded, not executed** — it takes
+  effect at `appealableUntil` unless appealed — so `disputeDecidedAt` and
+  `disputeSettledAt` must not be read as the same thing, and an appeal clears the
+  pending window rather than leaving a countdown for a superseded decision. The
+  two are not a strict alternation either: an UNDECIDED dispute whose tier missed
+  its decision SLA can be appealed, so an appeal is not evidence anyone decided.
+  `DisputeAppealed` is **not** `OrderAppealed` — that one is a merchant appealing
+  an order, once only, and the schema now says so where the fields sit next to
+  each other
+- `CircleDisputeRejectionSuppressed` as its own immutable
+  `CircleDisputeRejectionSuppression` row: the suppression is the fact, and the
+  `disputeCounter` it names is the counter's value at that moment, so two
+  suppressions of one circle are two rows rather than an overwrite
+- R8.2 **per-currency overrides** on `Currency`: `cashbackBps`, `minSellTxLimit`,
+  the four `processingTime*` bounds, `disputeAppealWindowSeconds` and
+  `disputeDecisionSlaTier1` / `Tier2`. Each overrides a network default and none
+  has an un-set — following the default again means setting the default's value —
+  so 0 reads as "follow the default" throughout, except `cashbackBps` where 0 is
+  also a real setting ("no cashback in this market") and the value alone cannot
+  tell the two apart. The dispute SLAs are not cosmetic: missing a tier's SLA is
+  itself grounds to appeal
 - `RoleGrantRecorded` (RoleAdminFacet, R8.2): `RoleMember.grantedBy`,
   `grantedAsSeat` and `grantedAsSeatName`, plus a `GRANT_RECORDED` `RoleActivity`
   carrying the seat. The seat, not the address, is what may stand a grant down:

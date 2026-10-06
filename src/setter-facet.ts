@@ -13,6 +13,9 @@ import {
   SuperAdminUpdated as SuperAdminUpdatedEvent,
   AdminStatusUpdated as AdminStatusUpdatedEvent,
   MinFiatAmountUpdated as MinFiatAmountUpdatedEvent,
+  CurrencyCashbackPercentageUpdated as CurrencyCashbackPercentageUpdatedEvent,
+  CurrencyProcessingTimeUpdated as CurrencyProcessingTimeUpdatedEvent,
+  MinSellTxLimitUpdated as MinSellTxLimitUpdatedEvent,
 } from "../generated/SetterFacet/SetterFacet";
 import { loadLegacyAdmin } from "./lib";
 import { CurrencyConfig, PaymentChannelConfig } from "../generated/schema";
@@ -262,4 +265,41 @@ export function handleAdminStatusUpdated(event: AdminStatusUpdatedEvent): void {
   admin.isAdmin = event.params.status;
   admin.updater = event.transaction.from;
   admin.save();
+}
+
+// ───────────────── R8.2 per-currency setting overrides ───────────────────
+// Each of these overrides a network default and has NO un-set: following the
+// default again means setting the default's value, so a row equal to the
+// default is indistinguishable from one never touched. Zero reads as "follow
+// the default" throughout — except cashback, where 0 is also a real setting
+// ("no cashback in this market"), and the event is the only way to tell.
+
+export function handleCurrencyCashbackPercentageUpdated(
+  event: CurrencyCashbackPercentageUpdatedEvent,
+): void {
+  const currency = loadCurrency(event.params.currency, event);
+  currency.cashbackBps = event.params.bps;
+  currency.save();
+}
+
+export function handleCurrencyProcessingTimeUpdated(
+  event: CurrencyProcessingTimeUpdatedEvent,
+): void {
+  const currency = loadCurrency(event.params.currency, event);
+  const t = event.params.processingTime;
+  currency.processingTimeBuyMin = t.buyMin;
+  currency.processingTimeBuyMax = t.buyMax;
+  currency.processingTimeSellMin = t.sellMin;
+  currency.processingTimeSellMax = t.sellMax;
+  currency.save();
+}
+
+export function handleMinSellTxLimitUpdated(
+  event: MinSellTxLimitUpdatedEvent,
+): void {
+  const currency = loadCurrency(event.params.currency, event);
+  // `previous` is carried by the event but not stored: the row holds current
+  // state, and the before/after pair is already the log's own.
+  currency.minSellTxLimit = event.params.floor;
+  currency.save();
 }
