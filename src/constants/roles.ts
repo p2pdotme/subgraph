@@ -10,6 +10,12 @@ export const ROLE_ADMIN: i32 = 4;
 export const ROLE_CIRCLE_ADMIN: i32 = 5;
 export const ROLE_COMMUNITY_ADMIN: i32 = 6;
 export const ROLE_PRICE_UPDATER: i32 = 7;
+// RETIRED at R8.2: it appears in no policy mask and never did. Circle
+// moderators act through CapabilityFacet's own per-selector grants
+// (`grantPermission`), which need no registry role, so the bit was never
+// wired to one. LibAuth keeps its circle-binding code — bit 8 is still in
+// CIRCLE_SCOPED_MASK — inert while no mask names the bit. Ops stays its
+// appointer purely so a remaining holder can be revoked.
 export const ROLE_CAPABILITY_GRANTEE: i32 = 8;
 // Bit 9 is RETIRED: its order/fiat powers moved to DEV_LEAD and its
 // insurance-claim powers to ADMIN, and from there to INSURANCE_ADMIN below.
@@ -23,16 +29,57 @@ export const ROLE_CAPABILITY_GRANTEE: i32 = 8;
 // .RETIRED_ROLE_MASK`, surfaced by `RoleAdminFacet.getRoleCatalog()`, is the
 // authority for which bits at or below MAX_ROLE name no live role.
 export const ROLE_ADMIN_VALUE_RETIRED: i32 = 9;
-// Claim review as its own country-bound seat, split out of ADMIN so the
-// high-scrutiny value tier is separate from general country operations. It
-// took the five InsuranceClaimFacet policy rows off ADMIN: approveClaim,
-// approveClaimWithAmount, rejectClaim, cancelApprovedClaim, settleClaim. Bit
-// 10 rather than the vacant 9, because reusing 9 would hand this authority to
-// anyone still holding the retired bit. INSURANCE_ADMIN binds through the SAME
-// `adminCountries` set as ADMIN, so `AdminCountry` rows now belong to either
-// role and `CountryAssigned` says nothing about which one.
+// RETIRED at R8.2, after one release as a live seat. It was claim review split
+// out of ADMIN as its own country-bound seat (taking approveClaim,
+// approveClaimWithAmount, rejectClaim and cancelApprovedClaim off it); the R8.2
+// review read spec §3.6 as seating claim approval on the country Admin, so
+// those four rows moved BACK to ADMIN and bit 10 names nothing. It still binds
+// through the same `adminCountries` set as ADMIN and is still in
+// COUNTRY_SCOPED_MASK, so a leftover holder's AdminCountry rows look live;
+// they authorize nothing. Bit 10 rather than the vacant 9 when it was created,
+// because reusing 9 would have handed claim authority to anyone still holding
+// the retired bit — the same reason it is not reused now.
 export const ROLE_INSURANCE_ADMIN: i32 = 10;
 export const MAX_ROLE: i32 = 10;
+
+/**
+ * Bits at or below MAX_ROLE that name NO live role: they appear in no policy
+ * mask, `grantRole` refuses them (`RoleRetired`), and `revokeRole` still
+ * clears them so leftover holders can be drained. Mirrors
+ * `RoleStorage.RETIRED_ROLES_MASK` and contracts' own `RETIRED_ROLE_BITS` in
+ * `config/rolePolicy.ts`, which are the two places that agree.
+ *
+ * NOT `RoleAdminFacet.getRoleCatalog().retiredMask`: that view still returns
+ * the older `RETIRED_ROLE_MASK` (bit 9 alone) while `grantRole` gates on
+ * `RETIRED_ROLES_MASK` (8 | 9 | 10), so the on-chain catalogue UNDER-REPORTS
+ * the retired set by two bits as of r8 33d3175. Reading it would render
+ * CAPABILITY_GRANTEE and INSURANCE_ADMIN as live seats that no grant can fill.
+ */
+const RETIRED_ROLE_BITS: i32[] = [
+  ROLE_CAPABILITY_GRANTEE,
+  ROLE_ADMIN_VALUE_RETIRED,
+  ROLE_INSURANCE_ADMIN,
+];
+
+/** True when the bit names no live role — render it as retired, never as
+ *  authority, however many `RoleMember` rows still carry it. */
+export function isRetiredRole(role: i32): boolean {
+  for (let i = 0; i < RETIRED_ROLE_BITS.length; i++) {
+    if (RETIRED_ROLE_BITS[i] == role) return true;
+  }
+  return false;
+}
+
+/** `Grant.asSeat` when a grant came from no lead seat: the migration operator
+ *  before the flip, or the futarchy bridge (`RoleStorage.NO_SEAT`). */
+export const NO_SEAT: i32 = 255;
+
+/** The lead seat a grant was made from. NO_SEAT is not an unknown role — it is
+ *  the recorded absence of a seat, and the two must not render alike. */
+export function seatName(seat: i32): string {
+  if (seat == NO_SEAT) return "NO_SEAT";
+  return roleName(seat);
+}
 
 const ROLE_NAMES: string[] = [
   "DEV_LEAD",
@@ -82,6 +129,8 @@ export const ROLE_ACTION_POLICY_CLEARED = "POLICY_CLEARED";
 export const ROLE_ACTION_LEGACY_AUTH_TOGGLED = "LEGACY_AUTH_TOGGLED";
 export const ROLE_ACTION_LEGACY_EXEMPT_SET = "LEGACY_EXEMPT_SET";
 export const ROLE_ACTION_FUTARCHY_BRIDGE_SET = "FUTARCHY_BRIDGE_SET";
+export const ROLE_ACTION_GRANT_RECORDED = "GRANT_RECORDED";
+export const ROLE_ACTION_LEAD_MULTISIG_SET = "LEAD_MULTISIG_REQUIREMENT_SET";
 
 // Co-sign lifecycle.
 export const COSIGN_STATUS_PROPOSED = "PROPOSED";

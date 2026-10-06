@@ -1216,6 +1216,414 @@
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "LeadNotMultisig",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "internalType": "address",
+          "name": "holder",
+          "type": "address"
+        }
+      ],
+      "name": "LeadSeatOccupied",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "internalType": "address",
+          "name": "timelock",
+          "type": "address"
+        }
+      ],
+      "name": "LeadTimelockProposerMissing",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotGranter",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "PolicyOutsideRemit",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        }
+      ],
+      "name": "RoleRetired",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "by",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "required",
+          "type": "bool"
+        }
+      ],
+      "name": "LeadMultisigRequirementSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "by",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "asSeat",
+          "type": "uint8"
+        }
+      ],
+      "name": "RoleGrantRecorded",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "selector",
+          "type": "bytes4"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "country",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "circleId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        }
+      ],
+      "name": "authorizationOf",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "bool",
+              "name": "configured",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "permissionless",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint8",
+              "name": "scope",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "tier",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "timelocked",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "dualSign",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "qualifies",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "legacyPathOpen",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct RoleAdminFacet.Authorization",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "country",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "circleId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "offset",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "limit",
+          "type": "uint256"
+        }
+      ],
+      "name": "authorizationsOf",
+      "outputs": [
+        {
+          "internalType": "bytes4[]",
+          "name": "selectors",
+          "type": "bytes4[]"
+        },
+        {
+          "components": [
+            {
+              "internalType": "bool",
+              "name": "configured",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "permissionless",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint8",
+              "name": "scope",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "tier",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "timelocked",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "dualSign",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "qualifies",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "legacyPathOpen",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct RoleAdminFacet.Authorization[]",
+          "name": "authorizations",
+          "type": "tuple[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "total",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getRoleCatalog",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "maxRole",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint256",
+          "name": "validMask",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "retiredMask",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "countryScopedMask",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "circleScopedMask",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "currencyScopedMask",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint8",
+          "name": "role",
+          "type": "uint8"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "getRoleGrant",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "by",
+          "type": "address"
+        },
+        {
+          "internalType": "uint8",
+          "name": "asSeat",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "multisigShape",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "threshold",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "owners",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "requireLeadMultisig",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "required",
+          "type": "bool"
+        }
+      ],
+      "name": "setRequireLeadMultisig",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     }
   ]
 }

@@ -1287,10 +1287,23 @@ type ProtocolAuthState @entity(immutable: false) {
   lastLegacyAuthUsedAt: BigInt
   # Selectors currently present in the policy registry
   configuredSelectorCount: Int!
-  # R7 break-glass pause (OrderProcessorFacet.emergencyPause)
+  # R7 break-glass pause (OrderProcessorFacet.emergencyPause). HISTORICAL from
+  # R8.2: the pause and its toggle are removed and `EmergencyPauseSet` can
+  # never fire again, leaving one pause — `SetterFacet.setExchangeStatus`, Dev
+  # only. These three fields freeze at their last pre-R8.2 value; do not read
+  # them as the live pause state of an R8.2 Diamond.
   emergencyPaused: Boolean!
   emergencyPausedBy: Bytes
   emergencyPausedAt: BigInt
+  # R8.2 LeadMultisigRequirementSet: while true a lead seat (DEV / OPS /
+  # MARKETING) may only be granted to a Safe-shaped multisig (threshold >= 2
+  # and >= 2 owners), and a lead's timelock may only be bound if a current
+  # member of that seat is one of its proposers. False on every Diamond until
+  # `setRequireLeadMultisig(true)` — testnets seat EOAs and leave it off, so
+  # false means "not required here", never "no multisig".
+  requireLeadMultisig: Boolean!
+  requireLeadMultisigSetBy: Bytes
+  requireLeadMultisigSetAt: BigInt
   # R4 fraud-manager blacklist rate limit (ReputationManager / RpHelper)
   blacklistWindowSeconds: BigInt
   blacklistMaxPerWindow: BigInt
@@ -1338,6 +1351,20 @@ type RoleMember @entity(immutable: false) {
   operator: Bytes!
   grantedAt: BigInt!
   revokedAt: BigInt
+  # True when `role` names no live role (R8.2 retired bits 8, 9 and 10):
+  # `grantRole` refuses it, `revokeRole` still clears it, so a row can be
+  # active and authorize nothing. Render it as retired, never as authority.
+  roleRetired: Boolean!
+  # RoleGrantRecorded: who granted the role and the LEAD SEAT they acted as,
+  # which is what decides who may stand the grant down. Post-flip `grantRole`
+  # is timelocked, so `grantedBy` is the lead's TimelockController while the
+  # undelayed revoke comes from the lead's Safe — the seat survives that, and a
+  # rotation of the lead's keys. `grantedAsSeat` is 255 (`NO_SEAT`) when the
+  # grant came from no seat: the migration operator before the flip, or the
+  # futarchy bridge. Null on grants made before R8.2 added the event.
+  grantedBy: Bytes
+  grantedAsSeat: Int
+  grantedAsSeatName: String
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -1418,7 +1445,8 @@ type RoleActivity @entity(immutable: true) {
   id: Bytes! # txHash ++ logIndex
   # ROLE_GRANTED | ROLE_REVOKED | COUNTRY_ASSIGNED | COUNTRY_UNASSIGNED |
   # TIMELOCK_SET | POLICY_SET | POLICY_CLEARED | LEGACY_AUTH_TOGGLED |
-  # LEGACY_EXEMPT_SET | FUTARCHY_BRIDGE_SET
+  # LEGACY_EXEMPT_SET | FUTARCHY_BRIDGE_SET | GRANT_RECORDED |
+  # LEAD_MULTISIG_REQUIREMENT_SET
   action: String!
   operator: Bytes!
   role: Int
@@ -1434,6 +1462,10 @@ type RoleActivity @entity(immutable: true) {
   # FUTARCHY_BRIDGE_SET only
   bridge: Bytes
   previousBridge: Bytes
+  # GRANT_RECORDED only: the lead seat the grant was made from, 255 (NO_SEAT)
+  # for the migration operator or the futarchy bridge.
+  asSeat: Int
+  asSeatName: String
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!

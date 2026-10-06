@@ -121,7 +121,13 @@ Notes:
   LibAuth's own answer plus the policy facts behind it, and
   `authorizationsOf(...)` pages that over every configured selector — one call
   for "what may this account call right now?", instead of re-deriving LibAuth's
-  rules off-chain from these entities.
+  rules off-chain from these entities. R8.2 adds `getRoleGrant(role, account)`
+  and `requireLeadMultisig()` to that list. The `p2pdotme/gov` leads console is
+  the worked example of this split taken to its end: it reads **only** the chain
+  (multicall `eth_call` plus a bounded `eth_getLogs` lookback) and computes every
+  authorization decision at render time, so it does not query this subgraph at
+  all. Nothing here is on its critical path — which is also why a field this
+  subgraph gets wrong fails quietly rather than breaking a screen.
 - `LegacyAuthDay` has **no row for a quiet day** — a subgraph only writes when
   an event fires, so absence is the zero. A fixed-width histogram fills the
   gaps from the `day` field (a unix day number); order by `day`, never by `id`.
@@ -145,6 +151,11 @@ Notes:
   cut, `LegacyAdmin` rows for super admins and admins are still `status: true`
   by design; they go false when `LegacyAdminClearInit` ships. Read the
   global-admin rows as retired at R8, the other two as still pending.
+- **`CommunityAdminAdded` / `CommunityAdminRemoved` are historical-only from
+  R8.2**, which made community admins bit 6 of the registry and nothing else.
+  Both handlers stay for the rows they already wrote; read a community admin's
+  standing from `RoleMember` on role 6, not from the legacy store. The same goes
+  for `FCMToken`, whose entrypoints R6.2 deleted outright.
 - `InsuranceClaim.rejectionKind` separates the three routes to
   `status = 3` (REJECTED), which are otherwise indistinguishable: `1` a reviewer
   rejected a SUBMITTED claim, `2` the super admin force-rejected an APPROVED one
@@ -162,31 +173,79 @@ Notes:
 - `ProtocolAuthState` (id `"auth"`) is a singleton: the legacy switch (defaults
   to **enabled** — it is stored inverted on-chain), the `LegacyAuthUsed`
   counters that gate the R7 flip (zero for seven days across all three emitters),
-  the configured-selector count and the break-glass pause.
+  the configured-selector count, the lead-multisig requirement and the
+  break-glass pause — the last **frozen** from R8.2, which removed
+  `emergencyPause` and its toggle. `EmergencyPauseSet` can never fire again, so
+  `emergencyPaused` / `emergencyPausedBy` / `emergencyPausedAt` hold whatever
+  they last held and are not the live state of an R8.2 Diamond; there is one
+  pause now, `SetterFacet.setExchangeStatus`, and it is Dev's alone.
+- `requireLeadMultisig` is **off until deliberately switched on**
+  (`setRequireLeadMultisig(true)`, `LeadMultisigRequirementSet`). While on, a
+  lead seat (DEV / OPS / MARKETING) may only be granted to a Safe-shaped
+  multisig — threshold ≥ 2 over ≥ 2 owners — and a lead's timelock may only be
+  bound if a current member of that seat proposes on it. `false` therefore means
+  "not required on this Diamond", which is the testnet shape, and is never
+  evidence that a seat is an EOA: cross it with the seat's own code.
 - Roles are bit positions (`0 DEV_LEAD … 8 CAPABILITY_GRANTEE`, plus
   `10 INSURANCE_ADMIN`, see `src/constants/roles.ts`); `SelectorPolicy.roles` /
-  `roleNames` expand the on-chain bitmask.
-- **Bit 9 (`ADMIN_VALUE_RETIRED`) is retired and authorizes nothing.** Its
-  order/fiat powers moved to `DEV_LEAD` and its claim powers to `ADMIN`, and from
-  there to `INSURANCE_ADMIN` (bit 10) when claim review became its own seat. The
-  bit was not reused and the others were not renumbered — renumbering would
-  re-point every live grant — and `MAX_ROLE` is 10, which still **admits** role
-  9, so anyone left holding it stays revocable. So bit 9 can still appear in
-  `RoleMember` and `RoleActivity` rows until the registry is drained of it; it
-  will not appear in any `SelectorPolicy.roles` mask. Render it as retired, never
-  as authority. Which bits are retired is no longer something a consumer has to
-  hard-code from prose like this: `getRoleCatalog()` returns `maxRole`,
-  `validMask`, `retiredMask` and the three scoped-role masks as this deployment
-  defines them, so read the retirement live and let a future seat that is added,
-  split or retired show up on its own.
+  `roleNames` expand the on-chain bitmask. Three of them — **8, 9 and 10** — are
+  retired as of R8.2 and name no live role; `RoleMember.roleRetired` carries that
+  per row.
+- **Bits 8, 9 and 10 are retired and authorize nothing** (R8.2). None appears in
+  any `SelectorPolicy.roles` mask, `grantRole` refuses all three (`RoleRetired`)
+  and `revokeRole` still reaches them, so each can keep appearing in `RoleMember`
+  and `RoleActivity` until the registry is drained of it. `MAX_ROLE` stays 10
+  precisely so the revoke path still admits them; lowering it would strand a
+  holder as unrevocable. `RoleMember.roleRetired` is the per-row flag — a row can
+  be `isActive: true` and `roleRetired: true` at once, which is a real holder of
+  nothing. Render retired, never as authority.
+  - **9 (`ADMIN_VALUE_RETIRED`)** — order/fiat powers to `DEV_LEAD`, claim powers
+    to `ADMIN`.
+  - **8 (`CAPABILITY_GRANTEE`)** — never in a policy mask at all. Circle
+    moderators act through `CapabilityFacet.grantPermission`, which needs no
+    registry role, so the seat had nothing to do. `LibAuth` keeps its
+    circle-binding code and the bit is still inside `CIRCLE_SCOPED_MASK`, inert.
+  - **10 (`INSURANCE_ADMIN`)** — live for exactly one release as claim review
+    split out of `ADMIN`; R8.2 read spec §3.6 as seating claim approval on the
+    country Admin and moved the four claim rows **back to `ADMIN`**.
+- **Do not read the retired set from `getRoleCatalog()`.** That view returns
+  `RoleStorage.RETIRED_ROLE_MASK` — bit 9 alone — while `grantRole` gates on
+  `RETIRED_ROLES_MASK` (`8 | 9 | 10`), so as of contracts-v4 r8 `33d3175` the
+  on-chain catalogue **under-reports the retired set by two bits** and would
+  render `CAPABILITY_GRANTEE` and `INSURANCE_ADMIN` as live seats no grant can
+  fill. (An earlier revision of this README said to prefer the live view; that
+  advice was right for R8 and is wrong for R8.2.) The two sources that agree are
+  `RoleStorage.RETIRED_ROLES_MASK` and contracts' own `RETIRED_ROLE_BITS` in
+  `config/rolePolicy.ts`; `getRoleCatalog()`'s other five fields (`maxRole`,
+  `validMask`, the three scoped-role masks) are still the live authority.
+- **The seat that appointed an address is what stands it down**, which is why
+  `RoleGrantRecorded` is indexed rather than derived from `RoleGranted`'s
+  operator. Post-flip `grantRole` runs through the lead's TimelockController
+  while the undelayed `revokeRole` comes from the lead's Safe, so the granting
+  _address_ is routinely not the revoking one; `RoleMember.grantedAsSeat` is the
+  lead seat, and it survives a rotation of that lead's keys. `255` (`NO_SEAT`,
+  rendered `grantedAsSeatName: "NO_SEAT"`) is the recorded **absence** of a seat
+  — the migration operator before the flip, or the futarchy bridge — and must not
+  be shown like an unknown role. `grantedBy` and the two seat fields are `null`
+  on grants made before R8.2 added the event, so null means "no record", never
+  "no appointer".
+- **The R8 cut's own initializer emits policy events, so policy history has no
+  hole across it.** `RetirementInit` re-declares `SelectorPolicySet`,
+  `SelectorPolicyCleared` and `LeadMultisigRequirementSet` and emits them while
+  running as a `delegatecall` from the Diamond during `diamondCut` — the logs
+  carry the Diamond's address and the same signatures, so the existing
+  `RoleAdminFacet` data source indexes them with no manifest change. Rows the
+  cut rewrites are therefore ordinary `SelectorPolicy` updates here, not a gap.
 - `AdminCountry` covers **`ADMIN` and `INSURANCE_ADMIN` together**. Both are
   country-scoped and both resolve against the same on-chain `adminCountries`
   set, so `CountryAssigned` carries no role and an `AdminCountry` row says only
   that this address is bound to this country — for whichever of the two roles it
-  holds. Cross it with `RoleMember` to see which — and it matters which: claim
-  review is seated on `INSURANCE_ADMIN` alone, so a reviewer granted `ADMIN` by
-  mistake has an `AdminCountry` row that looks entirely correct (the binding half
-  is identical) while authorizing nothing on any claim. The consequence on revoke:
+  holds. Cross it with `RoleMember` to see which — and since R8.2 the asymmetry
+  runs the other way from how it did at R8: claim approval is back on the country
+  `ADMIN`, and bit 10 is retired, so it is the holder of `INSURANCE_ADMIN` whose
+  `AdminCountry` row looks entirely correct (the binding half is identical, and
+  bit 10 is still in `COUNTRY_SCOPED_MASK`) while authorizing nothing on any
+  claim. Revoke those holders. The consequence on revoke:
   `RoleAdminFacet` clears the assignments only once the account holds
   **neither** role, because clearing on the first revoke would silently un-scope
   the one that remains. It emits one `CountryAssigned(…, false)` per country
@@ -196,7 +255,9 @@ Notes:
 - **`SelectorPolicy.scope` names the check that runs, not a per-holder limit.**
   Only five roles carry a binding: `ADMIN` and `INSURANCE_ADMIN` per country
   (sharing one set), `CIRCLE_ADMIN` and `CAPABILITY_GRANTEE` per circle,
-  `PRICE_UPDATER` per currency. The four leads
+  `PRICE_UPDATER` per currency — though two of the five, `CAPABILITY_GRANTEE`
+  and `INSURANCE_ADMIN`, are retired bits whose binding code R8.2 leaves in
+  place and inert, so the mask still lists them. The four leads
   (`DEV_LEAD`, `OPS_LEAD`, `MARKETING_LEAD`, `FRAUD_MANAGER`) are unbound, and
   `LibAuth._qualifiesCountry` returns true as soon as the caller matched through
   a role outside the scope's bound set (`COUNTRY_SCOPED_MASK` is `ADMIN |
@@ -312,11 +373,18 @@ operational helpers`, which deleted `libraries/upgradeEmitEvents.sol` outright)
   from a later `startBlock`, and it no longer exists. And all eleven selectors
   carry `SelectorPolicy` rows (OPS_LEAD, GLOBAL) that outlive them, so the
   generated map has to keep resolving names the current release no longer
-  contains: it does, because the map unions the r8, r7 and `dev` trees and the
-  pre-removal ones still carry them — regenerating after the removal produced a
-  byte-identical map (same 707 selectors, same digest), which is the check to
-  repeat when r7 and `dev` catch up. Drop the older artifacts from the generator
-  and those eleven rows lose their `functionName`.
+  contains.
+  Unioning the r8, r7 and `main` trees was how that held while the pre-removal
+  trees still carried them — and it stopped holding the moment `main` caught up.
+  R6.2's FCM removal reached `main`, no scanned tree declared `addFcmToken`,
+  `removeFcmToken` or `getFcmTokens` any more, and all three names dropped out of
+  the map while Base mainnet (R6) still serves registry rows for them. The
+  generator now **carries selectors forward**: any selector the committed map
+  already names survives a regeneration that no longer finds it, and
+  `selectors.meta.json` lists those under `carriedForward`. The map is therefore
+  monotonic — a name, once resolved, is never lost — and `--no-carry-forward`
+  writes a plain snapshot of the scanned trees for seeing what a release removed
+  (do not commit one).
 - `SelectorPolicy.functionName`, `CoSign.functionName`, `LegacyAuthUsage
 .functionName` and `TimelockCall.functionName` resolve selectors through
   `src/constants/selectors.ts`, a generated map. Regenerate it after each
@@ -325,6 +393,12 @@ operational helpers`, which deleted `libraries/upgradeEmitEvents.sol` outright)
   ```bash
   node scripts/generate-selectors.mjs ../contracts-v4/artifacts
   ```
+
+  Hardhat's own `npm run compile` in contracts-v4 produces that tree. Compiling
+  the ABIs by hand instead, with one `solc` standard-JSON input over the whole
+  tree, overflows soljson's wasm heap on the R8.2 tree ("memory access out of
+  bounds" — it reads like a broken contract and is not one); split the sources
+  into batches and merge the artifact directories.
 
   The generator also writes `src/constants/selectors.meta.json`, recording the
   contracts-v4 commits it read and a sha256 digest of the selector→name pairs.
@@ -335,8 +409,12 @@ operational helpers`, which deleted `libraries/upgradeEmitEvents.sol` outright)
   Policy rows outlive their selectors (R8 removes `failSafe`, the circle
   staking entrypoints, `setSuperAdmin`, …, but their `SelectorPolicySet`
   events stay indexed), so pass the artifacts of earlier releases as extra
-  arguments to keep those names resolvable — the committed map was built from
-  the r8, r7 and main trees.
+  arguments — the committed map was built from the r8, r7 and main trees. Those
+  extra trees are a convenience, not the guarantee: once every tracked branch
+  has moved past a removal, carry-forward is what keeps the name (see above).
+  The `p2pdotme/gov` console reaches the same conclusion independently — its
+  `gen-inventory.ts` carries removed selectors forward marked `removed: { at }`,
+  because an R8-only inventory renders a live R6 row as "unknown selector".
 
 - A timelock's `MinDelayChange` is emitted in its constructor, before the
   template exists, so `LeadTimelock.minDelay` stays null unless the delay is

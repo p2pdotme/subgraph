@@ -786,6 +786,12 @@ dataSources:
           handler: handleLegacyExemptSet
         - event: FutarchyBridgeUpdated(indexed address,indexed address,indexed address)
           handler: handleFutarchyBridgeUpdated
+        # R8.2: emitted next to RoleGranted, carrying the lead SEAT the grant
+        # was made from — which is what decides who may stand it down.
+        - event: RoleGrantRecorded(indexed uint8,indexed address,address,uint8)
+          handler: handleRoleGrantRecorded
+        - event: LeadMultisigRequirementSet(indexed address,bool)
+          handler: handleLeadMultisigRequirementSet
         # Emitted via LibAuth from every re-gated facet on the main Diamond
         - event: LegacyAuthUsed(indexed address,indexed bytes4)
           handler: handleLegacyAuthUsed

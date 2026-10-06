@@ -29,6 +29,7 @@ import {
   roleName,
   scopeName,
   tierName,
+  isRetiredRole,
 } from "../constants/roles";
 import { selectorFunctionName } from "../constants/selectors";
 import { bytes32ToAscii, bytesFromU8, logKey, maskToBits } from "../utils";
@@ -62,6 +63,11 @@ export function loadProtocolAuthState(
     state.blacklistWindowSeconds = null;
     state.blacklistMaxPerWindow = null;
     state.blacklistRateLimitSetAt = null;
+    // False until setRequireLeadMultisig(true): "not required on this
+    // Diamond", which is the testnet shape, not "no multisig anywhere".
+    state.requireLeadMultisig = false;
+    state.requireLeadMultisigSetBy = null;
+    state.requireLeadMultisigSetAt = null;
   }
 
   state.blockNumber = event.block.number;
@@ -119,7 +125,13 @@ export function loadRoleMember(
     member.operator = Bytes.empty();
     member.grantedAt = BigInt.zero();
     member.revokedAt = null;
+    member.grantedBy = null;
+    member.grantedAsSeat = null;
+    member.grantedAsSeatName = null;
   }
+  // Recomputed on every touch, not only on create: a bit retired by a later
+  // release must stop reading as authority on rows written before it was.
+  member.roleRetired = isRetiredRole(role);
 
   member.blockNumber = event.block.number;
   member.blockTimestamp = event.block.timestamp;
