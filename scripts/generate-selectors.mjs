@@ -18,6 +18,20 @@
  * `Legacy*Facet` shims are skipped; when several contracts share a selector the
  * alphabetically first remaining contract name wins (the signature is identical
  * either way, so the label is cosmetic).
+ *
+ * The map is CARRIED FORWARD, never a snapshot: a selector the committed map
+ * already names is kept even once no scanned tree declares it. A release that
+ * deletes a function does not delete the deployed registry rows that reference
+ * its selector — Base mainnet runs an older release than the branches scanned
+ * here — and a dropped name renders a live `SelectorPolicy` row with an empty
+ * `functionName`, which reads as "unknown selector" rather than as "retired".
+ * The p2pdotme/gov console generates its own inventory from the same contracts
+ * and carries selectors forward for exactly this reason (`removed: { at }` in
+ * its `gen-inventory.ts`); this generator is the same claim, so the two can be
+ * compared. Carried entries are listed in `selectors.meta.json` under
+ * `carriedForward`, and `--no-carry-forward` writes a plain snapshot of the
+ * scanned trees instead — useful to see what a release actually removed, but
+ * do NOT commit one.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -28,8 +42,10 @@ import { keccak_256 } from "@noble/hashes/sha3.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const dirs = process.argv.slice(2).length
-  ? process.argv.slice(2)
+const args = process.argv.slice(2);
+const carryForward = !args.includes("--no-carry-forward");
+const dirs = args.filter((a) => !a.startsWith("--")).length
+  ? args.filter((a) => !a.startsWith("--"))
   : [path.join(root, "abis")];
 const outFile = path.join(root, "src", "constants", "selectors.ts");
 const metaFile = path.join(root, "src", "constants", "selectors.meta.json");
@@ -131,9 +147,33 @@ for (const dir of dirs) {
   }
 }
 
-const rows = [...candidates.entries()]
-  .map(([selector, names]) => [selector, [...names].sort()[0]])
-  .sort((a, b) => (a[0] < b[0] ? -1 : 1));
+const scanned = new Map(
+  [...candidates.entries()].map(([selector, names]) => [
+    selector,
+    [...names].sort()[0],
+  ]),
+);
+
+// Carry forward every selector the committed map already names. Keyed on the
+// selector alone: a name that changed in a scanned tree takes the new value,
+// one that disappeared keeps the old.
+const carried = {};
+if (carryForward && fs.existsSync(metaFile)) {
+  let previous;
+  try {
+    previous = JSON.parse(fs.readFileSync(metaFile, "utf8"));
+  } catch {
+    previous = null;
+  }
+  for (const [selector, name] of Object.entries(previous?.selectors || {})) {
+    if (!scanned.has(selector)) {
+      scanned.set(selector, name);
+      carried[selector] = name;
+    }
+  }
+}
+
+const rows = [...scanned.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
 
 const sources = dirs.map((dir) => {
   const ref = gitRefOf(dir);
@@ -202,6 +242,10 @@ fs.writeFileSync(
       artifactCount: files,
       digest,
       sources,
+      // Named by the committed map but declared by none of the scanned trees:
+      // a release removed the function while deployed registries may still
+      // hold rows for the selector. Annotated, never dropped.
+      carriedForward: carried,
       selectors: Object.fromEntries(rows),
     },
     null,
@@ -214,3 +258,14 @@ console.log(
 console.log(
   `  sources: ${sources.map((src) => src.commit.slice(0, 10)).join(", ")} · digest ${digest.slice(0, 12)}`,
 );
+const carriedCount = Object.keys(carried).length;
+if (carriedCount) {
+  console.log(
+    `  carried forward ${carriedCount} selector(s) no scanned tree declares:`,
+  );
+  for (const [selector, name] of Object.entries(carried)) {
+    console.log(`    ${selector} ${name}`);
+  }
+} else if (!carryForward) {
+  console.log("  carry-forward disabled — snapshot only, do not commit");
+}

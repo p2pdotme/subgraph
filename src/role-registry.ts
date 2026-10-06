@@ -6,7 +6,9 @@ import {
   FutarchyBridgeUpdated as FutarchyBridgeUpdatedEvent,
   LegacyAuthToggled as LegacyAuthToggledEvent,
   LegacyAuthUsed as LegacyAuthUsedEvent,
+  LeadMultisigRequirementSet as LeadMultisigRequirementSetEvent,
   LegacyExemptSet as LegacyExemptSetEvent,
+  RoleGrantRecorded as RoleGrantRecordedEvent,
   RoleGranted as RoleGrantedEvent,
   RoleRevoked as RoleRevokedEvent,
   RoleTimelockSet as RoleTimelockSetEvent,
@@ -38,6 +40,8 @@ import {
   ROLE_ACTION_COUNTRY_UNASSIGNED,
   ROLE_ACTION_FUTARCHY_BRIDGE_SET,
   ROLE_ACTION_GRANTED,
+  ROLE_ACTION_GRANT_RECORDED,
+  ROLE_ACTION_LEAD_MULTISIG_SET,
   ROLE_ACTION_LEGACY_AUTH_TOGGLED,
   ROLE_ACTION_LEGACY_EXEMPT_SET,
   ROLE_ACTION_POLICY_CLEARED,
@@ -46,6 +50,7 @@ import {
   ROLE_ACTION_TIMELOCK_SET,
   roleName,
   scopeName,
+  seatName,
   tierName,
 } from "./constants/roles";
 import { bytes32ToAscii } from "./utils";
@@ -100,6 +105,56 @@ export function handleRoleRevoked(event: RoleRevokedEvent): void {
   activity.role = role;
   activity.roleName = roleName(role);
   activity.account = event.params.account;
+  activity.save();
+}
+
+// R8.2: emitted next to RoleGranted. The SEAT matters more than the address —
+// post-flip `grantRole` runs through the lead's TimelockController while the
+// undelayed `revokeRole` comes from the lead's Safe, so recording only
+// `grantedBy` would make every grant look revocable by a controller that never
+// revokes. Only the seat that appointed an address (or the bridge) may stand it
+// down or re-scope it, which is why this is indexed rather than derived.
+export function handleRoleGrantRecorded(event: RoleGrantRecordedEvent): void {
+  const role = event.params.role;
+  const member = loadRoleMember(role, event.params.account, event);
+  member.grantedBy = event.params.by;
+  member.grantedAsSeat = event.params.asSeat;
+  member.grantedAsSeatName = seatName(event.params.asSeat);
+  member.save();
+
+  // `by` is the operator of record here; the seat is the authority.
+  const activity = newRoleActivity(
+    event,
+    ROLE_ACTION_GRANT_RECORDED,
+    event.params.by,
+  );
+  activity.role = role;
+  activity.roleName = roleName(role);
+  activity.account = event.params.account;
+  activity.asSeat = event.params.asSeat;
+  activity.asSeatName = seatName(event.params.asSeat);
+  activity.save();
+}
+
+// R8.2: while required, a lead seat may only be granted to a Safe-shaped
+// multisig and a lead's timelock may only be bound if a current member of that
+// seat proposes on it. Off by default, so `false` is "not required here" — the
+// testnet shape — and never evidence that a seat is an EOA.
+export function handleLeadMultisigRequirementSet(
+  event: LeadMultisigRequirementSetEvent,
+): void {
+  const state = loadProtocolAuthState(event);
+  state.requireLeadMultisig = event.params.required;
+  state.requireLeadMultisigSetBy = event.params.by;
+  state.requireLeadMultisigSetAt = event.block.timestamp;
+  state.save();
+
+  const activity = newRoleActivity(
+    event,
+    ROLE_ACTION_LEAD_MULTISIG_SET,
+    event.params.by,
+  );
+  activity.flag = event.params.required;
   activity.save();
 }
 

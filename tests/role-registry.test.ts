@@ -20,6 +20,8 @@ import {
   RoleTimelockSet,
   SelectorPolicyCleared,
   SelectorPolicySet,
+  RoleGrantRecorded,
+  LeadMultisigRequirementSet,
 } from "../generated/RoleAdminFacet/RoleAdminFacet";
 import { CoSignConsumed } from "../generated/B2BGatewayFacet/B2BGatewayFacet";
 import {
@@ -35,6 +37,8 @@ import {
   handleRoleTimelockSet,
   handleSelectorPolicyCleared,
   handleSelectorPolicySet,
+  handleRoleGrantRecorded,
+  handleLeadMultisigRequirementSet,
 } from "../src/role-registry";
 import { handleCoSignConsumed } from "../src/b2b-gateway";
 import { roleMemberId, protocolRoleId } from "../src/lib/role-registry.lib";
@@ -65,6 +69,8 @@ const KEY = Bytes.fromHexString(
 const ROLE_DEV_LEAD = 0;
 const ROLE_OPS_LEAD = 1;
 const ROLE_ADMIN = 4;
+const ROLE_CAPABILITY_GRANTEE = 8;
+const ROLE_ADMIN_VALUE_RETIRED = 9;
 const ROLE_INSURANCE_ADMIN = 10;
 
 let nextLogIndex = 0;
@@ -124,6 +130,27 @@ function bridgeEvent(
   e.parameters.push(param("updater", ethereum.Value.fromAddress(OPERATOR)));
   e.parameters.push(param("old", ethereum.Value.fromAddress(previous)));
   e.parameters.push(param("bridge", ethereum.Value.fromAddress(bridge)));
+  return e;
+}
+
+function grantRecordedEvent(
+  role: i32,
+  account: Address,
+  by: Address,
+  asSeat: i32,
+): RoleGrantRecorded {
+  const e = baseEvent<RoleGrantRecorded>();
+  e.parameters.push(param("role", ethereum.Value.fromI32(role)));
+  e.parameters.push(param("account", ethereum.Value.fromAddress(account)));
+  e.parameters.push(param("by", ethereum.Value.fromAddress(by)));
+  e.parameters.push(param("asSeat", ethereum.Value.fromI32(asSeat)));
+  return e;
+}
+
+function multisigEvent(required: boolean): LeadMultisigRequirementSet {
+  const e = baseEvent<LeadMultisigRequirementSet>();
+  e.parameters.push(param("by", ethereum.Value.fromAddress(OPERATOR)));
+  e.parameters.push(param("required", ethereum.Value.fromBoolean(required)));
   return e;
 }
 
@@ -187,10 +214,12 @@ describe("RoleAdminFacet — membership", () => {
     assert.fieldEquals("RoleMember", memberId, "revokedAt", "1");
   });
 
-  test("INSURANCE_ADMIN (bit 10) is named, not UNKNOWN_ROLE_10", () => {
-    // Claim review was split off ADMIN onto its own country-bound bit. A role
-    // the mapping has no name for indexes as UNKNOWN_ROLE_<n>, which would
-    // reach every consumer rendering roleName — so the name is the assertion.
+  test("INSURANCE_ADMIN (bit 10) keeps its name although R8.2 retired it", () => {
+    // Bit 10 was claim review split off ADMIN for one release; R8.2 moved the
+    // four claim rows back to the country Admin and retired the bit. The name
+    // must SURVIVE the retirement: rows granted while it was live are still in
+    // the store, and a role the mapping has no name for indexes as
+    // UNKNOWN_ROLE_<n>, which would reach every consumer rendering roleName.
     handleRoleGranted(roleEvent<RoleGranted>(ROLE_INSURANCE_ADMIN, ALICE));
 
     const roleId = protocolRoleId(ROLE_INSURANCE_ADMIN).toHexString();
@@ -198,7 +227,96 @@ describe("RoleAdminFacet — membership", () => {
     assert.fieldEquals("ProtocolRole", roleId, "role", "10");
     const memberId = roleMemberId(ROLE_INSURANCE_ADMIN, ALICE).toHexString();
     assert.fieldEquals("RoleMember", memberId, "roleName", "INSURANCE_ADMIN");
+    // Active AND retired: revokeRole still reaches it, grantRole no longer
+    // does, so the row is real and authorizes nothing.
     assert.fieldEquals("RoleMember", memberId, "isActive", "true");
+    assert.fieldEquals("RoleMember", memberId, "roleRetired", "true");
+  });
+
+  test("R8.2 retires bits 8, 9 and 10 — and only those", () => {
+    handleRoleGranted(roleEvent<RoleGranted>(ROLE_CAPABILITY_GRANTEE, ALICE));
+    handleRoleGranted(roleEvent<RoleGranted>(ROLE_ADMIN_VALUE_RETIRED, ALICE));
+    handleRoleGranted(roleEvent<RoleGranted>(ROLE_INSURANCE_ADMIN, ALICE));
+    handleRoleGranted(roleEvent<RoleGranted>(ROLE_ADMIN, ALICE));
+
+    assert.fieldEquals(
+      "RoleMember",
+      roleMemberId(ROLE_CAPABILITY_GRANTEE, ALICE).toHexString(),
+      "roleRetired",
+      "true",
+    );
+    assert.fieldEquals(
+      "RoleMember",
+      roleMemberId(ROLE_ADMIN_VALUE_RETIRED, ALICE).toHexString(),
+      "roleRetired",
+      "true",
+    );
+    assert.fieldEquals(
+      "RoleMember",
+      roleMemberId(ROLE_INSURANCE_ADMIN, ALICE).toHexString(),
+      "roleRetired",
+      "true",
+    );
+    // ADMIN took the claim rows back, so it is emphatically live.
+    assert.fieldEquals(
+      "RoleMember",
+      roleMemberId(ROLE_ADMIN, ALICE).toHexString(),
+      "roleRetired",
+      "false",
+    );
+  });
+
+  test("the grant record carries the appointing seat, and NO_SEAT is a value", () => {
+    handleRoleGranted(roleEvent<RoleGranted>(ROLE_ADMIN, ALICE));
+    // Post-flip the caller is Ops's TimelockController, not Ops itself: the
+    // seat is what says who may stand the grant down.
+    handleRoleGrantRecorded(
+      grantRecordedEvent(ROLE_ADMIN, ALICE, TIMELOCK, ROLE_OPS_LEAD),
+    );
+
+    const memberId = roleMemberId(ROLE_ADMIN, ALICE).toHexString();
+    assert.fieldEquals(
+      "RoleMember",
+      memberId,
+      "grantedBy",
+      TIMELOCK.toHexString(),
+    );
+    assert.fieldEquals("RoleMember", memberId, "grantedAsSeat", "1");
+    assert.fieldEquals("RoleMember", memberId, "grantedAsSeatName", "OPS_LEAD");
+
+    // The bridge and the pre-flip migration operator record NO_SEAT (255).
+    // It must not render as UNKNOWN_ROLE_255: the absence of a seat is a fact.
+    handleRoleGranted(roleEvent<RoleGranted>(ROLE_ADMIN, BOB));
+    handleRoleGrantRecorded(grantRecordedEvent(ROLE_ADMIN, BOB, OPERATOR, 255));
+    const bobId = roleMemberId(ROLE_ADMIN, BOB).toHexString();
+    assert.fieldEquals("RoleMember", bobId, "grantedAsSeat", "255");
+    assert.fieldEquals("RoleMember", bobId, "grantedAsSeatName", "NO_SEAT");
+  });
+
+  test("the lead-multisig requirement lands on the singleton", () => {
+    // Off by default: `false` is "not required on this Diamond", which is the
+    // testnet shape, never evidence that a lead seat is an EOA.
+    handleLeadMultisigRequirementSet(multisigEvent(true));
+    assert.fieldEquals(
+      "ProtocolAuthState",
+      AUTH_ID,
+      "requireLeadMultisig",
+      "true",
+    );
+    assert.fieldEquals(
+      "ProtocolAuthState",
+      AUTH_ID,
+      "requireLeadMultisigSetBy",
+      OPERATOR.toHexString(),
+    );
+
+    handleLeadMultisigRequirementSet(multisigEvent(false));
+    assert.fieldEquals(
+      "ProtocolAuthState",
+      AUTH_ID,
+      "requireLeadMultisig",
+      "false",
+    );
   });
 
   test("country assignment creates the Country and the AdminCountry link", () => {

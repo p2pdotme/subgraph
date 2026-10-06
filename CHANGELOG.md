@@ -10,6 +10,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- `RoleGrantRecorded` (RoleAdminFacet, R8.2): `RoleMember.grantedBy`,
+  `grantedAsSeat` and `grantedAsSeatName`, plus a `GRANT_RECORDED` `RoleActivity`
+  carrying the seat. The seat, not the address, is what may stand a grant down:
+  post-flip `grantRole` runs through the lead's TimelockController while the
+  undelayed `revokeRole` comes from the lead's Safe, so deriving the appointer
+  from `RoleGranted`'s operator would make every grant look revocable by a
+  controller that never revokes. `255` (`NO_SEAT`) is the recorded absence of a
+  seat — the migration operator before the flip, or the futarchy bridge — and is
+  rendered `"NO_SEAT"` rather than `UNKNOWN_ROLE_255`. Null on grants made before
+  the event existed, which means "no record", not "no appointer"
+- `LeadMultisigRequirementSet` (R8.2): `ProtocolAuthState.requireLeadMultisig` /
+  `requireLeadMultisigSetBy` / `requireLeadMultisigSetAt`. While on, a lead seat
+  may only be granted to a Safe-shaped multisig (threshold ≥ 2 over ≥ 2 owners)
+  and a lead's timelock may only be bound if a current member of that seat
+  proposes on it. It defaults off, so `false` is "not required on this Diamond" —
+  the testnet shape — and never evidence that a seat is an EOA
+- `RoleMember.roleRetired`, recomputed on every touch rather than at create, so a
+  bit retired by a later release stops reading as authority on rows written
+  before it was. A row can be `isActive: true` and `roleRetired: true` at once:
+  `revokeRole` still reaches a retired bit, `grantRole` no longer does
 - `FutarchyBridgeUpdated` (RoleAdminFacet): the root appointer's address on
   `ProtocolAuthState.futarchyBridge` / `futarchyBridgeSetBy` /
   `futarchyBridgeSetAt`, plus a `FUTARCHY_BRIDGE_SET` `RoleActivity` carrying
@@ -70,6 +90,65 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **R8.2 retires role bits 8 and 10 as well as 9, and moves claim approval back
+  to the country `ADMIN`.** Bit 10 (`INSURANCE_ADMIN`) was live for exactly one
+  release as claim review split out of `ADMIN`; the R8.2 review read spec §3.6 as
+  seating claim approval on the country Admin and moved the four claim rows back,
+  leaving the bit naming nothing. Bit 8 (`CAPABILITY_GRANTEE`) was never in a
+  policy mask at all — circle moderators act through
+  `CapabilityFacet.grantPermission`, which needs no registry role. Both keep
+  their names (rows granted while bit 10 was live are still in the store) and
+  both keep their scope bindings in `LibAuth`, inert. The previous note here —
+  that claim review is seated on `INSURANCE_ADMIN` alone, so an `ADMIN` granted
+  by mistake authorizes nothing on a claim — was correct at R8 and is now exactly
+  **inverted**: it is the leftover `INSURANCE_ADMIN` whose `AdminCountry` row
+  looks correct while authorizing nothing. Corrected, and `RoleMember.roleRetired`
+  makes it per-row rather than prose
+- **Stopped pointing consumers at `getRoleCatalog()` for the retired set.** That
+  view returns `RoleStorage.RETIRED_ROLE_MASK` (bit 9 alone) while `grantRole`
+  gates on `RETIRED_ROLES_MASK` (`8 | 9 | 10`), so as of contracts-v4 r8
+  `33d3175` the on-chain catalogue under-reports the retired set by two bits and
+  would render `CAPABILITY_GRANTEE` and `INSURANCE_ADMIN` as live seats no grant
+  can fill. The advice added in the previous entry below was right for R8 and
+  wrong for R8.2; the sources that agree are `RETIRED_ROLES_MASK` and contracts'
+  own `RETIRED_ROLE_BITS` in `config/rolePolicy.ts`. The view's other five fields
+  remain the live authority
+- **The selector map is carried forward, not a snapshot of the scanned trees.**
+  R6.2's FCM removal reached `main`, so no scanned tree declared `addFcmToken`,
+  `removeFcmToken` or `getFcmTokens` and all three names dropped out — while Base
+  mainnet, on R6, still serves `SelectorPolicy` rows for them, which would have
+  rendered with an empty `functionName`. Unioning several trees only delays this;
+  it fails whenever every tracked branch moves past a removal. The generator now
+  keeps any selector the committed map already names, lists them under
+  `carriedForward` in `selectors.meta.json`, and takes `--no-carry-forward` for a
+  throwaway snapshot of what a release removed. `p2pdotme/gov` reaches the same
+  conclusion independently (`removed: { at }` in its `gen-inventory.ts`), which
+  is what prompted looking
+- `EmergencyPauseSet` is **historical-only** from R8.2, which removed
+  `emergencyPause` and its toggle, leaving one pause (`setExchangeStatus`, Dev
+  only). `ProtocolAuthState.emergencyPaused` / `emergencyPausedBy` /
+  `emergencyPausedAt` freeze at their last pre-R8.2 values and must not be read
+  as an R8.2 Diamond's live pause state. `CommunityAdminAdded` /
+  `CommunityAdminRemoved` are historical-only too — community admins are role bit
+  6 and nothing else now, so read them from `RoleMember`
+- `src/constants/selectors.ts` regenerated from r8 `33d3175` / r7 `73b25c9` /
+  main `af49f8e`: 747 selectors (was 710), digest `3f1a2c42abde`, 3 of them
+  carried forward. The 37 new names are R8.2's dispute tiers and appeals, the
+  per-currency cashback / processing-time / min-sell settings, the seized-stake
+  and reward-pool surfaces, `setRequireLeadMultisig` / `requireLeadMultisig` /
+  `getRoleGrant`, and `setExchangeStatus` — the one pause that remains.
+  Compiling the R8.2 tree for the generator has to be split into batches now: a
+  single `solc` standard-JSON input over the whole tree overflows soljson's wasm
+  heap with "memory access out of bounds", which reads like a broken contract and
+  is not one
+- Documented that the R8 cut's own initializer emits `SelectorPolicySet`,
+  `SelectorPolicyCleared` and `LeadMultisigRequirementSet` while running as a
+  `delegatecall` from the Diamond, so those logs carry the Diamond's address and
+  the existing data source indexes them with no manifest change — policy history
+  has no hole across the cut
+- Noted that the `p2pdotme/gov` leads console does not query this subgraph at
+  all: it reads only the chain and computes authorization at render time. Useful
+  context for how a wrong field here fails — quietly, not as a broken screen
 - Documented that **`SelectorPolicy.scope` is a claim about the facet's gate that
   the registry does not police**, and what that looks like from here. A row whose
   `scope` disagrees with the `enforce*` / `passes*` variant its facet calls is
