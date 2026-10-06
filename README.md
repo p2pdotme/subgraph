@@ -156,6 +156,17 @@ Notes:
   Both handlers stay for the rows they already wrote; read a community admin's
   standing from `RoleMember` on role 6, not from the legacy store. The same goes
   for `FCMToken`, whose entrypoints R6.2 deleted outright.
+- **R8.2's new events, and the two still unindexed.** The release added eighteen
+  events. Indexed here: the tiered-dispute path and its per-currency settings, the
+  three other per-currency overrides, the seized-stake ledger and PIP
+  contributions, `CircleAdminHistorySeeded`, `RoleGrantRecorded` and
+  `LeadMultisigRequirementSet`. **Not** indexed: the four reward-pool events
+  (`RewardPoolDeposited`, `RewardPoolWithdrawnToInsurance`,
+  `UnpooledRewardsAssigned`) and `ContractDelisted`, all emitted by `RpHelper`,
+  which this subgraph has no data source for at all — wiring them needs a deployed
+  `RpHelper` address, and guessing one would index nothing while looking wired.
+  `MerchantRecommenderRewardAccrued` / `RecommenderRewardAccrued` on
+  `ReputationManager` remain unindexed for the same pre-existing reason.
 - `InsuranceClaim.rejectionKind` separates the three routes to
   `status = 3` (REJECTED), which are otherwise indistinguishable: `1` a reviewer
   rejected a SUBMITTED claim, `2` the super admin force-rejected an APPROVED one

@@ -49,6 +49,7 @@ dataSources:
       entities:
         - CircleFacet
         - CircleAdminP2PStakeReturn
+        - CircleAdminHistory
       abis:
         - name: CircleFacet
           file: ./abis/CircleFacet.json
@@ -57,6 +58,10 @@ dataSources:
           handler: handleCircleCreated
         - event: CircleAdminUpdated(indexed uint256,indexed address,indexed address)
           handler: handleCircleAdminUpdated
+        # R8.2: emitted by RetirementInit as a delegatecall from the Diamond, so
+        # the log carries this address. Seeded history, not observed.
+        - event: CircleAdminHistorySeeded(indexed uint256,indexed address,uint64)
+          handler: handleCircleAdminHistorySeeded
         - event: CircleCommunityUrlUpdated(indexed uint256,string)
           handler: handleCircleCommunityUrlUpdated
         - event: CircleAdminCommunityUrlUpdated(indexed uint256,string)
