@@ -5,13 +5,22 @@ import {
   MerchantPaymentChannelUpdate as MerchantPaymentChannelUpdateEvent,
   CurrencyAddedUpdate as CurrencyAddedUpdateEvent,
   CurrencyMonthlyVolumeLimitUpdate as CurrencyMonthlyVolumeLimitUpdateEvent,
+  MonthlyVolumeLimit as MonthlyVolumeLimitEvent,
   MerchantWithdrawFeePercentageUpdate as MerchantWithdrawFeePercentageUpdateEvent,
   PaymentChannelConfigUpdate as PaymentChannelConfigUpdateEvent,
   MerchantClaimableRewardsUpdate as MerchantClaimableRewardsUpdateEvent,
   MerchantWithdrawFeePercentage as MerchantWithdrawFeePercentageEvent,
+  SuperAdminUpdated as SuperAdminUpdatedEvent,
+  AdminStatusUpdated as AdminStatusUpdatedEvent,
+  MinFiatAmountUpdated as MinFiatAmountUpdatedEvent,
+  CurrencyCashbackPercentageUpdated as CurrencyCashbackPercentageUpdatedEvent,
+  CurrencyProcessingTimeUpdated as CurrencyProcessingTimeUpdatedEvent,
+  MinSellTxLimitUpdated as MinSellTxLimitUpdatedEvent,
 } from "../generated/SetterFacet/SetterFacet";
+import { loadLegacyAdmin } from "./lib";
 import { CurrencyConfig, PaymentChannelConfig } from "../generated/schema";
 import {
+  applyMonthlyVolumeLimit,
   isMerchantActive,
   isMerchantAvailable,
   loadCircle,
@@ -154,20 +163,27 @@ export function handleCurrencyAddedUpdate(
   currency.save();
 }
 
+// Per-currency minimum fiat order amount. `current` is the authoritative value
+// after the change; 0 means the floor was cleared, not that orders are blocked.
+export function handleMinFiatAmountUpdated(
+  event: MinFiatAmountUpdatedEvent,
+): void {
+  const currency = loadCurrency(event.params.currency, event);
+  currency.minFiatAmount = event.params.current;
+  currency.save();
+}
+
+// The live setter's primary event. `CurrencyMonthlyVolumeLimitUpdate` below is
+// the replay-only mirror of the same field, kept because the rows it wrote are
+// already indexed — but this is the one that keeps the limit current.
+export function handleMonthlyVolumeLimit(event: MonthlyVolumeLimitEvent): void {
+  applyMonthlyVolumeLimit(event.params.currency, event.params.limit, event);
+}
+
 export function handleCurrencyMonthlyVolumeLimitUpdate(
   event: CurrencyMonthlyVolumeLimitUpdateEvent,
 ): void {
-  const id = event.params.currency;
-  let config = CurrencyConfig.load(id);
-  if (!config) {
-    config = new CurrencyConfig(id);
-    config.currency = event.params.currency;
-  }
-  config.monthlyVolumeLimit = event.params.newLimit;
-  config.blockNumber = event.block.number;
-  config.blockTimestamp = event.block.timestamp;
-  config.transactionHash = event.transaction.hash;
-  config.save();
+  applyMonthlyVolumeLimit(event.params.currency, event.params.newLimit, event);
 }
 
 export function handleMerchantWithdrawFeePercentageUpdate(
@@ -230,4 +246,60 @@ export function handleMerchantWithdrawFeePercentage(
   withdrawFee.feePercentage = event.params.feePercentage;
   withdrawFee.time = event.block.timestamp;
   withdrawFee.save();
+}
+
+// ─────────────────────────── legacy admin stores ─────────────────────────
+// `superAdmins` / `admins` are not enumerable on-chain; replaying these
+// events from genesis is how the R8 RetirementInit address lists are built,
+// and the R8 cut emits the same events with status=false to drain them.
+
+export function handleSuperAdminUpdated(event: SuperAdminUpdatedEvent): void {
+  const admin = loadLegacyAdmin(event.params.updatedAddress, event);
+  admin.isSuperAdmin = event.params.status;
+  admin.updater = event.params.updater;
+  admin.save();
+}
+
+export function handleAdminStatusUpdated(event: AdminStatusUpdatedEvent): void {
+  const admin = loadLegacyAdmin(event.params.admin, event);
+  admin.isAdmin = event.params.status;
+  admin.updater = event.transaction.from;
+  admin.save();
+}
+
+// ───────────────── R8.2 per-currency setting overrides ───────────────────
+// Each of these overrides a network default and has NO un-set: following the
+// default again means setting the default's value, so a row equal to the
+// default is indistinguishable from one never touched. Zero reads as "follow
+// the default" throughout — except cashback, where 0 is also a real setting
+// ("no cashback in this market"), and the event is the only way to tell.
+
+export function handleCurrencyCashbackPercentageUpdated(
+  event: CurrencyCashbackPercentageUpdatedEvent,
+): void {
+  const currency = loadCurrency(event.params.currency, event);
+  currency.cashbackBps = event.params.bps;
+  currency.save();
+}
+
+export function handleCurrencyProcessingTimeUpdated(
+  event: CurrencyProcessingTimeUpdatedEvent,
+): void {
+  const currency = loadCurrency(event.params.currency, event);
+  const t = event.params.processingTime;
+  currency.processingTimeBuyMin = t.buyMin;
+  currency.processingTimeBuyMax = t.buyMax;
+  currency.processingTimeSellMin = t.sellMin;
+  currency.processingTimeSellMax = t.sellMax;
+  currency.save();
+}
+
+export function handleMinSellTxLimitUpdated(
+  event: MinSellTxLimitUpdatedEvent,
+): void {
+  const currency = loadCurrency(event.params.currency, event);
+  // `previous` is carried by the event but not stored: the row holds current
+  // state, and the before/after pair is already the log's own.
+  currency.minSellTxLimit = event.params.floor;
+  currency.save();
 }

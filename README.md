@@ -68,13 +68,368 @@ Deploys to The Graph Studio at `https://thegraph.com/studio/`.
 
 Contract addresses per network are defined in `networks.json`:
 
-| Network | Diamond Proxy | ReputationManager |
-|---------|--------------|-------------------|
-| `base` | `0x4cad6eC90e65baBec9335cAd728DDC610c316368` | `0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D` |
+| Network | Diamond Proxy                                | ReputationManager                            |
+| ------- | -------------------------------------------- | -------------------------------------------- |
+| `base`  | `0x4cad6eC90e65baBec9335cAd728DDC610c316368` | `0xCF613e08EE1B4c2669DdCf06A7d22c9856f6Aa1D` |
 
-All data sources (except ReputationManager) point to the same diamond proxy contract.
+To index a local `contracts-v4` stack (`npx hardhat local:deploy --network
+localhost`, see that repo's `docs/runbooks/local-stack.md`), import its output
+and build for `localhost`:
+
+```bash
+node scripts/import-local-stack.mjs ../contracts-v4/deployments/1337/local-stack.json
+npx graph build --network localhost
+```
+
+All main-protocol data sources point to the same diamond proxy contract; the
+Insurance Diamond and the Governance Diamond have their own addresses. The
+`LeadTimelock` data-source **template** has no fixed address: an instance is
+created for every timelock that `RoleAdminFacet.setRoleTimelock` binds to a role.
 
 ---
+
+## Roles & Permissions (contracts-v4 rollout R2 → R8)
+
+The selector-level role registry replaced the flat `superAdmin` / `admin` model
+in staged releases. The indexer follows every release's events so a UI or an ops
+dashboard can answer "who can call what, from where, and is anyone still relying
+on the legacy path":
+
+| Release              | Contract events                                                                                                                                                                                                                                                                                                                    | Entities                                                                                                                                       |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1 fund custody      | `CircleAdminP2PStakeReturned` (CircleFacet), `NonPoolTokenSwept` (InsurancePoolFacet)                                                                                                                                                                                                                                              | `CircleAdminP2PStakeReturn`, `InsuranceNonPoolTokenSweep`                                                                                      |
+| R2 role registry     | `RoleGranted`, `RoleRevoked`, `RoleTimelockSet`, `SelectorPolicySet`, `SelectorPolicyCleared`, `LegacyAuthToggled`, `LegacyExemptSet`, `FutarchyBridgeUpdated` (RoleAdminFacet)                                                                                                                                                    | `ProtocolRole`, `RoleMember`, `SelectorPolicy`, `RoleActivity`, `ProtocolAuthState`                                                            |
+| R3/R4 shadow re-gate | `LegacyAuthUsed` on the main Diamond, the Insurance Diamond and the ReputationManager; `BlacklistRateLimitSet` (RpHelper)                                                                                                                                                                                                          | `LegacyAuthUsage`, `LegacyAuthSelectorStats`, `LegacyAuthDay`, counters and the blacklist rate limit on `ProtocolAuthState` / `SelectorPolicy` |
+| R5 country scope     | `CountryActiveSet`, `CurrencyCountryBound` (CountryFacet), `CountryAssigned` (RoleAdminFacet)                                                                                                                                                                                                                                      | `Country`, `Currency.country`, `AdminCountry`                                                                                                  |
+| R6 claim contest     | `ClaimContested`, `ClaimContestRemoved` (InsuranceClaimFacet)                                                                                                                                                                                                                                                                      | `InsuranceClaim.contested*`, `InsuranceClaimContestActivity`                                                                                   |
+| R7 cutover           | `EmergencyPauseSet` (OrderProcessorFacet), `CoSignProposed` / `CoSignCancelled` (RoleAdminFacet), `CoSignConsumed` (LibAuth via B2BGatewayFacet), `LeadTimelock` template (`CallScheduled`, `CallSalt`, `CallExecuted`, `Cancelled`, `MinDelayChange`), `OwnershipTransferred` on all three Diamonds (main, Insurance, Governance) | `EmergencyPauseActivity`, `CoSign`, `LeadTimelock`, `TimelockOperation`, `TimelockCall`, `DiamondOwnership`, `DiamondOwnershipTransfer`        |
+| R8 retirement        | `SuperAdminUpdated`, `AdminStatusUpdated`, `GlobalAdminUpdated` replayed from genesis. R8's `RetirementInit` drains only the global-admin set (`GlobalAdminUpdated(…, false)`); the super-admin and admin clear is **deferred past R8** to `LegacyAdminClearInit`, which re-emits the other two with `status=false`                | `LegacyAdmin`                                                                                                                                  |
+
+Notes:
+
+- **Read history here, read authorization state from the chain.** The registry's
+  current state is indexed (`SelectorPolicy`, `ProtocolRole`, `RoleMember`,
+  `AdminCountry`, `DiamondOwnership`, `ProtocolAuthState.legacyAuthEnabled`),
+  but an index is minutes behind and a mapping bug is a silent authority error.
+  Anything that gates a signature or renders a permission decision should
+  `eth_call` the Diamond (`getSelectorPolicy`, `getRoleMembers`,
+  `roleTimelock`, `isOperationReady`, `getCoSign`, `owner`,
+  `isLegacyAuthEnabled`) and use these entities for what _happened_. Loading
+  both is a free cross-check: an indexed `roleMask` that disagrees with the
+  live call is itself worth surfacing. For the decision rather than its inputs,
+  `authorizationOf(selector, account, country, circleId, currency)` returns
+  LibAuth's own answer plus the policy facts behind it, and
+  `authorizationsOf(...)` pages that over every configured selector — one call
+  for "what may this account call right now?", instead of re-deriving LibAuth's
+  rules off-chain from these entities. R8.2 adds `getRoleGrant(role, account)`
+  and `requireLeadMultisig()` to that list. The `p2pdotme/gov` leads console is
+  the worked example of this split taken to its end: it reads **only** the chain
+  (multicall `eth_call` plus a bounded `eth_getLogs` lookback) and computes every
+  authorization decision at render time, so it does not query this subgraph at
+  all. Nothing here is on its critical path — which is also why a field this
+  subgraph gets wrong fails quietly rather than breaking a screen.
+- `LegacyAuthDay` has **no row for a quiet day** — a subgraph only writes when
+  an event fires, so absence is the zero. A fixed-width histogram fills the
+  gaps from the `day` field (a unix day number); order by `day`, never by `id`.
+  The current quiet streak is `ProtocolAuthState.lastLegacyAuthUsedAt`. A streak
+  that will not start is not necessarily a caller still holding a legacy admin:
+  a misconfigured `scope` keeps `passes*` returning false forever, so the fall
+  through to legacy is structural and no amount of granting fixes it. Suspect it
+  when `LegacyAuthSelectorStats` concentrates on one (emitter, selector) pair
+  whose policy row looks correct — then check `authorizationOf` per the `scope`
+  note below.
+- `LegacyAuthSelectorStats` is keyed per **(emitter, selector)**, so a
+  protocol-wide per-selector total means summing the three emitter rows.
+- `ProtocolAuthState.configuredSelectorCount` counts selectors whose policy is
+  configured, which is **not** the `SelectorPolicy` entity count: setting
+  `legacyExempt` on a selector with no policy yet creates a row with
+  `configured: false`. Filter on `configured: true` when comparing counts.
+- **R8 does not empty the legacy admin stores.** It drains `globalAdminSet`
+  only. `updateAdmin` / `setSuperAdmin` survive R8 on `SetterFacet` because a
+  store must not lose its last writer before the release that empties it — a
+  populated-but-unrevocable mapping is worse than a live one. So after the R8
+  cut, `LegacyAdmin` rows for super admins and admins are still `status: true`
+  by design; they go false when `LegacyAdminClearInit` ships. Read the
+  global-admin rows as retired at R8, the other two as still pending.
+- **`CommunityAdminAdded` / `CommunityAdminRemoved` are historical-only from
+  R8.2**, which made community admins bit 6 of the registry and nothing else.
+  Both handlers stay for the rows they already wrote; read a community admin's
+  standing from `RoleMember` on role 6, not from the legacy store. The same goes
+  for `FCMToken`, whose entrypoints R6.2 deleted outright.
+- **R8.2's new events, and the two still unindexed.** The release added eighteen
+  events. Indexed here: the tiered-dispute path and its per-currency settings, the
+  three other per-currency overrides, the seized-stake ledger and PIP
+  contributions, `CircleAdminHistorySeeded`, `RoleGrantRecorded` and
+  `LeadMultisigRequirementSet`. **Not** indexed: the four reward-pool events
+  (`RewardPoolDeposited`, `RewardPoolWithdrawnToInsurance`,
+  `UnpooledRewardsAssigned`) and `ContractDelisted`, all emitted by `RpHelper`,
+  which this subgraph has no data source for at all — wiring them needs a deployed
+  `RpHelper` address, and guessing one would index nothing while looking wired.
+  `MerchantRecommenderRewardAccrued` / `RecommenderRewardAccrued` on
+  `ReputationManager` remain unindexed for the same pre-existing reason.
+- `InsuranceClaim.rejectionKind` separates the three routes to
+  `status = 3` (REJECTED), which are otherwise indistinguishable: `1` a reviewer
+  rejected a SUBMITTED claim, `2` the super admin force-rejected an APPROVED one
+  (`ClaimForceRejected`), `3` a currency approver cancelled an APPROVED one
+  (`ApprovedClaimCancelled`, added on `main` after R6). Filtering on `status`
+  alone cannot tell an approver-level reversal from the break-glass path.
+- `Currency.minFiatAmount` is `0` when no floor is configured. The contract
+  appends this per-currency setting by upgrade and reads `0` as "no minimum", so
+  a Diamond that never set one must not be rendered as "orders blocked".
+- `CoSign` has no `paramsHash` field because the event never carries one. Its
+  `id` is the contract's key, `keccak256(selector ‖ keccak256(args))`, so a
+  caller can compute the key for the exact call it is about to submit and look
+  the standing co-sign up directly.
+
+- `ProtocolAuthState` (id `"auth"`) is a singleton: the legacy switch (defaults
+  to **enabled** — it is stored inverted on-chain), the `LegacyAuthUsed`
+  counters that gate the R7 flip (zero for seven days across all three emitters),
+  the configured-selector count, the lead-multisig requirement and the
+  break-glass pause — the last **frozen** from R8.2, which removed
+  `emergencyPause` and its toggle. `EmergencyPauseSet` can never fire again, so
+  `emergencyPaused` / `emergencyPausedBy` / `emergencyPausedAt` hold whatever
+  they last held and are not the live state of an R8.2 Diamond; there is one
+  pause now, `SetterFacet.setExchangeStatus`, and it is Dev's alone.
+- `requireLeadMultisig` is **off until deliberately switched on**
+  (`setRequireLeadMultisig(true)`, `LeadMultisigRequirementSet`). While on, a
+  lead seat (DEV / OPS / MARKETING) may only be granted to a Safe-shaped
+  multisig — threshold ≥ 2 over ≥ 2 owners — and a lead's timelock may only be
+  bound if a current member of that seat proposes on it. `false` therefore means
+  "not required on this Diamond", which is the testnet shape, and is never
+  evidence that a seat is an EOA: cross it with the seat's own code.
+- Roles are bit positions (`0 DEV_LEAD … 8 CAPABILITY_GRANTEE`, plus
+  `10 INSURANCE_ADMIN`, see `src/constants/roles.ts`); `SelectorPolicy.roles` /
+  `roleNames` expand the on-chain bitmask. Three of them — **8, 9 and 10** — are
+  retired as of R8.2 and name no live role; `RoleMember.roleRetired` carries that
+  per row.
+- **Bits 8, 9 and 10 are retired and authorize nothing** (R8.2). None appears in
+  any `SelectorPolicy.roles` mask, `grantRole` refuses all three (`RoleRetired`)
+  and `revokeRole` still reaches them, so each can keep appearing in `RoleMember`
+  and `RoleActivity` until the registry is drained of it. `MAX_ROLE` stays 10
+  precisely so the revoke path still admits them; lowering it would strand a
+  holder as unrevocable. `RoleMember.roleRetired` is the per-row flag — a row can
+  be `isActive: true` and `roleRetired: true` at once, which is a real holder of
+  nothing. Render retired, never as authority.
+  - **9 (`ADMIN_VALUE_RETIRED`)** — order/fiat powers to `DEV_LEAD`, claim powers
+    to `ADMIN`.
+  - **8 (`CAPABILITY_GRANTEE`)** — never in a policy mask at all. Circle
+    moderators act through `CapabilityFacet.grantPermission`, which needs no
+    registry role, so the seat had nothing to do. `LibAuth` keeps its
+    circle-binding code and the bit is still inside `CIRCLE_SCOPED_MASK`, inert.
+  - **10 (`INSURANCE_ADMIN`)** — live for exactly one release as claim review
+    split out of `ADMIN`; R8.2 read spec §3.6 as seating claim approval on the
+    country Admin and moved the four claim rows **back to `ADMIN`**.
+- **Do not read the retired set from `getRoleCatalog()`.** That view returns
+  `RoleStorage.RETIRED_ROLE_MASK` — bit 9 alone — while `grantRole` gates on
+  `RETIRED_ROLES_MASK` (`8 | 9 | 10`), so as of contracts-v4 r8 `33d3175` the
+  on-chain catalogue **under-reports the retired set by two bits** and would
+  render `CAPABILITY_GRANTEE` and `INSURANCE_ADMIN` as live seats no grant can
+  fill. (An earlier revision of this README said to prefer the live view; that
+  advice was right for R8 and is wrong for R8.2.) The two sources that agree are
+  `RoleStorage.RETIRED_ROLES_MASK` and contracts' own `RETIRED_ROLE_BITS` in
+  `config/rolePolicy.ts`; `getRoleCatalog()`'s other five fields (`maxRole`,
+  `validMask`, the three scoped-role masks) are still the live authority.
+- **The seat that appointed an address is what stands it down**, which is why
+  `RoleGrantRecorded` is indexed rather than derived from `RoleGranted`'s
+  operator. Post-flip `grantRole` runs through the lead's TimelockController
+  while the undelayed `revokeRole` comes from the lead's Safe, so the granting
+  _address_ is routinely not the revoking one; `RoleMember.grantedAsSeat` is the
+  lead seat, and it survives a rotation of that lead's keys. `255` (`NO_SEAT`,
+  rendered `grantedAsSeatName: "NO_SEAT"`) is the recorded **absence** of a seat
+  — the migration operator before the flip, or the futarchy bridge — and must not
+  be shown like an unknown role. `grantedBy` and the two seat fields are `null`
+  on grants made before R8.2 added the event, so null means "no record", never
+  "no appointer".
+- **The R8 cut's own initializer emits policy events, so policy history has no
+  hole across it.** `RetirementInit` re-declares `SelectorPolicySet`,
+  `SelectorPolicyCleared` and `LeadMultisigRequirementSet` and emits them while
+  running as a `delegatecall` from the Diamond during `diamondCut` — the logs
+  carry the Diamond's address and the same signatures, so the existing
+  `RoleAdminFacet` data source indexes them with no manifest change. Rows the
+  cut rewrites are therefore ordinary `SelectorPolicy` updates here, not a gap.
+- `AdminCountry` covers **`ADMIN` and `INSURANCE_ADMIN` together**. Both are
+  country-scoped and both resolve against the same on-chain `adminCountries`
+  set, so `CountryAssigned` carries no role and an `AdminCountry` row says only
+  that this address is bound to this country — for whichever of the two roles it
+  holds. Cross it with `RoleMember` to see which — and since R8.2 the asymmetry
+  runs the other way from how it did at R8: claim approval is back on the country
+  `ADMIN`, and bit 10 is retired, so it is the holder of `INSURANCE_ADMIN` whose
+  `AdminCountry` row looks entirely correct (the binding half is identical, and
+  bit 10 is still in `COUNTRY_SCOPED_MASK`) while authorizing nothing on any
+  claim. Revoke those holders. The consequence on revoke:
+  `RoleAdminFacet` clears the assignments only once the account holds
+  **neither** role, because clearing on the first revoke would silently un-scope
+  the one that remains. It emits one `CountryAssigned(…, false)` per country
+  when it does, so the rows still clear by replay rather than by any inference
+  in the mapping — but a revoke of one of the two roles legitimately leaves the
+  rows `assigned: true`.
+- **`SelectorPolicy.scope` names the check that runs, not a per-holder limit.**
+  Only five roles carry a binding: `ADMIN` and `INSURANCE_ADMIN` per country
+  (sharing one set), `CIRCLE_ADMIN` and `CAPABILITY_GRANTEE` per circle,
+  `PRICE_UPDATER` per currency — though two of the five, `CAPABILITY_GRANTEE`
+  and `INSURANCE_ADMIN`, are retired bits whose binding code R8.2 leaves in
+  place and inert, so the mask still lists them. The four leads
+  (`DEV_LEAD`, `OPS_LEAD`, `MARKETING_LEAD`, `FRAUD_MANAGER`) are unbound, and
+  `LibAuth._qualifiesCountry` returns true as soon as the caller matched through
+  a role outside the scope's bound set (`COUNTRY_SCOPED_MASK` is `ADMIN |
+INSURANCE_ADMIN`) — `_qualifiesCircle` and
+  `_qualifiesCurrency` short-circuit the same way. So a row with `scope: 1`
+  (COUNTRY) listing `DEV_LEAD` in `roles` does **not** confine that Dev Lead to
+  assigned countries; they pass everywhere, and the scope is there to be matched
+  by the gate variant the facet calls. Cross `scope` with `AdminCountry` (or the
+  circle / currency binding) for the bound role only — never render
+  "country-scoped" as a limit on the leads.
+- **`scope` is a claim about the facet's gate, and nothing in the registry keeps
+  the two in step.** A policy row whose `scope` disagrees with the `enforce*` /
+  `passes*` variant its facet actually calls is configurable, and the registry
+  neither rejects nor records it: `enforce*` reverts `PolicyScopeMismatch`
+  (`0xa2a481e6`) at call time, while `passes*` merely returns false and the
+  caller falls through to the legacy path. Under shadow mode that is the second
+  case, so the mismatch surfaces here as **a `LegacyAuthUsed` counter that never
+  drains** rather than as anything on the `SelectorPolicy` row, which keeps
+  looking correct. `authorizationOf` separates the two: it evaluates under the
+  policy's **own** scope, so `qualifies: true` on an account whose calls keep
+  emitting `LegacyAuthUsed` is the mismatch signature — the registry would admit
+  them, the facet's variant does not. (A `dualSign` row on an `enforce*`-gated
+  selector fails the same way but louder: `DualSignConsumeOnly`, always a
+  revert.)
+- **`timelocked: true` rows consult membership not at all.** The only caller that
+  passes is the `LeadTimelock` bound to some role in the mask
+  (`ProtocolRole.timelock`), so a `RoleMember` row on such a selector authorizes
+  no direct call however senior its holder — read those through
+  `TimelockOperation` / `TimelockCall`. `permissionless: true` is the one
+  override above everything here: it opens the selector to any caller, ahead of
+  both the timelock and the mask.
+- **An absent `SelectorPolicy` row does not mean nobody can call the selector,
+  and contracts-v4 now publishes which of the four readings applies.**
+  `getSelectorPolicy` returns the same zeroed struct for "retired",
+  "capability-gated", "gated somewhere other than the registry" and "nobody has
+  looked at this yet" — and those readings are the difference between fine and
+  alarming. `docs/roles-exclusions.json` in contracts-v4 is the machine-readable
+  answer, keyed by selector with a bucket and a `why` per entry; prefer it over
+  any list hand-kept here. Governed selectors are deliberately absent from it:
+  read those live from `getConfiguredSelectors`, which is authoritative per
+  network.
+  Its `capability` bucket holds **twelve** selectors — `blacklistMerchant`,
+  `removeBlacklist`, `toggleOnlineOfflineByAdmin`, `adminSettleDispute`,
+  `delegateStakeToMerchant`, `undelegateStakeFromMerchant`,
+  `approveOrRejectPaymentChannel`, `updateMerchant`, `cancelUnstakeRequest`,
+  `approveOrRejectMigration`, plus `InsurancePoolFacet.requestPipRefill` and
+  `cancelPipRefill`. Authority for all twelve lives in
+  `CirclePermission.selectors` (keyed `circleId-account`, maintained from
+  `PermissionGranted` / `PermissionRevoked`), so answer "who can blacklist a
+  merchant in circle 7?" from there, not from `SelectorPolicy`. The last two are
+  worth singling out: they are **Insurance**-Diamond entry points that check
+  capability **cross-diamond** against the main Diamond's `checkPermission`, so
+  the `PIPRefillRequest` rows this subgraph writes from the Insurance Diamond are
+  authorized by main-Diamond capability records — the two sides of that answer sit
+  on different proxies.
+  `LibCapability.checkPermission` tries the registry first, then that exact
+  record, then — while `legacyAuthEnabled` — a super admin, a global admin or the
+  circle's own admin, noting a `LegacyAuthUsed` as it goes. These selectors are
+  therefore where the legacy counters keep ticking until circle admins hold
+  explicit grants, and after the flip the capability record is the only path
+  left. The other never-configured families are genuinely unreachable through the
+  registry: retired or dying stubs removed at R8, futarchy-owned parameters the
+  Governance Diamond gates, and Diamond infrastructure gated by `owner`.
+- **`DiamondOwnership` has a row per Diamond, and R7 needs all three.**
+  `diamondCut` carries no policy row anywhere — it is gated by
+  `LibDiamond.enforceIsContractOwner`, so the upgrade authority is simply
+  whoever the owner is, and each of the three proxies (main, Insurance,
+  Governance) has its own. WS-3.5 is therefore three `transferOwnership`
+  transactions, and "upgrades are behind the DevTimelock" is only true when all
+  three rows show it: check them apart, never infer the other two from the main
+  one. The Governance Diamond's cut facet additionally accepts a passed proposal
+  executing against itself, so there ownership is the emergency path rather than
+  the only one. A missing row means that Diamond has emitted no transfer yet,
+  not that it is unowned.
+- **Who granted a role is now constrained, and one address escapes it.**
+  `grantRole` is a single selector covering every role bit, so its policy row
+  cannot say "Ops appoints Admins, Dev appoints Price Updaters". The contract
+  adds that as a second gate: the three leads self-rotate, `OPS_LEAD` appoints
+  ADMIN / INSURANCE_ADMIN / CIRCLE_ADMIN / CAPABILITY_GRANTEE, `MARKETING_LEAD`
+  appoints COMMUNITY_ADMIN, `DEV_LEAD` appoints PRICE_UPDATER, and either lead
+  may appoint FRAUD_MANAGER or drain the retired bit 9. Holding the role or
+  being the `LeadTimelock` bound to it both count, since `grantRole` is
+  timelocked while `revokeRole` is not. Two consequences for reading
+  `RoleActivity`: before the flip the matrix is **not enforced** (the seed grants
+  come from the legacy super admin, who holds no lead role), so early operators
+  will not fit it; and `ProtocolAuthState.futarchyBridge` — the root appointer
+  relaying an executed futarchy decision — bypasses both gates, so an operator
+  equal to that address took the root path and is the one case where any seat can
+  be granted or stripped. `null` there means never set, and the zero address
+  means deliberately cleared; either way there is no root path.
+- **The `emit*` / `fix*` replay selectors are gone, and that is fine.**
+  contracts-v4 removed all eleven in R8 (`feat(r8): retire the eleven one-shot
+operational helpers`, which deleted `libraries/upgradeEmitEvents.sol` outright)
+  after asking that the indexer be checked first, because the `emit*` family
+  existed to let this subgraph replay state. Checked before the removal: seven of the nine events that family emits have **no emitter
+  anywhere else** — `CurrencyAddedUpdate`,
+  `CurrencyMonthlyVolumeLimitUpdate`, `MerchantWithdrawFeePercentageUpdate`,
+  `PaymentChannelConfigUpdate`, `CircleMerchantDetailsAndConfigUpdate`,
+  `MerchantPaymentChannelUpdate`, `MerchantClaimableRewardsUpdate` (only
+  `PaymentChannelMigrationRequest` and `CircleCreated` are also emitted by the
+  real flows). Removing the selectors therefore makes those seven unemittable
+  for good, so any field written only from them would become permanently
+  unfillable. Every one of them now also has a primary path — `CurrencyToggled`
+  for `isActive`, `MonthlyVolumeLimit` for the volume limit,
+  `MerchantWithdrawFeePercentage` for the fee, `PaymentChannelConfigChanged` for
+  the channel config, and the merchant/reward flows for the rest — so the index
+  did not need a replay path for steady-state correctness. `CircleCreated` and
+  `PaymentChannelMigrationRequest` keep their real-flow emitters (`CircleFacet`,
+  `MerchantOnboardFacet`), so those two handlers stay live; **the other seven are
+  now historical-only** — they can never fire again, and their handlers exist
+  purely to keep the rows they already wrote. Two things this leaves behind. A
+  replay is still the only way to backfill that state into a subgraph redeployed
+  from a later `startBlock`, and it no longer exists. And all eleven selectors
+  carry `SelectorPolicy` rows (OPS_LEAD, GLOBAL) that outlive them, so the
+  generated map has to keep resolving names the current release no longer
+  contains.
+  Unioning the r8, r7 and `main` trees was how that held while the pre-removal
+  trees still carried them — and it stopped holding the moment `main` caught up.
+  R6.2's FCM removal reached `main`, no scanned tree declared `addFcmToken`,
+  `removeFcmToken` or `getFcmTokens` any more, and all three names dropped out of
+  the map while Base mainnet (R6) still serves registry rows for them. The
+  generator now **carries selectors forward**: any selector the committed map
+  already names survives a regeneration that no longer finds it, and
+  `selectors.meta.json` lists those under `carriedForward`. The map is therefore
+  monotonic — a name, once resolved, is never lost — and `--no-carry-forward`
+  writes a plain snapshot of the scanned trees for seeing what a release removed
+  (do not commit one).
+- `SelectorPolicy.functionName`, `CoSign.functionName`, `LegacyAuthUsage
+.functionName` and `TimelockCall.functionName` resolve selectors through
+  `src/constants/selectors.ts`, a generated map. Regenerate it after each
+  contracts release from a compiled contracts-v4 checkout:
+
+  ```bash
+  node scripts/generate-selectors.mjs ../contracts-v4/artifacts
+  ```
+
+  Hardhat's own `npm run compile` in contracts-v4 produces that tree. Compiling
+  the ABIs by hand instead, with one `solc` standard-JSON input over the whole
+  tree, overflows soljson's wasm heap on the R8.2 tree ("memory access out of
+  bounds" — it reads like a broken contract and is not one); split the sources
+  into batches and merge the artifact directories.
+
+  The generator also writes `src/constants/selectors.meta.json`, recording the
+  contracts-v4 commits it read and a sha256 digest of the selector→name pairs.
+  Any other repo generating its own inventory from the same contracts (the ops
+  console does) should compare that digest in CI — two generated inventories
+  off one set of contracts drift silently otherwise.
+
+  Policy rows outlive their selectors (R8 removes `failSafe`, the circle
+  staking entrypoints, `setSuperAdmin`, …, but their `SelectorPolicySet`
+  events stay indexed), so pass the artifacts of earlier releases as extra
+  arguments — the committed map was built from the r8, r7 and main trees. Those
+  extra trees are a convenience, not the guarantee: once every tracked branch
+  has moved past a removal, carry-forward is what keeps the name (see above).
+  The `p2pdotme/gov` console reaches the same conclusion independently — its
+  `gen-inventory.ts` carries removed selectors forward marked `removed: { at }`,
+  because an R8-only inventory renders a live R6 row as "unknown selector".
+
+- A timelock's `MinDelayChange` is emitted in its constructor, before the
+  template exists, so `LeadTimelock.minDelay` stays null unless the delay is
+  changed later; the 48h policy minimum lives in the contracts runbook.
 
 ## Entity Relationship Diagram
 
@@ -268,11 +623,11 @@ erDiagram
 
 ## Available Scripts
 
-| Command | Description |
-|---------|-------------|
+| Command           | Description                                    |
+| ----------------- | ---------------------------------------------- |
 | `npm run codegen` | Generate TypeScript types from ABIs and schema |
-| `npm run build` | Compile AssemblyScript to WebAssembly |
-| `npm run deploy` | Deploy to The Graph Studio |
+| `npm run build`   | Compile AssemblyScript to WebAssembly          |
+| `npm run deploy`  | Deploy to The Graph Studio                     |
 
 ---
 
@@ -330,9 +685,9 @@ When a circle is first created, it enters **bootstrap** with a default score of 
 
 **Graduation to active** happens when either threshold is met:
 
-| Threshold | Value |
-|-----------|-------|
-| Lifetime orders | ≥ 40 |
+| Threshold            | Value         |
+| -------------------- | ------------- |
+| Lifetime orders      | ≥ 40          |
 | Lifetime USDC volume | ≥ 20,000 USDC |
 
 **Weight cap** — Bootstrap circles have their score capped at 25 (`BOOTSTRAP_MAX_WEIGHT`), regardless of the calculated score. This prevents unproven circles from dominating order routing.
@@ -342,6 +697,7 @@ When a circle is first created, it enters **bootstrap** with a default score of 
 ### Step 3: Circle Score Calculation (0–100)
 
 The score is only computed when:
+
 - Circle is **not rejected**
 - Circle has completed at least **10 orders** (MIN_ORDERS_FOR_SCORE)
 
@@ -363,13 +719,13 @@ speed = clamp(100 × (150 - avg_settlement_seconds) / (150 - 45), 0, 100)
 - 150 seconds = worst case (score 0)
 
 | Avg Settlement | Speed Score |
-|---------------|-------------|
-| 45s | 100 |
-| 60s | ~86 |
-| 75s | ~71 |
-| 90s | ~57 |
-| 120s | ~29 |
-| 150s+ | 0 |
+| -------------- | ----------- |
+| 45s            | 100         |
+| 60s            | ~86         |
+| 75s            | ~71         |
+| 90s            | ~57         |
+| 120s           | ~29         |
+| 150s+          | 0           |
 
 #### 3b. Dispute Score (30% weight)
 
@@ -380,14 +736,14 @@ dispute = max(0, 100 - (dispute_rate × 1800))
 ```
 
 | Dispute % | Score |
-|-----------|-------|
-| 0.0% | 100 |
-| 0.5% | 91 |
-| 1.0% | 82 |
-| 2.0% | 64 |
-| 3.0% | 46 |
-| 5.0% | 10 |
-| ≥5.6% | 0 |
+| --------- | ----- |
+| 0.0%      | 100   |
+| 0.5%      | 91    |
+| 1.0%      | 82    |
+| 2.0%      | 64    |
+| 3.0%      | 46    |
+| 5.0%      | 10    |
+| ≥5.6%     | 0     |
 
 #### 3c. Merchants Score (20% weight)
 
@@ -408,13 +764,13 @@ volume = min(100, total_volume_usdc / 10,000)
 ```
 
 | Total Volume (USDC) | Volume Score |
-|--------------------|-------------|
-| 0 | 0 |
-| 50,000 | 5 |
-| 100,000 | 10 |
-| 250,000 | 25 |
-| 500,000 | 50 |
-| ≥1,000,000 | 100 |
+| ------------------- | ------------ |
+| 0                   | 0            |
+| 50,000              | 5            |
+| 100,000             | 10           |
+| 250,000             | 25           |
+| 500,000             | 50           |
+| ≥1,000,000          | 100          |
 
 ### Note: Order Routing
 
@@ -438,18 +794,19 @@ Let's walk through two circles with different performance profiles to see how th
 
 #### Raw Metrics
 
-| Metric | Circle Alpha | Circle Beta |
-|--------|-------------|------------|
-| Avg Settlement Time | 60s | 120s |
-| Dispute Rate | 1.0% | 4.0% |
-| Active Merchants | 25 | 8 |
-| 30d Volume (USDC) | 500,000 | 50,000 |
-| Lifetime Orders | 200 | 15 |
-| Status | active | bootstrap |
+| Metric              | Circle Alpha | Circle Beta |
+| ------------------- | ------------ | ----------- |
+| Avg Settlement Time | 60s          | 120s        |
+| Dispute Rate        | 1.0%         | 4.0%        |
+| Active Merchants    | 25           | 8           |
+| 30d Volume (USDC)   | 500,000      | 50,000      |
+| Lifetime Orders     | 200          | 15          |
+| Status              | active       | bootstrap   |
 
 #### Sub-Score Breakdown
 
 **Circle Alpha:**
+
 ```
 speed    = clamp(100 × (150 - 60) / (150 - 45), 0, 100)  = 85.7  ≈ 86
 dispute  = max(0, 100 - (0.01 × 1800))                    = 82
@@ -458,6 +815,7 @@ volume   = min(100, 500,000 / 10,000)                      = 50
 ```
 
 **Circle Beta:**
+
 ```
 speed    = clamp(100 × (150 - 120) / (150 - 45), 0, 100)  = 28.6  ≈ 29
 dispute  = max(0, 100 - (0.04 × 1800))                     = 28
@@ -489,5 +847,6 @@ xychart-beta
 ```
 
 **What this means:**
+
 - Circle Alpha scores 67 vs Circle Beta's 21 — Alpha dominates because it settles 2x faster (60s vs 120s), has 4x fewer disputes (1% vs 4%), has 3x more merchants, and 10x more volume.
 - Circle Beta can improve its score by: reducing settlement time, lowering disputes, onboarding more merchants, or increasing volume. The score recalculates on every completed order, so improvements are reflected immediately.
