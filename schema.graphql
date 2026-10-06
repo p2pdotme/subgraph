@@ -1242,6 +1242,12 @@ type UserP2PStake @entity(immutable: false) {
   lastActionAt: BigInt! # block.timestamp of most recent event
   # Last seizure metadata (only populated once a seize occurs)
   fraudReserve: Bytes # address that received the seized stake
+  # R8.2: the COUNTRY whose insurance pool the seizure was credited to.
+  # `P2PStakeSeizedForCountry` is emitted alongside `P2PStakeSeized` for the same
+  # act, so this annotates that seizure rather than recording another one —
+  # `totalSeized` is fed by `P2PStakeSeized` alone and must stay that way.
+  seizedForCountry: Bytes
+  seizedForCountryCode: String
   activities: [UserP2PStakeActivity!]! @derivedFrom(field: "stake")
 
   # Updated on every event for this user; reflect the most recent event, not creation.
@@ -1628,6 +1634,75 @@ type EmergencyPauseActivity @entity(immutable: true) {
   id: Bytes! # txHash ++ logIndex
   by: Bytes!
   paused: Boolean!
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# SEIZED STAKE (R8.2)
+# Mirrors the Insurance Diamond's own `getSeizedStake(token, country)` /
+# `getSeizedStakeTotal(token)` accounting: a force-recovered stake is credited to
+# the COUNTRY insurance pool rather than paid to whoever triggered the recovery.
+#
+# `amount` here is DERIVED by summing events, so it is only correct for a
+# subgraph that indexed from before the first seizure. `getSeizedStake` is the
+# authority; a redeploy from a later `startBlock` under-counts, and nothing in
+# the data says so. Read this for the history and the chain for the balance.
+type SeizedStake @entity(immutable: false) {
+  id: Bytes! # token ++ country
+  token: Bytes!
+  country: Bytes!
+  countryCode: String!
+  # recordedTotal - releasedTotal, as seen from the indexed range.
+  amount: BigInt!
+  recordedTotal: BigInt!
+  releasedTotal: BigInt!
+  lastRecordedAt: BigInt
+  lastReleasedAt: BigInt
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# Immutable log of every seizure movement the INSURANCE DIAMOND records,
+# including MERCHANT_STAKE_TO_CAIP, which credits a force-recovered merchant's
+# USDC to its circle's insurance pool (CAIP) and so is keyed by circle, not
+# token, and does not move the token/country ledger.
+#
+# The main Diamond's `P2PStakeSeizedForCountry` is deliberately NOT a row here.
+# It is emitted on the line after `P2PStakeSeized`, in the same transaction, for
+# the same act — so a second amount-bearing row would double-count every user
+# stake seizure. It lands as `UserP2PStake.seizedForCountry` instead.
+type SeizedStakeActivity @entity(immutable: true) {
+  id: Bytes! # txHash ++ logIndex
+  # RECORDED | RELEASED | MERCHANT_STAKE_TO_CAIP
+  action: String!
+  country: Bytes!
+  countryCode: String!
+  amount: BigInt!
+  # RECORDED / RELEASED only.
+  token: Bytes
+  seizedStake: SeizedStake
+  # RELEASED only: who the stake was released to.
+  to: Bytes
+  # MERCHANT_STAKE_TO_CAIP only.
+  circleId: BigInt
+
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# PIP CONTRIBUTIONS (R8.2)
+# `contributeToPIP` is open to anyone, so a contribution carries no authority and
+# `from` is not an operator. Separate from `PIPDeposited`, which is the
+# protocol's own funding path.
+type PIPContribution @entity(immutable: true) {
+  id: Bytes! # txHash ++ logIndex
+  from: Bytes!
+  amount: BigInt!
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
