@@ -141,6 +141,10 @@ dataSources:
         - OrderProcessorFacet
         - ProtocolAuthState
         - EmergencyPauseActivity
+        - Orders
+        - Currency
+        - DisputeActivity
+        - CircleDisputeRejectionSuppression
       abis:
         - name: OrderProcessorFacet
           file: ./abis/OrderProcessorFacet.json
@@ -152,8 +156,22 @@ dataSources:
         - event: OrderAppealed(indexed uint256,indexed address,uint128)
           handler: handleOrderAppealed
         # R7 break-glass pause (roles & permissions rollout)
+        # HISTORICAL from R8.2, which removed emergencyPause and its toggle.
+        # Kept so the rows it already wrote stay reachable.
         - event: EmergencyPauseSet(indexed address,bool)
           handler: handleEmergencyPauseSet
+        # R8.2 tiered disputes. A decision is recorded, then executes at
+        # appealableUntil unless appealed; DisputeAppealed is NOT OrderAppealed.
+        - event: DisputeDecided(indexed uint256,uint8,uint8,indexed address,uint64)
+          handler: handleDisputeDecided
+        - event: DisputeAppealed(indexed uint256,uint8,indexed address)
+          handler: handleDisputeAppealed
+        - event: DisputeAppealWindowSet(indexed bytes32,uint32)
+          handler: handleDisputeAppealWindowSet
+        - event: DisputeDecisionSlaSet(indexed bytes32,uint32,uint32)
+          handler: handleDisputeDecisionSlaSet
+        - event: CircleDisputeRejectionSuppressed(indexed address,indexed uint256,uint256)
+          handler: handleCircleDisputeRejectionSuppressed
       file: ./src/order.ts
   - kind: ethereum
     name: OrderFlowFacet
@@ -448,6 +466,8 @@ dataSources:
       entities:
         - CircleCreatedUpdate
         - LegacyAdmin
+        - Currency
+        - CurrencyConfig
       abis:
         - name: SetterFacet
           file: ./abis/SetterFacet.json
@@ -481,6 +501,13 @@ dataSources:
           handler: handleAdminStatusUpdated
         - event: MinFiatAmountUpdated(indexed bytes32,uint256,uint256)
           handler: handleMinFiatAmountUpdated
+        # R8.2 per-currency overrides of network defaults; 0 = follow the default
+        - event: CurrencyCashbackPercentageUpdated(indexed bytes32,uint24)
+          handler: handleCurrencyCashbackPercentageUpdated
+        - event: CurrencyProcessingTimeUpdated(indexed bytes32,(uint256,uint256,uint256,uint256))
+          handler: handleCurrencyProcessingTimeUpdated
+        - event: MinSellTxLimitUpdated(indexed bytes32,uint256,uint256)
+          handler: handleMinSellTxLimitUpdated
       file: ./src/setter-facet.ts
   - kind: ethereum
     name: CapabilityFacet

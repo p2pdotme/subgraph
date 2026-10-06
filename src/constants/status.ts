@@ -30,3 +30,9 @@ export const ORDER_TYPE_PAY: i32 = 2;
 export const FAULT_TYPE_USER: i32 = 1;
 export const FAULT_TYPE_MERCHANT: i32 = 2;
 export const FAULT_TYPE_BANK: i32 = 3;
+
+// R8.2 tiered-dispute activity actions. DECIDED is a decision RECORDED, which
+// executes at `appealableUntil` unless appealed; APPEALED can follow either a
+// decision or a missed decision SLA on an undecided dispute.
+export const DISPUTE_ACTION_DECIDED = "DECIDED";
+export const DISPUTE_ACTION_APPEALED = "APPEALED";

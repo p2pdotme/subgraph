@@ -2378,6 +2378,196 @@
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "disputeCounter",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "disputeThreshold",
+          "type": "uint256"
+        }
+      ],
+      "name": "CircleOverDisputeThreshold",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint24",
+          "name": "bps",
+          "type": "uint24"
+        }
+      ],
+      "name": "CurrencyCashbackPercentageUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "buyMin",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyMax",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellMin",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellMax",
+              "type": "uint256"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct P2pConfigStorage.ProcessingTimeSecs",
+          "name": "processingTime",
+          "type": "tuple"
+        }
+      ],
+      "name": "CurrencyProcessingTimeUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "previous",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "floor",
+          "type": "uint256"
+        }
+      ],
+      "name": "MinSellTxLimitUpdated",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint24",
+          "name": "bps",
+          "type": "uint24"
+        }
+      ],
+      "name": "setCurrencyCashbackPercentage",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "buyMin",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyMax",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellMin",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellMax",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct P2pConfigStorage.ProcessingTimeSecs",
+          "name": "processingTime",
+          "type": "tuple"
+        }
+      ],
+      "name": "setCurrencyProcessingTime",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "active",
+          "type": "bool"
+        }
+      ],
+      "name": "setExchangeStatus",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "floor",
+          "type": "uint256"
+        }
+      ],
+      "name": "setMinSellTxLimit",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     }
   ]
 }

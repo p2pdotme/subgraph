@@ -770,6 +770,355 @@
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "DisputeAppealNotDue",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "DisputeAppealWindowClosed",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "DisputeAppealWindowOpen",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "DisputeAtFinalTier",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "DisputeDecisionPending",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidDisputeSla",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NoDisputeDecision",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotDisputeParty",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "by",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "circleId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "disputeCounter",
+          "type": "uint256"
+        }
+      ],
+      "name": "CircleDisputeRejectionSuppressed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "window",
+          "type": "uint32"
+        }
+      ],
+      "name": "DisputeAppealWindowSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "orderId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "tier",
+          "type": "uint8"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "by",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeAppealed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "orderId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "decisionTier",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum OrderProcessorStorage.FaultType",
+          "name": "faultType",
+          "type": "uint8"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "by",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "appealableUntil",
+          "type": "uint64"
+        }
+      ],
+      "name": "DisputeDecided",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "tier1",
+          "type": "uint32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "tier2",
+          "type": "uint32"
+        }
+      ],
+      "name": "DisputeDecisionSlaSet",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_orderId",
+          "type": "uint256"
+        }
+      ],
+      "name": "appealDispute",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_orderId",
+          "type": "uint256"
+        }
+      ],
+      "name": "finalizeDispute",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getDisputeAppealWindow",
+      "outputs": [
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_orderId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getDisputeDecision",
+      "outputs": [
+        {
+          "internalType": "enum OrderProcessorStorage.FaultType",
+          "name": "faultType",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint8",
+          "name": "decisionTier",
+          "type": "uint8"
+        },
+        {
+          "internalType": "address",
+          "name": "decidedBy",
+          "type": "address"
+        },
+        {
+          "internalType": "uint64",
+          "name": "decidedAt",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "appealableUntil",
+          "type": "uint64"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getDisputeDecisionSla",
+      "outputs": [
+        {
+          "internalType": "uint32",
+          "name": "tier1",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "tier2",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_orderId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getDisputeTier",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "tier",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint64",
+          "name": "tierSince",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "appealableAt",
+          "type": "uint64"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "window",
+          "type": "uint32"
+        }
+      ],
+      "name": "setDisputeAppealWindow",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "currency",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "tier1",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "tier2",
+          "type": "uint32"
+        }
+      ],
+      "name": "setDisputeDecisionSla",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     }
   ]
 }
