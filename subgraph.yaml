@@ -450,6 +450,11 @@ dataSources:
           handler: handleP2PStakeCooldownExtended
         - event: P2PStakeSeized(indexed address,uint256,indexed address)
           handler: handleP2PStakeSeized
+        # R8.2: emitted alongside P2PStakeSeized for the SAME act (force-recovery
+        # pays the country insurance pool now). Annotates that seizure with its
+        # country; it must never add to totalSeized.
+        - event: P2PStakeSeizedForCountry(indexed address,indexed bytes32,uint256)
+          handler: handleP2PStakeSeizedForCountry
       file: ./src/p2p-stake.ts
   # UPGRADE EMIT EVENTS -> Sync up with older data
   - kind: ethereum
@@ -609,6 +614,9 @@ dataSources:
         - CircleAdminCALR
         - CALRActivity
         - InsuranceNonPoolTokenSweep
+        - SeizedStake
+        - SeizedStakeActivity
+        - PIPContribution
       abis:
         - name: InsurancePoolFacet
           file: ./abis/InsurancePoolFacet.json
@@ -634,6 +642,16 @@ dataSources:
         # R1 non-pool token recovery (roles & permissions rollout)
         - event: NonPoolTokenSwept(indexed address,indexed address,uint256)
           handler: handleNonPoolTokenSwept
+        # R8.2: a force-recovered stake is credited to the COUNTRY pool
+        - event: SeizedStakeRecorded(indexed address,indexed bytes32,uint256)
+          handler: handleSeizedStakeRecorded
+        - event: SeizedStakeReleased(indexed address,indexed bytes32,indexed address,uint256)
+          handler: handleSeizedStakeReleased
+        - event: SeizedMerchantStakeToCaip(indexed uint256,indexed bytes32,uint256)
+          handler: handleSeizedMerchantStakeToCaip
+        # contributeToPIP is open to anyone, so `from` carries no authority
+        - event: PIPContributed(indexed address,uint256)
+          handler: handlePIPContributed
       file: ./src/insurance-pool.ts
   - kind: ethereum
     name: InsuranceSinkFacet

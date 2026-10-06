@@ -1,4 +1,4 @@
-import { BigInt, Bytes } from "@graphprotocol/graph-ts";
+import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   PIPRefillRequested as PIPRefillRequestedEvent,
   PIPRefillCancelled as PIPRefillCancelledEvent,
@@ -10,9 +10,23 @@ import {
   CALRUnlocked as CALRUnlockedEvent,
   CALRLockReverted as CALRLockRevertedEvent,
   NonPoolTokenSwept as NonPoolTokenSweptEvent,
+  SeizedStakeRecorded as SeizedStakeRecordedEvent,
+  SeizedStakeReleased as SeizedStakeReleasedEvent,
+  SeizedMerchantStakeToCaip as SeizedMerchantStakeToCaipEvent,
+  PIPContributed as PIPContributedEvent,
 } from "../generated/InsurancePoolFacet/InsurancePoolFacet";
-import { InsuranceNonPoolTokenSweep } from "../generated/schema";
-import { logKey } from "./utils";
+import {
+  InsuranceNonPoolTokenSweep,
+  PIPContribution,
+  SeizedStake,
+  SeizedStakeActivity,
+} from "../generated/schema";
+import { bytes32ToAscii, logKey } from "./utils";
+import {
+  SEIZED_ACTION_MERCHANT_STAKE_TO_CAIP,
+  SEIZED_ACTION_RECORDED,
+  SEIZED_ACTION_RELEASED,
+} from "./constants/status";
 import {
   InsuranceApprover,
   InsuranceCurrencyConfig,
@@ -24,9 +38,7 @@ import {
   newCALRActivity,
 } from "./lib";
 
-export function handlePIPRefillRequested(
-  event: PIPRefillRequestedEvent,
-): void {
+export function handlePIPRefillRequested(event: PIPRefillRequestedEvent): void {
   const circleIdBytes = Bytes.fromByteArray(
     Bytes.fromBigInt(event.params.circleId),
   );
@@ -64,9 +76,7 @@ export function handlePIPRefillRequested(
   entity.save();
 }
 
-export function handlePIPRefillCancelled(
-  event: PIPRefillCancelledEvent,
-): void {
+export function handlePIPRefillCancelled(event: PIPRefillCancelledEvent): void {
   const entity = loadPIPRefillRequest(event.params.circleId, event);
 
   // RefillStatus.CANCELLED = 2
@@ -76,9 +86,7 @@ export function handlePIPRefillCancelled(
   entity.save();
 }
 
-export function handlePIPRefillApproved(
-  event: PIPRefillApprovedEvent,
-): void {
+export function handlePIPRefillApproved(event: PIPRefillApprovedEvent): void {
   const entity = loadPIPRefillRequest(event.params.circleId, event);
 
   // RefillStatus.APPROVED = 1
@@ -89,9 +97,7 @@ export function handlePIPRefillApproved(
   entity.save();
 }
 
-export function handlePIPRefillRejected(
-  event: PIPRefillRejectedEvent,
-): void {
+export function handlePIPRefillRejected(event: PIPRefillRejectedEvent): void {
   const entity = loadPIPRefillRequest(event.params.circleId, event);
 
   // RefillStatus.REJECTED = 3
@@ -213,4 +219,125 @@ export function handleNonPoolTokenSwept(event: NonPoolTokenSweptEvent): void {
   entity.blockTimestamp = event.block.timestamp;
   entity.transactionHash = event.transaction.hash;
   entity.save();
+}
+
+// ─────────────────── R8.2 seized stake (country pools) ───────────────────
+// A force-recovered stake is credited to the COUNTRY insurance pool, not paid
+// to whoever triggered the recovery. The running `amount` here is derived from
+// the events in the indexed range; `getSeizedStake(token, country)` is the
+// authority (see the note on the entity).
+
+function loadSeizedStake(
+  token: Bytes,
+  country: Bytes,
+  event: ethereum.Event,
+): SeizedStake {
+  const id = token.concat(country);
+  let row = SeizedStake.load(id);
+  if (!row) {
+    row = new SeizedStake(id);
+    row.token = token;
+    row.country = country;
+    row.countryCode = bytes32ToAscii(country);
+    row.amount = BigInt.zero();
+    row.recordedTotal = BigInt.zero();
+    row.releasedTotal = BigInt.zero();
+    row.lastRecordedAt = null;
+    row.lastReleasedAt = null;
+  }
+  row.blockNumber = event.block.number;
+  row.blockTimestamp = event.block.timestamp;
+  row.transactionHash = event.transaction.hash;
+  return row;
+}
+
+function newSeizedActivity(
+  event: ethereum.Event,
+  action: string,
+  country: Bytes,
+  amount: BigInt,
+): SeizedStakeActivity {
+  const activity = new SeizedStakeActivity(
+    logKey(event.transaction.hash, event.logIndex),
+  );
+  activity.action = action;
+  activity.country = country;
+  activity.countryCode = bytes32ToAscii(country);
+  activity.amount = amount;
+  activity.blockNumber = event.block.number;
+  activity.blockTimestamp = event.block.timestamp;
+  activity.transactionHash = event.transaction.hash;
+  return activity;
+}
+
+export function handleSeizedStakeRecorded(
+  event: SeizedStakeRecordedEvent,
+): void {
+  const row = loadSeizedStake(event.params.token, event.params.country, event);
+  row.recordedTotal = row.recordedTotal.plus(event.params.amount);
+  row.amount = row.amount.plus(event.params.amount);
+  row.lastRecordedAt = event.block.timestamp;
+  row.save();
+
+  const activity = newSeizedActivity(
+    event,
+    SEIZED_ACTION_RECORDED,
+    event.params.country,
+    event.params.amount,
+  );
+  activity.token = event.params.token;
+  activity.seizedStake = row.id;
+  activity.save();
+}
+
+export function handleSeizedStakeReleased(
+  event: SeizedStakeReleasedEvent,
+): void {
+  const row = loadSeizedStake(event.params.token, event.params.country, event);
+  row.releasedTotal = row.releasedTotal.plus(event.params.amount);
+  // Can go negative for a subgraph that started indexing after the seizure it
+  // releases. Clamping would hide that; the entity comment says to read the
+  // balance from the chain.
+  row.amount = row.amount.minus(event.params.amount);
+  row.lastReleasedAt = event.block.timestamp;
+  row.save();
+
+  const activity = newSeizedActivity(
+    event,
+    SEIZED_ACTION_RELEASED,
+    event.params.country,
+    event.params.amount,
+  );
+  activity.token = event.params.token;
+  activity.seizedStake = row.id;
+  activity.to = event.params.to;
+  activity.save();
+}
+
+// Keyed by circle, not token: this credits a circle's own insurance pool
+// (CAIP), so it does NOT move the token/country seized-stake ledger.
+export function handleSeizedMerchantStakeToCaip(
+  event: SeizedMerchantStakeToCaipEvent,
+): void {
+  const activity = newSeizedActivity(
+    event,
+    SEIZED_ACTION_MERCHANT_STAKE_TO_CAIP,
+    event.params.country,
+    event.params.amount,
+  );
+  activity.circleId = event.params.circleId;
+  activity.save();
+}
+
+// `contributeToPIP` is open to anyone, so `from` carries no authority.
+export function handlePIPContributed(event: PIPContributedEvent): void {
+  const row = new PIPContribution(
+    logKey(event.transaction.hash, event.logIndex),
+  );
+  row.from = event.params.from;
+  row.amount = event.params.amount;
+  row.blockNumber = event.block.number;
+  row.blockTimestamp = event.block.timestamp;
+  row.transactionHash = event.transaction.hash;
+  row.save();
 }

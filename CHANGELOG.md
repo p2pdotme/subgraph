@@ -10,6 +10,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- R8.2 **seized stake** (InsurancePoolFacet): `SeizedStakeRecorded` /
+  `SeizedStakeReleased` onto a `SeizedStake` ledger per (token, country) mirroring
+  the Diamond's own `getSeizedStake` / `getSeizedStakeTotal`, plus a
+  `SeizedStakeActivity` log that also carries `SeizedMerchantStakeToCaip` (keyed
+  by circle, so it does not move the token ledger) and a `PIPContribution` row per
+  `contributeToPIP` — open to anyone, so `from` carries no authority. The running
+  `amount` is derived from the indexed range and goes **negative** rather than
+  clamping when a release has no matching record, because a subgraph deployed
+  after a seizure would otherwise show a plausible wrong balance;
+  `getSeizedStake` is the authority and the entity says so
+- `P2PStakeSeizedForCountry` as `UserP2PStake.seizedForCountry` /
+  `seizedForCountryCode`, deliberately **not** a second seizure record. It is
+  emitted on the line after `P2PStakeSeized`, in the same transaction, for the
+  same act — force-recovery pays the country insurance pool now rather than the
+  caller — so an amount-bearing row would have made every user stake seizure read
+  as twice what was taken. There is a test pinning `totalSeized` across both
 - R8.2 **tiered disputes** (OrderProcessorFacet): `DisputeDecided` and
   `DisputeAppealed` onto `Orders.disputeTier` / `disputeDecisionTier` /
   `disputeDecidedBy` / `disputeDecidedAt` / `disputeAppealableUntil` /
