@@ -9,8 +9,12 @@ import { loadCurrency } from "./lib";
 export function handlePaymentChannelConfigChanged(
   event: PaymentChannelConfigChanged,
 ): void {
-  // Use paymentChannelId as the entity ID
-  const id = Bytes.fromI32(event.params.cfg.paymentChannelId.toI32());
+  // Key by paymentChannelId exactly as SetterFacet's PaymentChannelConfigUpdate
+  // does, so both events update one row. Bytes.fromI32(id.toI32()) produced a
+  // different (4-byte) key for the same config and left duplicate rows.
+  const id = changetype<Bytes>(
+    Bytes.fromBigInt(event.params.cfg.paymentChannelId),
+  );
 
   let config = PaymentChannelConfig.load(id);
   if (!config) {
