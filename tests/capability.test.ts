@@ -15,7 +15,7 @@ import {
   handlePermissionGranted,
   handlePermissionRevoked,
 } from "../src/capability";
-import { circlePermissionId } from "../src/lib";
+import { circleAccountId } from "../src/lib";
 
 // Values from the event that halted indexing at block 52506326.
 const ACCOUNT = "0x6c1cd62701c3e13facb9e5948ffb9b00d98ec583";
@@ -102,7 +102,7 @@ function createPermissionRevokedEvent(
 }
 
 function idOf(circleId: i32, account: string): string {
-  return circlePermissionId(
+  return circleAccountId(
     BigInt.fromI32(circleId),
     Address.fromString(account),
   ).toHexString();

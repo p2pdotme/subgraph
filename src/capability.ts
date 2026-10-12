@@ -7,7 +7,7 @@ import {
   PermissionRevoked as PermissionRevokedEvent,
 } from "../generated/CapabilityFacet/CapabilityFacet";
 import {
-  circlePermissionId,
+  circleAccountId,
   loadCirclePermission,
   loadCommunityAdmin,
 } from "./lib";
@@ -34,7 +34,7 @@ function removeSelector(selectors: Bytes[], selector: Bytes): Bytes[] {
 export function handleAccountNameUpdated(
   event: AccountNameUpdatedEvent,
 ): void {
-  const key = circlePermissionId(event.params.circleId, event.params.account);
+  const key = circleAccountId(event.params.circleId, event.params.account);
 
   const permission = loadCirclePermission(key, event);
   permission.circleId = event.params.circleId;
@@ -45,7 +45,7 @@ export function handleAccountNameUpdated(
 }
 
 export function handlePermissionGranted(event: PermissionGrantedEvent): void {
-  const key = circlePermissionId(event.params.circleId, event.params.account);
+  const key = circleAccountId(event.params.circleId, event.params.account);
 
   const permission = loadCirclePermission(key, event);
   permission.circleId = event.params.circleId;
@@ -85,7 +85,7 @@ export function handleCommunityAdminRemoved(
 }
 
 export function handlePermissionRevoked(event: PermissionRevokedEvent): void {
-  const key = circlePermissionId(event.params.circleId, event.params.account);
+  const key = circleAccountId(event.params.circleId, event.params.account);
 
   const permission = loadCirclePermission(key, event);
   permission.circleId = event.params.circleId;
