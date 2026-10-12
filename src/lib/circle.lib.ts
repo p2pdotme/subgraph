@@ -1,4 +1,4 @@
-import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   Circle,
   CircleDailyMetrics,
@@ -143,6 +143,23 @@ export function loadCircleOrderMetricsByMonth(
   metrics.transactionHash = event.transaction.hash;
 
   return metrics;
+}
+
+// CirclePermission ids were originally Bytes.fromHexString("<circleId>-0x<account>").
+// That string is not hex: graph-ts asserts even length, so circleIds with an
+// even digit count (10-99, 1000-9999, ...) aborted the handler (circle 20 halted
+// indexing at block 52506326), while odd digit counts parsed into junk-but-stable
+// bytes. Keep the legacy id where it parsed so existing rows stay addressable,
+// and use the UTF-8 bytes of the same string otherwise. Legacy ids are
+// len/2 bytes (22 for circleId 1-9, 23 for 100-999); UTF-8 ids are len bytes
+// (>= 45), so the two never collide.
+// TODO: drop the legacy branch on the next full resync.
+export function circlePermissionId(circleId: BigInt, account: Address): Bytes {
+  const legacy = `${circleId.toString()}-${account.toHexString()}`;
+  if (legacy.length % 2 == 0) {
+    return Bytes.fromHexString(legacy);
+  }
+  return Bytes.fromUTF8(legacy);
 }
 
 export function loadCirclePermission(
