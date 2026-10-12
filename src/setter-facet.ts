@@ -23,6 +23,7 @@ import {
   savePaymentChannel,
   loadMerchantRewards,
   loadMerchantWithdrawFeePercentage,
+  updateActiveMerchantsCount,
   updateAvailableMerchantsCount,
 } from "./lib";
 
@@ -55,7 +56,15 @@ export function handleCircleMerchantDetailsAndConfigUpdate(
     event,
   );
 
-  // Snapshot availability BEFORE the bulk overwrite so we can emit a proper delta.
+  // Snapshot state BEFORE the bulk overwrite so every counter moves by a
+  // delta. This event can re-emit an already-indexed merchant (admin
+  // migration/update), so unconditional increments double-count it.
+  const wasInCircle = !merchant.circleId.equals(BigInt.zero());
+  const wasActive = isMerchantActive(
+    merchant.stakedAmount,
+    merchant.isOnline,
+    merchant.isBlacklisted,
+  );
   const wasAvailable = isMerchantAvailable(
     merchant.stakedAmount,
     merchant.isOnline,
@@ -85,37 +94,31 @@ export function handleCircleMerchantDetailsAndConfigUpdate(
   // loadCircle only materializes it in memory.
   circle.save();
 
-  let circleMetrics = loadCircleMetrics(circle.id, event);
-  circleMetrics.totalMerchantsCount = circleMetrics.totalMerchantsCount.plus(
-    BigInt.fromI32(1),
-  );
-  circleMetrics.save();
+  // Only a merchant not yet attached to a circle joins the total.
+  if (!wasInCircle) {
+    let circleMetrics = loadCircleMetrics(circle.id, event);
+    circleMetrics.totalMerchantsCount = circleMetrics.totalMerchantsCount.plus(
+      BigInt.fromI32(1),
+    );
+    circleMetrics.save();
+  }
 
   const isActive = isMerchantActive(
     merchant.stakedAmount,
     merchant.isOnline,
     merchant.isBlacklisted,
   );
-
-  if (isActive) {
-    let scoreState = loadCircleScoreState(circle.id, event);
-    scoreState.activeMerchantsCount = scoreState.activeMerchantsCount.plus(
-      BigInt.fromI32(1),
-    );
-    scoreState.save();
-  }
-
   const isAvailable = isMerchantAvailable(
     merchant.stakedAmount,
     merchant.isOnline,
     merchant.isBlacklisted,
     merchant.isUnstakeRequested,
   );
-  if (wasAvailable != isAvailable) {
-    let scoreState = loadCircleScoreState(circle.id, event);
-    updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
-    scoreState.save();
-  }
+
+  let scoreState = loadCircleScoreState(circle.id, event);
+  updateActiveMerchantsCount(scoreState, wasActive, isActive);
+  updateAvailableMerchantsCount(scoreState, wasAvailable, isAvailable);
+  scoreState.save();
 }
 
 export function handleMerchantPaymentChannelUpdate(

@@ -7,6 +7,8 @@ import {
   UsdcUndelegatedFromMerchantInCircle as UsdcUndelegatedFromMerchantInCircleEvent,
 } from "../generated/USDCStakeDelegationFacet/USDCStakeDelegationFacet";
 import {
+  addStakerStakeRecord,
+  addStakerUnstakeRecord,
   backfillMerchantCircle,
   circleAccountId,
   loadCircle,
@@ -26,7 +28,10 @@ import {
 import { Circle } from "../generated/schema";
 
 export function handleExitRequested(event: ExitRequestedEvent): void {
-  const stakeRecordKey = circleAccountId(event.params.circleId, event.params.user);
+  const stakeRecordKey = circleAccountId(
+    event.params.circleId,
+    event.params.user,
+  );
 
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(circleKey, event);
@@ -41,11 +46,14 @@ export function handleExitRequested(event: ExitRequestedEvent): void {
   circleUnstakeRecord.status = BigInt.fromI32(UNSTAKE_REQUEST_RAISED);
   circleUnstakeRecord.availableAt = event.params.availableAt;
 
-  staker.circleUsdcUnstakeRecords.push(circleUnstakeRecord.id);
-
   circleUnstakeRecord.save();
 
+  addStakerUnstakeRecord(staker, circleUnstakeRecord.id);
+  staker.save();
+
   const stakeRecord = loadCircleUsdcStakeRecords(stakeRecordKey, event);
+  stakeRecord.circle = circle.id;
+  stakeRecord.staker = staker.id;
   stakeRecord.unstakeRequest = circleUnstakeRecord.id;
   stakeRecord.save();
 }
@@ -53,21 +61,34 @@ export function handleExitRequested(event: ExitRequestedEvent): void {
 export function handleExitProceedsWithdrawn(
   event: ExitProceedsWithdrawnEvent,
 ): void {
-  const stakeRecordKey = circleAccountId(event.params.circleId, event.params.user);
+  const stakeRecordKey = circleAccountId(
+    event.params.circleId,
+    event.params.user,
+  );
+
+  const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
+  const circle = loadCircle(circleKey, event);
+  const staker = loadStaker(event.params.user, event);
 
   // UPDATE CIRCLE UNSTAKE RECORD
+  // Always (re)link circle/staker: if the ExitRequested log was dropped this
+  // is the record's first write, and both fields are non-nullable.
   let unstakeRecord = loadCircleUsdcUnstakeRecords(stakeRecordKey, event);
+  unstakeRecord.circle = circle.id;
+  unstakeRecord.staker = staker.id;
   unstakeRecord.status = BigInt.fromI32(UNSTAKE_REQUEST_WITHDRAWN);
   unstakeRecord.save();
+  addStakerUnstakeRecord(staker, unstakeRecord.id);
 
   // UPDATE CIRCLE STAKE RECORD
   const stakeRecord = loadCircleUsdcStakeRecords(stakeRecordKey, event);
+  stakeRecord.circle = circle.id;
+  stakeRecord.staker = staker.id;
   stakeRecord.amount = stakeRecord.amount.minus(event.params.amount);
   stakeRecord.save();
+  addStakerStakeRecord(staker, stakeRecord.id);
 
   // UPDATE CIRCLE METRICS
-  const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
-  const circle = loadCircle(circleKey, event);
   const circleMetrics = loadCircleMetrics(circle.id, event);
   circleMetrics.totalUsdcStaked = circleMetrics.totalUsdcStaked.minus(
     event.params.amount,
@@ -80,7 +101,6 @@ export function handleExitProceedsWithdrawn(
   circleMetrics.save();
 
   // UPDATE STAKER
-  const staker = loadStaker(event.params.user, event);
   staker.totalStaked = staker.totalStaked.minus(event.params.amount);
   staker.save();
 }
@@ -95,7 +115,10 @@ export function handleUsdcStakedForDelegationInCircle(
   staker.totalStaked = staker.totalStaked.plus(event.params.amount);
   staker.save();
 
-  const stakeRecordKey = circleAccountId(event.params.circleId, event.params.user);
+  const stakeRecordKey = circleAccountId(
+    event.params.circleId,
+    event.params.user,
+  );
   const stakeRecord = loadCircleUsdcStakeRecords(stakeRecordKey, event);
   stakeRecord.circle = circle.id;
   stakeRecord.staker = staker.id;
@@ -105,7 +128,7 @@ export function handleUsdcStakedForDelegationInCircle(
   stakeRecord.stakedAt = event.block.timestamp;
   stakeRecord.save();
 
-  staker.circleUsdcStakeRecords.push(stakeRecord.id);
+  addStakerStakeRecord(staker, stakeRecord.id);
   staker.save();
 
   const circleMetrics = loadCircleMetrics(circle.id, event);
