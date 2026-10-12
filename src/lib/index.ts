@@ -11,6 +11,7 @@ export {
   getDayNumber,
   getDailyMetricsKey,
   loadCircleOrderMetricsByMonth,
+  circlePermissionId,
   loadCirclePermission,
   loadCommunityAdmin,
 } from "./circle.lib";
