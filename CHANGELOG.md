@@ -6,14 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased]
+## [1.0.0] — 2026-10
+
+Goldsky `p2pme-subgraph/1.0.0`. **Full sync only**: entity ids for circles 1–9 differ from 0.3.x, so this version is never grafted.
 
 ### Added
-- MIT License and open-source community files (`CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`)
-- `.env.example` for local docker-compose setup
+- `ApprovedClaimCancelled`: an approver-cancelled APPROVED claim becomes REJECTED (#81)
+- Merchant KPI daily metrics: per-merchant daily buckets, missed-order streaks, online/busy time (#75)
+- Insurance: pool (#46), debt ledger events (#63), CALR lifecycle events (#72)
+- USDC stake delegation: stake (#58) and cancel unstake (#60)
+- Merchant `OrderAppealed` event (#62)
+- B2BGatewayFacet indexing aligned with current contract events (#51)
+- Governance facet (#49)
+- Routing capacity signal for circle scoring (#64)
+- MIT License and open-source community files (`CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`) (#47)
+- `.env.example` for local docker-compose setup (#47)
 
 ### Changed
-- Replaced hardcoded postgres password in `docker-compose.yml` with `POSTGRES_PASSWORD` env var
+- `CirclePermission`, `CircleUsdcStakeRecords` and `CircleUsdcUnstakeRecords` ids are the UTF-8 bytes of `<circleId>-0x<account>` for every circle (#82)
+- The manifest no longer declares `features: [grafting]` (#82)
+- Insurance diamond address (#54) and circle URLs (#55) updated
+- Replaced hardcoded postgres password in `docker-compose.yml` with `POSTGRES_PASSWORD` env var (#47)
+
+### Fixed
+- Indexing halted on 2-digit circle ids in `handlePermissionGranted` (prod stopped at block 52506326 on 12 Oct 2026); the stake-delegation handlers had the same key (#82)
+- A 4-digit `accountNo` reached `BigInt.fromString("")` in `handleMonthlyVolumeUnlimitedFlagUpdated` (#82)
+- Idle circle scores no longer inflated (#64)
+- Payment-channel fiat balance tracked across insurance write-offs (#66)
+- Circle persisted when a merchant is linked to it (#68); `CircleMerchant` circle links self-heal after provider log gaps (#74)
+- Immutable entity errors; governor facet updated (#57)
 
 ---
 
