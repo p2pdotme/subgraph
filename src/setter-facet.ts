@@ -23,6 +23,7 @@ import {
   savePaymentChannel,
   loadMerchantRewards,
   loadMerchantWithdrawFeePercentage,
+  paymentChannelConfigId,
   updateAvailableMerchantsCount,
 } from "./lib";
 
@@ -188,7 +189,7 @@ export function handleMerchantWithdrawFeePercentageUpdate(
 export function handlePaymentChannelConfigUpdate(
   event: PaymentChannelConfigUpdateEvent,
 ): void {
-  const id = changetype<Bytes>(Bytes.fromBigInt(event.params.paymentChannelId));
+  const id = paymentChannelConfigId(event.params.paymentChannelId);
   let config = PaymentChannelConfig.load(id);
   if (!config) {
     config = new PaymentChannelConfig(id);
