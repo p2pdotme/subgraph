@@ -58,6 +58,10 @@ export function handleUserBlacklisted(event: UserBlacklistedEvent): void {
 
   user.address = event.params.user;
   user.isBlacklisted = true;
+  // RpHelper.markUserBlacklisted zeroes reputationPoints (for the user and
+  // each blacklisted voter) and emits only UserBlacklisted, never
+  // ReputationPointsUpdated.
+  user.reputationPoint = BigInt.zero();
 
   user.save();
 }
