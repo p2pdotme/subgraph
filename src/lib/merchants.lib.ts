@@ -137,6 +137,14 @@ export function savePaymentChannel(pc: MerchantPaymentChannels): void {
   pc.save();
 }
 
+// One id for PaymentChannelConfig, shared by CountryFacet's
+// PaymentChannelConfigChanged and SetterFacet's PaymentChannelConfigUpdate.
+// They used Bytes.fromI32 (0x01000000) and Bytes.fromBigInt (0x01), so the
+// same channel was stored twice and the row the other event wrote went stale.
+export function paymentChannelConfigId(paymentChannelId: BigInt): Bytes {
+  return Bytes.fromByteArray(Bytes.fromBigInt(paymentChannelId));
+}
+
 export function loadMerchantVolumeByMonth(
   key: Bytes,
   event: ethereum.Event,

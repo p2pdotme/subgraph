@@ -22,6 +22,7 @@ export {
   backfillMerchantCircle,
   loadMerchantPaymentChannels,
   savePaymentChannel,
+  paymentChannelConfigId,
   loadMerchantVolumeByMonth,
   loadMerchantOrderMetricsByMonth,
   loadPaymentChannelMigration,
