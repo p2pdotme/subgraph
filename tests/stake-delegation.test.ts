@@ -123,10 +123,10 @@ describe("CircleUsdcStakeRecord id", () => {
     assert.fieldEquals("CircleUsdcUnstakeRecords", id, "amount", "40");
   });
 
-  test("circle 5 keeps the legacy id", () => {
+  test("circle 5 uses the same UTF-8 id format", () => {
     handleUsdcStakedForDelegationInCircle(createStakedEvent(5, 100));
 
-    const id = Bytes.fromHexString(`5-${USER}`).toHexString();
+    const id = Bytes.fromUTF8(`5-${USER}`).toHexString();
     assert.entityCount("CircleUsdcStakeRecords", 1);
     assert.fieldEquals("CircleUsdcStakeRecords", id, "amount", "100");
   });

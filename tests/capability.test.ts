@@ -113,35 +113,20 @@ describe("CirclePermission id", () => {
     clearStore();
   });
 
-  test("legacy id is unchanged for odd digit-count circleIds", () => {
-    // Byte-identical to the original Bytes.fromHexString key, so rows written
-    // before the fix are still found after a graft.
-    assert.stringEquals(
-      idOf(5, ACCOUNT),
-      Bytes.fromHexString(`5-${ACCOUNT}`).toHexString(),
-    );
-    assert.stringEquals(
-      idOf(123, ACCOUNT),
-      Bytes.fromHexString(`123-${ACCOUNT}`).toHexString(),
-    );
-  });
-
-  test("legacy id matches a real row on the live 0.3.0 deployment", () => {
-    // circlePermissions on p2pme-subgraph/0.3.0 at block 52506326.
+  test("every circleId uses the UTF-8 bytes of the key", () => {
+    // 1-digit and 3-digit ids used to take a junk Bytes.fromHexString path
+    // (circle 1 -> 0x01006c1c...); now all digit counts share one format.
     assert.stringEquals(
       idOf(1, ACCOUNT),
-      "0x01006c1cd62701c3e13facb9e5948ffb9b00d98ec583",
+      Bytes.fromUTF8(`1-${ACCOUNT}`).toHexString(),
     );
-    assert.stringEquals(
-      idOf(7, "0xf35d2127239fd2eb69e48721a547610187dbd467"),
-      "0x0700f35d2127239fd2eb69e48721a547610187dbd467",
-    );
-  });
-
-  test("even digit-count circleIds use the UTF-8 bytes of the key", () => {
     assert.stringEquals(
       idOf(20, ACCOUNT),
       Bytes.fromUTF8(`20-${ACCOUNT}`).toHexString(),
+    );
+    assert.stringEquals(
+      idOf(123, ACCOUNT),
+      Bytes.fromUTF8(`123-${ACCOUNT}`).toHexString(),
     );
   });
 
@@ -162,7 +147,7 @@ describe("CirclePermission id", () => {
     assert.fieldEquals("CirclePermission", id, "selectors", "[]");
   });
 
-  test("grant + revoke for circle 5 reuse one legacy row", () => {
+  test("grant + revoke for circle 5 reuse one row", () => {
     handlePermissionGranted(
       createPermissionGrantedEvent(5, ACCOUNT, SELECTOR, "ops"),
     );
