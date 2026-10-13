@@ -37,8 +37,8 @@ export {
   loadMerchantRewards,
   loadCircleAdminRewardClaimLedger,
   loadMerchantRewardClaimLedger,
-  refreshCircleAdminEarned,
-  refreshMerchantEarned,
+  saveCircleAdminRewards,
+  saveMerchantRewards,
 } from "./rewards.lib";
 export {
   loadUser,
