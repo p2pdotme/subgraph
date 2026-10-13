@@ -287,22 +287,33 @@ export function handleOrderDisputeWithFaultType(
 
     // KPI: reverse completion metrics when a completed order is overturned
     if (overturnedCompleted) {
-      const disputedOrderForKpi = loadOrders(
-        Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
-        event,
-      );
       const completionDaily = loadMerchantDailyMetrics(
         merchant,
-        disputedOrderForKpi.completedAt,
+        disputedOrder.completedAt,
         event,
       );
       if (completionDaily.completedCount.gt(BigInt.zero())) {
         completionDaily.completedCount = completionDaily.completedCount.minus(
           BigInt.fromI32(1),
         );
-        completionDaily.usdcVolume = completionDaily.usdcVolume.minus(
-          event.params._order.amount,
+        completionDaily.usdcVolume = nonNegative(
+          completionDaily.usdcVolume.minus(event.params._order.amount),
         );
+        // Undo the accept-to-complete speed handleOrderCompleted added
+        // (completedAt is that completion's block timestamp)
+        if (
+          disputedOrder.acceptedAt.gt(BigInt.zero()) &&
+          disputedOrder.completedAt.ge(disputedOrder.acceptedAt) &&
+          completionDaily.completedWithSpeedCount.gt(BigInt.zero())
+        ) {
+          completionDaily.acceptToCompleteSecondsSum = nonNegative(
+            completionDaily.acceptToCompleteSecondsSum.minus(
+              disputedOrder.completedAt.minus(disputedOrder.acceptedAt),
+            ),
+          );
+          completionDaily.completedWithSpeedCount =
+            completionDaily.completedWithSpeedCount.minus(BigInt.fromI32(1));
+        }
         completionDaily.save();
       }
       if (merchant.lifetimeCompletedCount.gt(BigInt.zero())) {
@@ -407,12 +418,15 @@ export function handleOrderDisputeWithFaultType(
 
   // UPDATE CIRCLE SCORE WHEN DISPUTE IS SETTLED
   if (settled) {
-    // Count every merchant-fault settlement, the same rule as the contract's
-    // circle disputeCounter (OrderProcessorFacet.adminSettleDispute). This used
-    // to count only COMPLETED → CANCELLED, which never matched (see above) and
-    // would still skip BUY merchant-fault settlements, which end COMPLETED.
-    // Bucketed on the settle day, so the 30d dispute rate reads as
+    // Count every merchant-fault settlement, the same trigger as the
+    // contract's circle disputeCounter (OrderProcessorFacet.adminSettleDispute).
+    // This used to count only COMPLETED → CANCELLED, which never matched (see
+    // above) and would still skip BUY merchant-fault settlements, which end
+    // COMPLETED. Bucketed on the settle day, so the 30d dispute rate reads as
     // merchant-fault disputes settled in the window / orders accepted in it.
+    // Credited to the merchant's circle like the rest of this handler; the
+    // contract uses the order's circleId, which matched for every linked
+    // merchant-fault settlement on prod (683 of 683, block 52554986).
     if (event.params.faultType === FAULT_TYPE_MERCHANT) {
       scoreState.merchantFaultDisputesCount =
         scoreState.merchantFaultDisputesCount.plus(BigInt.fromI32(1));

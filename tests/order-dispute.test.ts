@@ -12,7 +12,7 @@ import {
   handleOrderCompleted,
   handleOrderDisputeWithFaultType,
 } from "../src/order";
-import { getDailyMetricsKey, getDayNumber } from "../src/lib";
+import { getDailyMetricsKey, getDayNumber, loadOrders } from "../src/lib";
 import { getYearMonthFromTimestamp } from "../src/utils/date.utils";
 import {
   OrderFields,
@@ -60,6 +60,11 @@ function circleDay(ts: i32): string {
   ).toHexString();
 }
 
+function merchantDay(ts: i32): string {
+  const day = (ts as i64) / 86400;
+  return Bytes.fromUTF8(`${MERCHANT.toHexString()}-${day.toString()}`).toHexString();
+}
+
 function sellOrder(): OrderFields {
   const f = new OrderFields();
   f.orderType = 1;
@@ -103,6 +108,34 @@ describe("dispute settlement", () => {
     // The dispute counts toward the circle score, on the settle day
     assert.fieldEquals("CircleScoreState", circleKey().toHexString(), "merchantFaultDisputesCount", "1");
     assert.fieldEquals("CircleDailyMetrics", circleDay(T2), "merchantFaultDisputesCount", "1");
+  });
+
+  test("an overturned completion also leaves the merchant's speed stats", () => {
+    const f = sellOrder();
+    f.status = 3;
+    f.completedTimestamp = T1;
+    const completed = orderCompleted(f, T1);
+    // Accepted 600s before completion
+    const order = loadOrders(
+      Bytes.fromByteArray(Bytes.fromBigInt(BigInt.fromI32(f.id))),
+      completed,
+    );
+    order.acceptedAt = BigInt.fromI32(T1 - 600);
+    order.save();
+    handleOrderCompleted(completed);
+    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T1), "acceptToCompleteSecondsSum", "600");
+    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T1), "completedWithSpeedCount", "1");
+
+    f.status = 4;
+    f.disputeStatus = 1;
+    handleCancelledOrders(cancelledOrders(f, T2));
+    f.disputeStatus = 2;
+    handleOrderDisputeWithFaultType(orderDispute(f, FAULT_MERCHANT, ADMIN, T2));
+
+    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T1), "completedCount", "0");
+    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T1), "usdcVolume", "0");
+    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T1), "acceptToCompleteSecondsSum", "0");
+    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T1), "completedWithSpeedCount", "0");
   });
 
   test("merchant fault on a never-completed SELL counts the dispute only", () => {
