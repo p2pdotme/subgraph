@@ -31,6 +31,23 @@ describe("CancelledOrders merchant attribution", () => {
     assert.entityCount("CircleMerchant", 0);
     assert.entityCount("CircleOrderMetricsByMonth", 0);
     assert.entityCount("MerchantOrderMetricsByMonth", 0);
+    // Still a cancel for the user and the currency
+    assert.fieldEquals("User", USER.toHexString(), "cancelledSellOrdersCount", "1");
+    assert.entityCount("CurrencyMetricsByMonth", 1);
+  });
+
+  test("an accepted cancel with no circle still reaches currency metrics", () => {
+    // circleId 0 and no registration: the merchant has no circle to credit
+    const f = new OrderFields();
+    f.status = 4;
+    f.circleId = 0;
+    f.user = USER;
+    f.merchant = MERCHANT;
+    handleCancelledOrders(cancelledOrders(f, 1788000000));
+
+    assert.entityCount("CircleOrderMetricsByMonth", 0);
+    assert.fieldEquals("User", USER.toHexString(), "cancelledSellOrdersCount", "1");
+    assert.entityCount("CurrencyMetricsByMonth", 1);
   });
 
   test("an accepted cancel is still credited to its merchant", () => {

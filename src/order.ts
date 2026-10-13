@@ -553,6 +553,14 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     }
   }
 
+  const orderType = event.params._order.orderType;
+
+  // User cancel counts cover every cancel, accepted or not, like currency
+  // metrics below and handleLegacyCancelledOrders.
+  let user = loadUser(event.params._order.user, event);
+  adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+  user.save();
+
   // Only update merchant stats if an order was accepted by a merchant. This
   // used to test Bytes.empty(), which a 20-byte address(0) never equals, so
   // every never-accepted cancel loaded a CircleMerchant for 0x000…0 and, via
@@ -565,70 +573,38 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     );
     backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
-      const circle = merchant.circle;
+    const circle = merchant.circle;
 
     // Null when the registration event is missing and no backfill has run yet;
-  // Bytes.fromI32(0) is the legacy placeholder from older deployments.
-    if (!circle || circle.equals(Bytes.fromI32(0))) return;
+    // Bytes.fromI32(0) is the legacy placeholder from older deployments. Skip
+    // only the merchant/circle buckets: currency metrics below still count it.
+    if (circle && !circle.equals(Bytes.fromI32(0))) {
+      const month = getYearMonthFromTimestamp(event.block.timestamp);
 
-    // Update monthly order metrics
-    const month = getYearMonthFromTimestamp(event.block.timestamp);
+      // Update merchant monthly order metrics
+      const merchantMetricsKey = Bytes.fromUTF8(
+        `${merchant.id.toHexString()}-${month}`,
+      );
+      const orderMetrics = loadMerchantOrderMetricsByMonth(
+        merchantMetricsKey,
+        event,
+      );
+      orderMetrics.merchant = merchant.id;
+      orderMetrics.month = month;
+      adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+      orderMetrics.save();
 
-    // Update merchant monthly order metrics
-    const merchantMetricsKey = Bytes.fromUTF8(
-      `${merchant.id.toHexString()}-${month}`,
-    );
-    const orderMetrics = loadMerchantOrderMetricsByMonth(
-      merchantMetricsKey,
-      event,
-    );
-    orderMetrics.merchant = merchant.id;
-    orderMetrics.month = month;
-
-    let user = loadUser(event.params._order.user, event);
-
-    const orderType = event.params._order.orderType;
-
-    // UPDATE CANCELLED ORDERS COUNT
-    if (orderType === ORDER_TYPE_BUY) {
-      orderMetrics.cancelledBuyOrdersCount =
-        orderMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
-
-      user.cancelledBuyOrdersCount = user.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
-    } else if (orderType === ORDER_TYPE_SELL) {
-      orderMetrics.cancelledSellOrdersCount =
-        orderMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
-
-      user.cancelledSellOrdersCount = user.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
-    } else if (orderType === ORDER_TYPE_PAY) {
-      orderMetrics.cancelledPayOrdersCount =
-        orderMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
-
-      user.cancelledPayOrdersCount = user.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
+      // Update circle monthly order metrics
+      const circleMetricsKey = Bytes.fromUTF8(`${circle.toHexString()}-${month}`);
+      const circleOrderMetrics = loadCircleOrderMetricsByMonth(
+        circleMetricsKey,
+        event,
+      );
+      circleOrderMetrics.circle = circle;
+      circleOrderMetrics.month = month;
+      adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+      circleOrderMetrics.save();
     }
-
-    user.save();
-    orderMetrics.save();
-
-    // Update circle monthly order metrics
-    const circleMetricsKey = Bytes.fromUTF8(`${circle.toHexString()}-${month}`);
-    const circleOrderMetrics = loadCircleOrderMetricsByMonth(
-      circleMetricsKey,
-      event,
-    );
-    circleOrderMetrics.circle = circle;
-    circleOrderMetrics.month = month;
-    if (orderType === ORDER_TYPE_BUY) {
-      circleOrderMetrics.cancelledBuyOrdersCount =
-        circleOrderMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
-    } else if (orderType === ORDER_TYPE_SELL) {
-      circleOrderMetrics.cancelledSellOrdersCount =
-        circleOrderMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
-    } else if (orderType === ORDER_TYPE_PAY) {
-      circleOrderMetrics.cancelledPayOrdersCount =
-        circleOrderMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
-    }
-    circleOrderMetrics.save();
   }
 
   // Update currency metrics (monthly + daily, regardless of merchant assignment)
