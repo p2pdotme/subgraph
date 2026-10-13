@@ -145,23 +145,15 @@ export function loadCircleOrderMetricsByMonth(
   return metrics;
 }
 
-// Per-(circle, account) ids (CirclePermission, CircleUsdcStakeRecord,
-// CircleUsdcUnstakeRecord) were originally
-// Bytes.fromHexString("<circleId>-0x<account>"). That string is not hex:
-// graph-ts asserts even length, so circleIds with an even digit count
-// (10-99, 1000-9999, ...) aborted the handler (circle 20 halted indexing at
-// block 52506326), while odd digit counts parsed into junk-but-stable bytes.
-// Keep the legacy id where it parsed so existing rows stay addressable, and
-// use the UTF-8 bytes of the same string otherwise. Legacy ids are len/2
-// bytes (22 for circleId 1-9, 23 for 100-999); UTF-8 ids are len bytes
-// (>= 45), so the two never collide.
-// TODO: drop the legacy branch on the next full resync.
+// Per-(circle, account) id for CirclePermission, CircleUsdcStakeRecords and
+// CircleUsdcUnstakeRecords: the UTF-8 bytes of "<circleId>-0x<account>".
+// These ids used to be Bytes.fromHexString of that same string, which is not
+// hex: even digit-count circleIds (10-99, ...) aborted the handler (circle 20
+// halted indexing at block 52506326) and odd ones parsed into junk bytes. The
+// grafted 0.3.x deployments kept the junk ids for circles 1-9 and 100-999;
+// a full resync writes every circle with this one format.
 export function circleAccountId(circleId: BigInt, account: Address): Bytes {
-  const legacy = `${circleId.toString()}-${account.toHexString()}`;
-  if (legacy.length % 2 == 0) {
-    return Bytes.fromHexString(legacy);
-  }
-  return Bytes.fromUTF8(legacy);
+  return Bytes.fromUTF8(`${circleId.toString()}-${account.toHexString()}`);
 }
 
 export function loadCirclePermission(
