@@ -24,6 +24,7 @@ import {
   loadMerchantRewards,
   loadMerchantWithdrawFeePercentage,
   paymentChannelConfigId,
+  refreshMerchantEarned,
   updateAvailableMerchantsCount,
 } from "./lib";
 
@@ -215,6 +216,7 @@ export function handleMerchantClaimableRewardsUpdate(
   );
   merchantRewards.merchant = event.params.merchant.toHexString();
   merchantRewards.claimableRewards = event.params.claimableRewards;
+  refreshMerchantEarned(merchantRewards);
   merchantRewards.save();
 }
 
