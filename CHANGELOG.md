@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+Data-correctness fixes. They change existing rows, so they ship as a **full sync only**, never a graft.
+
+### Fixed
+- Dispute settlements never reversed an overturned order, and merchant-fault disputes were never counted toward `circleScore` (`adminSettleDispute` emits `OrderDispute` after the cancel/complete it causes)
+- The same dead reversal in the pre-COT legacy dispute handlers
+- Never-accepted cancels were credited to a `0x000…0` merchant, inflating circle 1's monthly cancel counts; user and currency cancel counts now cover every cancel
+- An overturned completion now also leaves the merchant's KPI day (completed count, volume, accept-to-complete speed)
+- Blacklisted users keep 0 reputation points, as on-chain
+- Payment channel configs are stored under one id instead of two
+- `earnedRewards` is derived on every rewards save instead of only on claims
+- B2B `Integrator.activeOrderCount` floors at zero, like the contract
+- `Staker` stake and unstake record lists are persisted
+
 ## [1.0.0] — 2026-10
 
 Goldsky `p2pme-subgraph/1.0.0`. **Full sync only**: entity ids for circles 1–9 differ from 0.3.x, so this version is never grafted.
