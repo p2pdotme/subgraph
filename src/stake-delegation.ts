@@ -25,6 +25,18 @@ import {
 } from "./constants";
 import { Circle } from "../generated/schema";
 
+// Entity list fields are returned as copies, so pushing onto
+// staker.circleUsdcStakeRecords directly was never saved. Add to the copy,
+// once per record id (repeat stakes in a circle reuse the same record), and
+// assign it back.
+function withRecord(records: Bytes[], id: Bytes): Bytes[] {
+  for (let i = 0; i < records.length; i++) {
+    if (records[i].equals(id)) return records;
+  }
+  records.push(id);
+  return records;
+}
+
 export function handleExitRequested(event: ExitRequestedEvent): void {
   const stakeRecordKey = circleAccountId(event.params.circleId, event.params.user);
 
@@ -41,13 +53,17 @@ export function handleExitRequested(event: ExitRequestedEvent): void {
   circleUnstakeRecord.status = BigInt.fromI32(UNSTAKE_REQUEST_RAISED);
   circleUnstakeRecord.availableAt = event.params.availableAt;
 
-  staker.circleUsdcUnstakeRecords.push(circleUnstakeRecord.id);
+  staker.circleUsdcUnstakeRecords = withRecord(
+    staker.circleUsdcUnstakeRecords,
+    circleUnstakeRecord.id,
+  );
 
   circleUnstakeRecord.save();
 
   const stakeRecord = loadCircleUsdcStakeRecords(stakeRecordKey, event);
   stakeRecord.unstakeRequest = circleUnstakeRecord.id;
   stakeRecord.save();
+  staker.save();
 }
 
 export function handleExitProceedsWithdrawn(
@@ -105,7 +121,10 @@ export function handleUsdcStakedForDelegationInCircle(
   stakeRecord.stakedAt = event.block.timestamp;
   stakeRecord.save();
 
-  staker.circleUsdcStakeRecords.push(stakeRecord.id);
+  staker.circleUsdcStakeRecords = withRecord(
+    staker.circleUsdcStakeRecords,
+    stakeRecord.id,
+  );
   staker.save();
 
   const circleMetrics = loadCircleMetrics(circle.id, event);
