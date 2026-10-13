@@ -9,6 +9,10 @@ import {
   OrderDispute as OrderDisputeWithFaultTypeEvent,
   CircleStatusUpdated as CircleStatusUpdatedEvent,
   OrderAppealed as OrderAppealedEvent,
+  DisputeDecided as DisputeDecidedEvent,
+  DisputeRaised as DisputeRaisedEvent,
+  DisputeEscalated as DisputeEscalatedEvent,
+  DisputeSettled as DisputeSettledEvent,
 } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
 import {
   backfillMerchantCircle,
@@ -33,6 +37,7 @@ import {
   applyTrustFirewall,
   checkBootstrapGraduation,
   loadMerchantDailyMetrics,
+  appendDisputeStep,
 } from "./lib";
 import {
   CircleMetrics,
@@ -54,6 +59,10 @@ import {
   FAULT_TYPE_USER,
   FAULT_TYPE_MERCHANT,
   FAULT_TYPE_BANK,
+  DISPUTE_STEP_RAISED,
+  DISPUTE_STEP_DECIDED,
+  DISPUTE_STEP_ESCALATED,
+  DISPUTE_STEP_SETTLED,
 } from "./constants/status";
 import {
   CancelledOrders as CancelledOrdersEvent,
@@ -191,7 +200,9 @@ export function handleOrderDisputeWithFaultType(
     );
     _order.disputeSettledAt = event.block.timestamp;
     _order.disputeFaultType = event.params.faultType;
-    _order.disputeSettledByAddr = event.transaction.from;
+    // `by` is the decider; finalizeDispute may be sent by anyone
+    _order.disputeSettledByAddr = event.params.by;
+    _order.disputeAppealableUntil = BigInt.fromI32(0);
     _order.save();
   }
 
@@ -474,6 +485,95 @@ export function handleOrderAppealed(event: OrderAppealedEvent): void {
   );
   order.appealedAt = event.params.appealedAt;
   order.appealedByMerchantAddress = event.params.merchant;
+  order.save();
+}
+
+export function handleDisputeRaised(event: DisputeRaisedEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.disputeTier = event.params.tier;
+  appendDisputeStep(
+    order,
+    event,
+    DISPUTE_STEP_RAISED,
+    event.params.tier,
+    0,
+    0,
+    event.params.by,
+    Bytes.empty(),
+    event.params.appealableAt,
+    false,
+  );
+  order.save();
+}
+
+export function handleDisputeDecided(event: DisputeDecidedEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.disputeTier = event.params.decisionTier;
+  // 0 for a tier-3 decision: final, executes in the same transaction
+  order.disputeAppealableUntil = event.params.appealableUntil;
+  appendDisputeStep(
+    order,
+    event,
+    DISPUTE_STEP_DECIDED,
+    event.params.decisionTier,
+    0,
+    event.params.faultType,
+    event.params.by,
+    Bytes.empty(),
+    event.params.appealableUntil,
+    false,
+  );
+  order.save();
+}
+
+export function handleDisputeEscalated(event: DisputeEscalatedEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.disputeTier = event.params.toTier;
+  // Escalation drops the pending decision; the DECIDED step stays in history
+  order.disputeAppealableUntil = BigInt.fromI32(0);
+  appendDisputeStep(
+    order,
+    event,
+    DISPUTE_STEP_ESCALATED,
+    event.params.toTier,
+    event.params.fromTier,
+    0,
+    event.params.by,
+    Bytes.empty(),
+    BigInt.fromI32(0),
+    event.params.slaLapsed,
+  );
+  order.save();
+}
+
+export function handleDisputeSettled(event: DisputeSettledEvent): void {
+  // Fault type, decider and settled-at come from OrderDispute in the same tx
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.disputeFinalizedByAddr = event.params.finalizedBy;
+  appendDisputeStep(
+    order,
+    event,
+    DISPUTE_STEP_SETTLED,
+    event.params.tier,
+    0,
+    event.params.faultType,
+    event.params.decidedBy,
+    event.params.finalizedBy,
+    BigInt.fromI32(0),
+    false,
+  );
   order.save();
 }
 

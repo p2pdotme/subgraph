@@ -30,3 +30,9 @@ export const ORDER_TYPE_PAY: i32 = 2;
 export const FAULT_TYPE_USER: i32 = 1;
 export const FAULT_TYPE_MERCHANT: i32 = 2;
 export const FAULT_TYPE_BANK: i32 = 3;
+
+// DisputeStep.kind
+export const DISPUTE_STEP_RAISED = 0;
+export const DISPUTE_STEP_DECIDED = 1;
+export const DISPUTE_STEP_ESCALATED = 2;
+export const DISPUTE_STEP_SETTLED = 3;

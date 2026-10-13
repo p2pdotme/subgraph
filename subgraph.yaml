@@ -145,6 +145,14 @@ dataSources:
           handler: handleCircleStatusUpdated
         - event: OrderAppealed(indexed uint256,indexed address,uint128)
           handler: handleOrderAppealed
+        - event: DisputeRaised(indexed uint256,uint8,indexed address,uint64)
+          handler: handleDisputeRaised
+        - event: DisputeDecided(indexed uint256,uint8,uint8,indexed address,uint64)
+          handler: handleDisputeDecided
+        - event: DisputeEscalated(indexed uint256,uint8,uint8,indexed address,bool)
+          handler: handleDisputeEscalated
+        - event: DisputeSettled(indexed uint256,uint8,uint8,indexed address,address)
+          handler: handleDisputeSettled
       file: ./src/order.ts
   - kind: ethereum
     name: OrderFlowFacet
