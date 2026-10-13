@@ -6,9 +6,19 @@ import {
 } from "../generated/OrderFlowFacet/OrderFlowFacet";
 import { OrderCompleted } from "../generated/OrderFlowHelper/OrderFlowHelper";
 import { OrderDispute } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
+import {
+  CancelledOrders as LegacyCancelledOrders,
+  OrderCancelledBy as LegacyOrderCancelledBy,
+  OrderCompleted as LegacyOrderCompleted,
+} from "../generated/LegacyOrderFlowFacet/LegacyOrderFlowFacet";
+import {
+  OrderDispute as LegacyOrderDisputeV2,
+  OrderDispute1 as LegacyOrderDispute,
+} from "../generated/LegacyOrderProcessorFacet/LegacyOrderProcessorFacet";
 
 // Builders for the order events that share the 22-field Order tuple
-// (OrderProcessorStorage.Order). Module scope only: AssemblyScript has no
+// (OrderProcessorStorage.Order), and the pre-COT legacy events whose tuple
+// has 21 fields (no circleId). Module scope only: AssemblyScript has no
 // closures.
 
 export const CURRENCY_INR = Bytes.fromHexString(
@@ -27,7 +37,7 @@ export class OrderFields {
   user: Address = Address.zero();
 }
 
-function orderTuple(f: OrderFields): ethereum.Tuple {
+function orderTuple(f: OrderFields, legacy: boolean = false): ethereum.Tuple {
   const dispute = new ethereum.Tuple();
   dispute.push(ethereum.Value.fromI32(0)); // raisedBy
   dispute.push(ethereum.Value.fromI32(f.disputeStatus));
@@ -58,7 +68,9 @@ function orderTuple(f: OrderFields): ethereum.Tuple {
   t.push(ethereum.Value.fromUnsignedBigIntArray(new Array<BigInt>())); // 18 assignedAccountNos
   t.push(ethereum.Value.fromFixedBytes(CURRENCY_INR)); // 19 currency
   t.push(ethereum.Value.fromUnsignedBigInt(BigInt.zero())); // 20 preferredPaymentChannelConfigId
-  t.push(ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(f.circleId))); // 21 circleId
+  if (!legacy) {
+    t.push(ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(f.circleId))); // 21 circleId
+  }
   return t;
 }
 
@@ -129,6 +141,81 @@ export function orderDispute(
     p("orderId", ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(f.id))),
   );
   e.parameters.push(p("_order", ethereum.Value.fromTuple(orderTuple(f))));
+  e.parameters.push(p("faultType", ethereum.Value.fromI32(faultType)));
+  return e;
+}
+
+export function legacyOrderCompleted(
+  f: OrderFields,
+  timestamp: i32,
+): LegacyOrderCompleted {
+  const e = base<LegacyOrderCompleted>(timestamp);
+  e.parameters.push(
+    p("orderId", ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(f.id))),
+  );
+  e.parameters.push(p("user", ethereum.Value.fromAddress(f.user)));
+  e.parameters.push(
+    p(
+      "completedTimestamp",
+      ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(f.completedTimestamp)),
+    ),
+  );
+  e.parameters.push(p("_order", ethereum.Value.fromTuple(orderTuple(f, true))));
+  return e;
+}
+
+export function legacyCancelledOrders(
+  f: OrderFields,
+  timestamp: i32,
+): LegacyCancelledOrders {
+  const e = base<LegacyCancelledOrders>(timestamp);
+  e.parameters.push(
+    p("orderId", ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(f.id))),
+  );
+  e.parameters.push(p("_order", ethereum.Value.fromTuple(orderTuple(f, true))));
+  return e;
+}
+
+export function legacyOrderCancelledBy(
+  f: OrderFields,
+  by: Address,
+  timestamp: i32,
+): LegacyOrderCancelledBy {
+  const e = base<LegacyOrderCancelledBy>(timestamp);
+  e.parameters.push(
+    p("orderId", ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(f.id))),
+  );
+  e.parameters.push(p("cancelledBy", ethereum.Value.fromAddress(by)));
+  return e;
+}
+
+// Pre-faultType OrderDispute (adminSettleDispute(orderId, bool userFault))
+export function legacyOrderDispute(
+  f: OrderFields,
+  by: Address,
+  timestamp: i32,
+): LegacyOrderDispute {
+  const e = base<LegacyOrderDispute>(timestamp);
+  e.parameters.push(p("by", ethereum.Value.fromAddress(by)));
+  e.parameters.push(
+    p("orderId", ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(f.id))),
+  );
+  e.parameters.push(p("_order", ethereum.Value.fromTuple(orderTuple(f, true))));
+  return e;
+}
+
+export function legacyOrderDisputeV2(
+  f: OrderFields,
+  faultType: i32,
+  by: Address,
+  timestamp: i32,
+): LegacyOrderDisputeV2 {
+  const e = base<LegacyOrderDisputeV2>(timestamp);
+  e.parameters.push(p("by", ethereum.Value.fromAddress(by)));
+  e.parameters.push(
+    p("orderId", ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(f.id))),
+  );
+  e.parameters.push(p("_order", ethereum.Value.fromTuple(orderTuple(f, true))));
   e.parameters.push(p("faultType", ethereum.Value.fromI32(faultType)));
   return e;
 }
