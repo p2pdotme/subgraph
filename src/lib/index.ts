@@ -60,3 +60,4 @@ export {
 } from "./insurance-pool.lib";
 export { loadUserP2PStake, newUserP2PStakeActivity } from "./p2p-stake.lib";
 export { loadMerchantDailyMetrics } from "./merchant-daily-metrics.lib";
+export * from "./dispute-step.lib";
