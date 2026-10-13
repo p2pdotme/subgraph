@@ -13,7 +13,7 @@ import {
   loadMerchantPaymentChannels,
   newCALRActivity,
   savePaymentChannel,
-  refreshCircleAdminEarned,
+  saveCircleAdminRewards,
 } from "./lib";
 
 function pcKeyFor(merchant: Bytes, accountNo: BigInt): Bytes {
@@ -153,8 +153,7 @@ export function handleCircleAdminClaimableRewardsCredited(
   );
   rewards.admin = admin.toHexString();
   rewards.claimableRewards = rewards.claimableRewards.plus(event.params.amount);
-  refreshCircleAdminEarned(rewards);
-  rewards.save();
+  saveCircleAdminRewards(rewards);
 
   // Keep the CALR aggregate's last-touched block fields fresh and record the
   // credit on the same activity timeline as the insurance-side events.

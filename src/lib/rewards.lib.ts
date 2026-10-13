@@ -90,18 +90,21 @@ export function loadMerchantRewardClaimLedger(
   return merchantRewardClaimLedger;
 }
 
-// earnedRewards = withdrawn + claimable + locked (lockedRewards already holds
-// next-cycle locked). Recomputed on every rewards event: it used to be set
-// only on claims, so allocations and adjustments since the last claim (or
-// any, for an account that never claimed) were missing from it.
-export function refreshCircleAdminEarned(rewards: CircleAdminRewards): void {
+// Single save path for rewards rows: derives earnedRewards (withdrawn +
+// claimable + locked; lockedRewards already holds next-cycle locked) from the
+// current fields so it can never drift from them. It used to be set only on
+// claims, so allocations and adjustments since the last claim were missing.
+// Every handler that writes a rewards row must save through these.
+export function saveCircleAdminRewards(rewards: CircleAdminRewards): void {
   rewards.earnedRewards = rewards.withdrawnRewards
     .plus(rewards.claimableRewards)
     .plus(rewards.lockedRewards);
+  rewards.save();
 }
 
-export function refreshMerchantEarned(rewards: MerchantRewards): void {
+export function saveMerchantRewards(rewards: MerchantRewards): void {
   rewards.earnedRewards = rewards.withdrawnRewards
     .plus(rewards.claimableRewards)
     .plus(rewards.lockedRewards);
+  rewards.save();
 }
