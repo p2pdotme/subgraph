@@ -141,8 +141,13 @@ export function savePaymentChannel(pc: MerchantPaymentChannels): void {
 // PaymentChannelConfigChanged and SetterFacet's PaymentChannelConfigUpdate.
 // They used Bytes.fromI32 (0x01000000) and Bytes.fromBigInt (0x01), so the
 // same channel was stored twice and the row the other event wrote went stale.
+// Bytes.fromI32 is used because its output does not depend on how the BigInt
+// was built (Bytes.fromBigInt gives 0x01 for an event-decoded uint256 on
+// graph-node but 0x01000000 for BigInt.fromI32 in matchstick), and it keeps
+// the id of the rows that are current on prod today. Channel ids are small
+// sequential numbers (77 on-chain).
 export function paymentChannelConfigId(paymentChannelId: BigInt): Bytes {
-  return Bytes.fromByteArray(Bytes.fromBigInt(paymentChannelId));
+  return Bytes.fromI32(paymentChannelId.toI32());
 }
 
 export function loadMerchantVolumeByMonth(

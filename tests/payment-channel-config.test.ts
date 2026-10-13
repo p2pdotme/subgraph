@@ -6,7 +6,7 @@ import {
   afterEach,
   newMockEvent,
 } from "matchstick-as/assembly/index";
-import { BigInt, ethereum } from "@graphprotocol/graph-ts";
+import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import { PaymentChannelConfigChanged } from "../generated/CountryFacet/CountryFacet";
 import { PaymentChannelConfigUpdate } from "../generated/SetterFacet/SetterFacet";
 import { handlePaymentChannelConfigChanged } from "../src/country-facet";
@@ -68,6 +68,8 @@ describe("PaymentChannelConfig id", () => {
     handlePaymentChannelConfigChanged(changed(800000000));
 
     const id = paymentChannelConfigId(BigInt.fromI32(1)).toHexString();
+    // Same id however the BigInt was built
+    assert.stringEquals(id, Bytes.fromI32(1).toHexString());
     assert.entityCount("PaymentChannelConfig", 1);
     assert.fieldEquals("PaymentChannelConfig", id, "dailyVolumeLimit", "800000000");
 
