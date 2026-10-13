@@ -89,3 +89,19 @@ export function loadMerchantRewardClaimLedger(
 
   return merchantRewardClaimLedger;
 }
+
+// earnedRewards = withdrawn + claimable + locked (lockedRewards already holds
+// next-cycle locked). Recomputed on every rewards event: it used to be set
+// only on claims, so allocations and adjustments since the last claim (or
+// any, for an account that never claimed) were missing from it.
+export function refreshCircleAdminEarned(rewards: CircleAdminRewards): void {
+  rewards.earnedRewards = rewards.withdrawnRewards
+    .plus(rewards.claimableRewards)
+    .plus(rewards.lockedRewards);
+}
+
+export function refreshMerchantEarned(rewards: MerchantRewards): void {
+  rewards.earnedRewards = rewards.withdrawnRewards
+    .plus(rewards.claimableRewards)
+    .plus(rewards.lockedRewards);
+}

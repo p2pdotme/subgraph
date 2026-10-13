@@ -12,6 +12,8 @@ import {
   loadMerchantRewards,
   loadCircleAdminRewardClaimLedger,
   loadMerchantRewardClaimLedger,
+  refreshCircleAdminEarned,
+  refreshMerchantEarned,
 } from "./lib";
 
 export function handleCircleAdminRewardAllocated(
@@ -28,6 +30,8 @@ export function handleCircleAdminRewardAllocated(
     );
   circleAdminRewards.claimableRewards =
     event.params.accountRewards.claimableRewards;
+
+  refreshCircleAdminEarned(circleAdminRewards);
 
   circleAdminRewards.save();
 }
@@ -51,10 +55,7 @@ export function handleCircleAdminRewardClaimed(
   circleAdminRewards.withdrawnRewards =
     circleAdminRewards.withdrawnRewards.plus(event.params.amount);
 
-  circleAdminRewards.earnedRewards = circleAdminRewards.withdrawnRewards
-    .plus(circleAdminRewards.claimableRewards)
-    .plus(circleAdminRewards.lockedRewards);
-
+  refreshCircleAdminEarned(circleAdminRewards);
   circleAdminRewards.save();
 
   let ledgerEntry = loadCircleAdminRewardClaimLedger(
@@ -81,6 +82,7 @@ export function handleCircleAdminRewardAdjusted(
     );
   circleAdminRewards.claimableRewards =
     event.params.accountRewards.claimableRewards;
+  refreshCircleAdminEarned(circleAdminRewards);
   circleAdminRewards.save();
 }
 
@@ -98,6 +100,8 @@ export function handleMerchantRewardAllocated(
     );
   merchantRewards.claimableRewards =
     event.params.accountRewards.claimableRewards;
+
+  refreshMerchantEarned(merchantRewards);
 
   merchantRewards.save();
 }
@@ -121,10 +125,7 @@ export function handleMerchantRewardClaimed(
     event.params.amount,
   );
 
-  merchantRewards.earnedRewards = merchantRewards.withdrawnRewards
-    .plus(merchantRewards.claimableRewards)
-    .plus(merchantRewards.lockedRewards);
-
+  refreshMerchantEarned(merchantRewards);
   merchantRewards.save();
 
   let ledgerEntry = loadMerchantRewardClaimLedger(
@@ -151,5 +152,6 @@ export function handleMerchantRewardAdjusted(
     );
   merchantRewards.claimableRewards =
     event.params.accountRewards.claimableRewards;
+  refreshMerchantEarned(merchantRewards);
   merchantRewards.save();
 }
