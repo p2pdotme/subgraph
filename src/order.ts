@@ -505,9 +505,7 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
 
   // KPI: an order cancelled/expired without any acceptance is a miss for every
   // assigned merchant (the accepted!=empty case was already counted at accept time)
-  // The contract emits address(0) for a never-accepted order's acceptedMerchant;
-  // the legacy branch below tests Bytes.empty() against the same event field and
-  // only matches synthetic defaults — both checks are intentional as-is.
+  // The contract emits address(0) for a never-accepted order's acceptedMerchant.
   if (event.params._order.acceptedMerchant.equals(Address.zero())) {
     const cancelledOrder = loadOrders(
       Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
@@ -536,9 +534,12 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     }
   }
 
-  // Only update merchant stats if an order was accepted by a merchant
+  // Only update merchant stats if an order was accepted by a merchant. This
+  // used to test Bytes.empty(), which a 20-byte address(0) never equals, so
+  // every never-accepted cancel loaded a CircleMerchant for 0x000…0 and, via
+  // its backfilled circle 1, landed in circle 1's monthly cancel counts.
   const acceptedMerchantAddress = event.params._order.acceptedMerchant;
-  if (!acceptedMerchantAddress.equals(Bytes.empty())) {
+  if (!acceptedMerchantAddress.equals(Address.zero())) {
     const merchant = loadCircleMerchant(
       Bytes.fromHexString(acceptedMerchantAddress.toHexString()),
       event,
