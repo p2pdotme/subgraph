@@ -10,6 +10,7 @@ import {
   ORDER_TYPE_SELL,
   ORDER_TYPE_PAY,
 } from "../constants/status";
+import { nonNegative } from "../utils/math.utils";
 
 export function loadUser(key: Bytes, event: ethereum.Event): User {
   let user = User.load(key);
@@ -47,19 +48,19 @@ export function adjustUserMetricsByOrderType(
 ): void {
   if (orderType === ORDER_TYPE_BUY) {
     user.completedBuyOrdersCount =
-      user.completedBuyOrdersCount.plus(completedDelta);
+      nonNegative(user.completedBuyOrdersCount.plus(completedDelta));
     user.cancelledBuyOrdersCount =
-      user.cancelledBuyOrdersCount.plus(cancelledDelta);
+      nonNegative(user.cancelledBuyOrdersCount.plus(cancelledDelta));
   } else if (orderType === ORDER_TYPE_SELL) {
     user.completedSellOrdersCount =
-      user.completedSellOrdersCount.plus(completedDelta);
+      nonNegative(user.completedSellOrdersCount.plus(completedDelta));
     user.cancelledSellOrdersCount =
-      user.cancelledSellOrdersCount.plus(cancelledDelta);
+      nonNegative(user.cancelledSellOrdersCount.plus(cancelledDelta));
   } else if (orderType === ORDER_TYPE_PAY) {
     user.completedPayOrdersCount =
-      user.completedPayOrdersCount.plus(completedDelta);
+      nonNegative(user.completedPayOrdersCount.plus(completedDelta));
     user.cancelledPayOrdersCount =
-      user.cancelledPayOrdersCount.plus(cancelledDelta);
+      nonNegative(user.cancelledPayOrdersCount.plus(cancelledDelta));
   }
 }
 

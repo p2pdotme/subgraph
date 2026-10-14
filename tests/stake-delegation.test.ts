@@ -123,6 +123,18 @@ describe("CircleUsdcStakeRecord id", () => {
     assert.fieldEquals("CircleUsdcUnstakeRecords", id, "amount", "40");
   });
 
+  test("the staker lists its stake and unstake records once each", () => {
+    // Mainnet: 0 of 7 stakers list any record while 10 stake and 3 unstake
+    // records exist; the handlers pushed onto a copy of the list.
+    handleUsdcStakedForDelegationInCircle(createStakedEvent(20, 100));
+    handleUsdcStakedForDelegationInCircle(createStakedEvent(20, 50));
+    handleExitRequested(createExitRequestedEvent(20, 40));
+
+    const id = Bytes.fromUTF8(`20-${USER}`).toHexString();
+    assert.fieldEquals("Staker", USER, "circleUsdcStakeRecords", `[${id}]`);
+    assert.fieldEquals("Staker", USER, "circleUsdcUnstakeRecords", `[${id}]`);
+  });
+
   test("circle 5 uses the same UTF-8 id format", () => {
     handleUsdcStakedForDelegationInCircle(createStakedEvent(5, 100));
 

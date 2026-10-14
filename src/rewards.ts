@@ -12,6 +12,8 @@ import {
   loadMerchantRewards,
   loadCircleAdminRewardClaimLedger,
   loadMerchantRewardClaimLedger,
+  saveCircleAdminRewards,
+  saveMerchantRewards,
 } from "./lib";
 
 export function handleCircleAdminRewardAllocated(
@@ -29,7 +31,7 @@ export function handleCircleAdminRewardAllocated(
   circleAdminRewards.claimableRewards =
     event.params.accountRewards.claimableRewards;
 
-  circleAdminRewards.save();
+  saveCircleAdminRewards(circleAdminRewards);
 }
 
 export function handleCircleAdminRewardClaimed(
@@ -51,11 +53,7 @@ export function handleCircleAdminRewardClaimed(
   circleAdminRewards.withdrawnRewards =
     circleAdminRewards.withdrawnRewards.plus(event.params.amount);
 
-  circleAdminRewards.earnedRewards = circleAdminRewards.withdrawnRewards
-    .plus(circleAdminRewards.claimableRewards)
-    .plus(circleAdminRewards.lockedRewards);
-
-  circleAdminRewards.save();
+  saveCircleAdminRewards(circleAdminRewards);
 
   let ledgerEntry = loadCircleAdminRewardClaimLedger(
     event.transaction.hash.concatI32(event.logIndex.toI32()),
@@ -81,7 +79,7 @@ export function handleCircleAdminRewardAdjusted(
     );
   circleAdminRewards.claimableRewards =
     event.params.accountRewards.claimableRewards;
-  circleAdminRewards.save();
+  saveCircleAdminRewards(circleAdminRewards);
 }
 
 export function handleMerchantRewardAllocated(
@@ -99,7 +97,7 @@ export function handleMerchantRewardAllocated(
   merchantRewards.claimableRewards =
     event.params.accountRewards.claimableRewards;
 
-  merchantRewards.save();
+  saveMerchantRewards(merchantRewards);
 }
 
 export function handleMerchantRewardClaimed(
@@ -121,11 +119,7 @@ export function handleMerchantRewardClaimed(
     event.params.amount,
   );
 
-  merchantRewards.earnedRewards = merchantRewards.withdrawnRewards
-    .plus(merchantRewards.claimableRewards)
-    .plus(merchantRewards.lockedRewards);
-
-  merchantRewards.save();
+  saveMerchantRewards(merchantRewards);
 
   let ledgerEntry = loadMerchantRewardClaimLedger(
     event.transaction.hash.concatI32(event.logIndex.toI32()),
@@ -151,5 +145,5 @@ export function handleMerchantRewardAdjusted(
     );
   merchantRewards.claimableRewards =
     event.params.accountRewards.claimableRewards;
-  merchantRewards.save();
+  saveMerchantRewards(merchantRewards);
 }

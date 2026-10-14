@@ -65,6 +65,7 @@ import {
   OrderCancelledBy1 as OrderCancelledByV2Event,
 } from "../generated/OrderFlowFacet/OrderFlowFacet";
 import { getYearMonthFromTimestamp } from "./utils/date.utils";
+import { nonNegative } from "./utils/math.utils";
 import {
   loadCampaign,
   loadCampaignManagers,
@@ -80,19 +81,19 @@ function adjustMerchantMetricsByOrderType(
 ): void {
   if (orderType === ORDER_TYPE_BUY) {
     metrics.completedBuyOrdersCount =
-      metrics.completedBuyOrdersCount.plus(completedDelta);
+      nonNegative(metrics.completedBuyOrdersCount.plus(completedDelta));
     metrics.cancelledBuyOrdersCount =
-      metrics.cancelledBuyOrdersCount.plus(cancelledDelta);
+      nonNegative(metrics.cancelledBuyOrdersCount.plus(cancelledDelta));
   } else if (orderType === ORDER_TYPE_SELL) {
     metrics.completedSellOrdersCount =
-      metrics.completedSellOrdersCount.plus(completedDelta);
+      nonNegative(metrics.completedSellOrdersCount.plus(completedDelta));
     metrics.cancelledSellOrdersCount =
-      metrics.cancelledSellOrdersCount.plus(cancelledDelta);
+      nonNegative(metrics.cancelledSellOrdersCount.plus(cancelledDelta));
   } else if (orderType === ORDER_TYPE_PAY) {
     metrics.completedPayOrdersCount =
-      metrics.completedPayOrdersCount.plus(completedDelta);
+      nonNegative(metrics.completedPayOrdersCount.plus(completedDelta));
     metrics.cancelledPayOrdersCount =
-      metrics.cancelledPayOrdersCount.plus(cancelledDelta);
+      nonNegative(metrics.cancelledPayOrdersCount.plus(cancelledDelta));
   }
 }
 
@@ -104,19 +105,19 @@ function adjustCircleMetricsByOrderType(
 ): void {
   if (orderType === ORDER_TYPE_BUY) {
     metrics.completedBuyOrdersCount =
-      metrics.completedBuyOrdersCount.plus(completedDelta);
+      nonNegative(metrics.completedBuyOrdersCount.plus(completedDelta));
     metrics.cancelledBuyOrdersCount =
-      metrics.cancelledBuyOrdersCount.plus(cancelledDelta);
+      nonNegative(metrics.cancelledBuyOrdersCount.plus(cancelledDelta));
   } else if (orderType === ORDER_TYPE_SELL) {
     metrics.completedSellOrdersCount =
-      metrics.completedSellOrdersCount.plus(completedDelta);
+      nonNegative(metrics.completedSellOrdersCount.plus(completedDelta));
     metrics.cancelledSellOrdersCount =
-      metrics.cancelledSellOrdersCount.plus(cancelledDelta);
+      nonNegative(metrics.cancelledSellOrdersCount.plus(cancelledDelta));
   } else if (orderType === ORDER_TYPE_PAY) {
     metrics.completedPayOrdersCount =
-      metrics.completedPayOrdersCount.plus(completedDelta);
+      nonNegative(metrics.completedPayOrdersCount.plus(completedDelta));
     metrics.cancelledPayOrdersCount =
-      metrics.cancelledPayOrdersCount.plus(cancelledDelta);
+      nonNegative(metrics.cancelledPayOrdersCount.plus(cancelledDelta));
   }
 }
 
@@ -208,23 +209,44 @@ export function handleOrderDisputeWithFaultType(
   if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
   const newStatus = event.params._order.status;
+  const settled =
+    event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED;
+
+  // Load the order (already synced above) for its original timestamps
+  const disputedOrder = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+    event,
+  );
+
+  // adminSettleDispute calls completeOrder/cancelOrder before it emits
+  // OrderDispute, so OrderCompleted/CancelledOrders have already synced and
+  // counted the new status by the time this runs (tx 0x33ce92c5…: CancelledOrders
+  // at log 153, OrderDispute at log 156). previousStatus therefore equals
+  // newStatus, and the status a settlement overturned has to be read from the
+  // order's own timestamps. A user-fault settlement leaves the order as it was.
+  const orderMoved = settled && event.params.faultType !== FAULT_TYPE_USER;
+  const overturnedCompleted =
+    orderMoved &&
+    newStatus === ORDER_STATUS_CANCELLED &&
+    disputedOrder.completedAt.gt(BigInt.zero());
+  const overturnedCancelled =
+    orderMoved &&
+    newStatus === ORDER_STATUS_COMPLETED &&
+    disputedOrder.cancelledAt.gt(BigInt.zero());
+  // False only when this settlement's OrderCompleted/CancelledOrders log was
+  // never indexed, so the new status still has to be counted here.
+  const newStatusCounted = previousStatus === newStatus;
 
   // Update metrics when dispute is settled
-  if (event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED) {
-    // Load the order to get original timestamps for correct month bucket
-    const disputedOrder = loadOrders(
-      Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
-      event,
-    );
-
+  if (settled) {
     // Use the original event's timestamp to target the correct month bucket:
     // - COMPLETED → CANCELLED: use completedAt (month where completion was recorded)
     // - CANCELLED → COMPLETED: use cancelledAt (month where cancellation was recorded)
     // - fresh: use current block timestamp
     let originalTimestamp: BigInt;
-    if (previousStatus === ORDER_STATUS_COMPLETED) {
+    if (overturnedCompleted) {
       originalTimestamp = disputedOrder.completedAt;
-    } else if (previousStatus === ORDER_STATUS_CANCELLED) {
+    } else if (overturnedCancelled) {
       originalTimestamp = disputedOrder.cancelledAt;
     } else {
       originalTimestamp = event.block.timestamp;
@@ -264,26 +286,34 @@ export function handleOrderDisputeWithFaultType(
     settleDaily.save();
 
     // KPI: reverse completion metrics when a completed order is overturned
-    if (
-      previousStatus === ORDER_STATUS_COMPLETED &&
-      newStatus === ORDER_STATUS_CANCELLED
-    ) {
-      const disputedOrderForKpi = loadOrders(
-        Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
-        event,
-      );
+    if (overturnedCompleted) {
       const completionDaily = loadMerchantDailyMetrics(
         merchant,
-        disputedOrderForKpi.completedAt,
+        disputedOrder.completedAt,
         event,
       );
       if (completionDaily.completedCount.gt(BigInt.zero())) {
         completionDaily.completedCount = completionDaily.completedCount.minus(
           BigInt.fromI32(1),
         );
-        completionDaily.usdcVolume = completionDaily.usdcVolume.minus(
-          event.params._order.amount,
+        completionDaily.usdcVolume = nonNegative(
+          completionDaily.usdcVolume.minus(event.params._order.amount),
         );
+        // Undo the accept-to-complete speed handleOrderCompleted added
+        // (completedAt is that completion's block timestamp)
+        if (
+          disputedOrder.acceptedAt.gt(BigInt.zero()) &&
+          disputedOrder.completedAt.ge(disputedOrder.acceptedAt) &&
+          completionDaily.completedWithSpeedCount.gt(BigInt.zero())
+        ) {
+          completionDaily.acceptToCompleteSecondsSum = nonNegative(
+            completionDaily.acceptToCompleteSecondsSum.minus(
+              disputedOrder.completedAt.minus(disputedOrder.acceptedAt),
+            ),
+          );
+          completionDaily.completedWithSpeedCount =
+            completionDaily.completedWithSpeedCount.minus(BigInt.fromI32(1));
+        }
         completionDaily.save();
       }
       if (merchant.lifetimeCompletedCount.gt(BigInt.zero())) {
@@ -307,25 +337,24 @@ export function handleOrderDisputeWithFaultType(
 
     const orderType = event.params._order.orderType;
 
-    // Adjust counts based on status change
-    if (
-      previousStatus === ORDER_STATUS_COMPLETED &&
-      newStatus === ORDER_STATUS_CANCELLED
-    ) {
+    // Adjust counts based on status change. The old status always comes off;
+    // the new one is added only if its own handler did not already count it.
+    const amount = event.params._order.amount;
+    const addNew = newStatusCounted ? BigInt.fromI32(0) : BigInt.fromI32(1);
+    if (overturnedCompleted) {
       // COMPLETED → CANCELLED: decrement completed, increment cancelled
-      adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(-1), BigInt.fromI32(1));
-      adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(-1), BigInt.fromI32(1));
-      adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(-1), BigInt.fromI32(1));
-      user.totalVolume = user.totalVolume.minus(event.params._order.amount);
-    } else if (
-      previousStatus === ORDER_STATUS_CANCELLED &&
-      newStatus === ORDER_STATUS_COMPLETED
-    ) {
+      adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(-1), addNew);
+      adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(-1), addNew);
+      adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(-1), addNew);
+      user.totalVolume = nonNegative(user.totalVolume.minus(amount));
+    } else if (overturnedCancelled) {
       // CANCELLED → COMPLETED: increment completed, decrement cancelled
-      adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(1), BigInt.fromI32(-1));
-      adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(1), BigInt.fromI32(-1));
-      adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(1), BigInt.fromI32(-1));
-      user.totalVolume = user.totalVolume.plus(event.params._order.amount);
+      adjustMerchantMetricsByOrderType(orderMetrics, orderType, addNew, BigInt.fromI32(-1));
+      adjustUserMetricsByOrderType(user, orderType, addNew, BigInt.fromI32(-1));
+      adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, addNew, BigInt.fromI32(-1));
+      if (!newStatusCounted) {
+        user.totalVolume = user.totalVolume.plus(amount);
+      }
     } else if (
       previousStatus !== ORDER_STATUS_COMPLETED &&
       previousStatus !== ORDER_STATUS_CANCELLED
@@ -344,16 +373,10 @@ export function handleOrderDisputeWithFaultType(
       }
     }
     // Update currency metrics (monthly + daily)
-    if (
-      previousStatus === ORDER_STATUS_COMPLETED &&
-      newStatus === ORDER_STATUS_CANCELLED
-    ) {
-      updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(-1), BigInt.fromI32(1), BigInt.fromI32(0).minus(event.params._order.amount), originalTimestamp, event);
-    } else if (
-      previousStatus === ORDER_STATUS_CANCELLED &&
-      newStatus === ORDER_STATUS_COMPLETED
-    ) {
-      updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(1), BigInt.fromI32(-1), event.params._order.amount, originalTimestamp, event);
+    if (overturnedCompleted) {
+      updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(-1), addNew, BigInt.fromI32(0).minus(amount), originalTimestamp, event);
+    } else if (overturnedCancelled) {
+      updateCurrencyMetrics(event.params._order.currency, orderType, addNew, BigInt.fromI32(-1), newStatusCounted ? BigInt.fromI32(0) : amount, originalTimestamp, event);
     } else if (
       previousStatus !== ORDER_STATUS_COMPLETED &&
       previousStatus !== ORDER_STATUS_CANCELLED
@@ -394,33 +417,43 @@ export function handleOrderDisputeWithFaultType(
   }
 
   // UPDATE CIRCLE SCORE WHEN DISPUTE IS SETTLED
-  if (event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED) {
-    const newStatus = event.params._order.status;
-
-    if (
-      newStatus === ORDER_STATUS_CANCELLED &&
-      previousStatus === ORDER_STATUS_COMPLETED
-    ) {
+  if (settled) {
+    // Count every merchant-fault settlement, the same trigger as the
+    // contract's circle disputeCounter (OrderProcessorFacet.adminSettleDispute).
+    // This used to count only COMPLETED → CANCELLED, which never matched (see
+    // above) and would still skip BUY merchant-fault settlements, which end
+    // COMPLETED. Bucketed on the settle day, so the 30d dispute rate reads as
+    // merchant-fault disputes settled in the window / orders accepted in it.
+    // Credited to the merchant's circle like the rest of this handler; the
+    // contract uses the order's circleId, which matched for every linked
+    // merchant-fault settlement on prod (683 of 683, block 52554986).
+    if (event.params.faultType === FAULT_TYPE_MERCHANT) {
       scoreState.merchantFaultDisputesCount =
         scoreState.merchantFaultDisputesCount.plus(BigInt.fromI32(1));
 
-      // Reverse settlement metrics for the disputed order using actual values
-      const order = loadOrders(
-        Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
+      const settleDayNum = getDayNumber(event.block.timestamp);
+      let settleCircleDaily = loadCircleDailyMetrics(
+        getDailyMetricsKey(circle, settleDayNum),
         event,
       );
+      settleCircleDaily.circle = circle;
+      settleCircleDaily.dayNumber = BigInt.fromI32(settleDayNum);
+      settleCircleDaily.merchantFaultDisputesCount =
+        settleCircleDaily.merchantFaultDisputesCount.plus(BigInt.fromI32(1));
+      settleCircleDaily.save();
+    }
 
-      // Use the original completion day's bucket (not settlement day) so that
-      // dispute rate stays consistent with completed order counts in the
-      // 30-day rolling window
+    if (overturnedCompleted) {
+      // Reverse settlement metrics for the disputed order using actual values
+      const order = disputedOrder;
+
+      // Reverse on the original completion day's bucket, where the
+      // completion's settlement time was added
       const completedDayNum = getDayNumber(order.completedAt);
       const completedDailyKey = getDailyMetricsKey(circle, completedDayNum);
       let completedDaily = loadCircleDailyMetrics(completedDailyKey, event);
       completedDaily.circle = circle;
       completedDaily.dayNumber = BigInt.fromI32(completedDayNum);
-      completedDaily.merchantFaultDisputesCount = completedDaily.merchantFaultDisputesCount.plus(
-        BigInt.fromI32(1),
-      );
 
       if (
         (order.type === ORDER_TYPE_SELL || order.type === ORDER_TYPE_PAY) &&
@@ -505,9 +538,7 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
 
   // KPI: an order cancelled/expired without any acceptance is a miss for every
   // assigned merchant (the accepted!=empty case was already counted at accept time)
-  // The contract emits address(0) for a never-accepted order's acceptedMerchant;
-  // the legacy branch below tests Bytes.empty() against the same event field and
-  // only matches synthetic defaults — both checks are intentional as-is.
+  // The contract emits address(0) for a never-accepted order's acceptedMerchant.
   if (event.params._order.acceptedMerchant.equals(Address.zero())) {
     const cancelledOrder = loadOrders(
       Bytes.fromByteArray(Bytes.fromBigInt(event.params._order.id)),
@@ -536,79 +567,58 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     }
   }
 
-  // Only update merchant stats if an order was accepted by a merchant
+  const orderType = event.params._order.orderType;
+
+  // User cancel counts cover every cancel, accepted or not, like currency
+  // metrics below and handleLegacyCancelledOrders.
+  let user = loadUser(event.params._order.user, event);
+  adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+  user.save();
+
+  // Only update merchant stats if an order was accepted by a merchant. This
+  // used to test Bytes.empty(), which a 20-byte address(0) never equals, so
+  // every never-accepted cancel loaded a CircleMerchant for 0x000…0 and, via
+  // its backfilled circle 1, landed in circle 1's monthly cancel counts.
   const acceptedMerchantAddress = event.params._order.acceptedMerchant;
-  if (!acceptedMerchantAddress.equals(Bytes.empty())) {
+  if (!acceptedMerchantAddress.equals(Address.zero())) {
     const merchant = loadCircleMerchant(
       Bytes.fromHexString(acceptedMerchantAddress.toHexString()),
       event,
     );
     backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
-      const circle = merchant.circle;
+    const circle = merchant.circle;
 
     // Null when the registration event is missing and no backfill has run yet;
-  // Bytes.fromI32(0) is the legacy placeholder from older deployments.
-    if (!circle || circle.equals(Bytes.fromI32(0))) return;
+    // Bytes.fromI32(0) is the legacy placeholder from older deployments. Skip
+    // only the merchant/circle buckets: currency metrics below still count it.
+    if (circle && !circle.equals(Bytes.fromI32(0))) {
+      const month = getYearMonthFromTimestamp(event.block.timestamp);
 
-    // Update monthly order metrics
-    const month = getYearMonthFromTimestamp(event.block.timestamp);
+      // Update merchant monthly order metrics
+      const merchantMetricsKey = Bytes.fromUTF8(
+        `${merchant.id.toHexString()}-${month}`,
+      );
+      const orderMetrics = loadMerchantOrderMetricsByMonth(
+        merchantMetricsKey,
+        event,
+      );
+      orderMetrics.merchant = merchant.id;
+      orderMetrics.month = month;
+      adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+      orderMetrics.save();
 
-    // Update merchant monthly order metrics
-    const merchantMetricsKey = Bytes.fromUTF8(
-      `${merchant.id.toHexString()}-${month}`,
-    );
-    const orderMetrics = loadMerchantOrderMetricsByMonth(
-      merchantMetricsKey,
-      event,
-    );
-    orderMetrics.merchant = merchant.id;
-    orderMetrics.month = month;
-
-    let user = loadUser(event.params._order.user, event);
-
-    const orderType = event.params._order.orderType;
-
-    // UPDATE CANCELLED ORDERS COUNT
-    if (orderType === ORDER_TYPE_BUY) {
-      orderMetrics.cancelledBuyOrdersCount =
-        orderMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
-
-      user.cancelledBuyOrdersCount = user.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
-    } else if (orderType === ORDER_TYPE_SELL) {
-      orderMetrics.cancelledSellOrdersCount =
-        orderMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
-
-      user.cancelledSellOrdersCount = user.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
-    } else if (orderType === ORDER_TYPE_PAY) {
-      orderMetrics.cancelledPayOrdersCount =
-        orderMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
-
-      user.cancelledPayOrdersCount = user.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
+      // Update circle monthly order metrics
+      const circleMetricsKey = Bytes.fromUTF8(`${circle.toHexString()}-${month}`);
+      const circleOrderMetrics = loadCircleOrderMetricsByMonth(
+        circleMetricsKey,
+        event,
+      );
+      circleOrderMetrics.circle = circle;
+      circleOrderMetrics.month = month;
+      adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+      circleOrderMetrics.save();
     }
-
-    user.save();
-    orderMetrics.save();
-
-    // Update circle monthly order metrics
-    const circleMetricsKey = Bytes.fromUTF8(`${circle.toHexString()}-${month}`);
-    const circleOrderMetrics = loadCircleOrderMetricsByMonth(
-      circleMetricsKey,
-      event,
-    );
-    circleOrderMetrics.circle = circle;
-    circleOrderMetrics.month = month;
-    if (orderType === ORDER_TYPE_BUY) {
-      circleOrderMetrics.cancelledBuyOrdersCount =
-        circleOrderMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
-    } else if (orderType === ORDER_TYPE_SELL) {
-      circleOrderMetrics.cancelledSellOrdersCount =
-        circleOrderMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
-    } else if (orderType === ORDER_TYPE_PAY) {
-      circleOrderMetrics.cancelledPayOrdersCount =
-        circleOrderMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
-    }
-    circleOrderMetrics.save();
   }
 
   // Update currency metrics (monthly + daily, regardless of merchant assignment)
