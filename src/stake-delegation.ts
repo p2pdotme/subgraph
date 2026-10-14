@@ -8,6 +8,7 @@ import {
 } from "../generated/USDCStakeDelegationFacet/USDCStakeDelegationFacet";
 import {
   backfillMerchantCircle,
+  circleAccountId,
   loadCircle,
   loadCircleMerchant,
   loadCircleMetrics,
@@ -25,9 +26,7 @@ import {
 import { Circle } from "../generated/schema";
 
 export function handleExitRequested(event: ExitRequestedEvent): void {
-  const stakeRecordKey = Bytes.fromHexString(
-    `${event.params.circleId.toString()}-${event.params.user.toHexString()}`,
-  );
+  const stakeRecordKey = circleAccountId(event.params.circleId, event.params.user);
 
   const circleKey = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
   const circle = loadCircle(circleKey, event);
@@ -54,9 +53,7 @@ export function handleExitRequested(event: ExitRequestedEvent): void {
 export function handleExitProceedsWithdrawn(
   event: ExitProceedsWithdrawnEvent,
 ): void {
-  const stakeRecordKey = Bytes.fromHexString(
-    `${event.params.circleId.toString()}-${event.params.user.toHexString()}`,
-  );
+  const stakeRecordKey = circleAccountId(event.params.circleId, event.params.user);
 
   // UPDATE CIRCLE UNSTAKE RECORD
   let unstakeRecord = loadCircleUsdcUnstakeRecords(stakeRecordKey, event);
@@ -98,9 +95,7 @@ export function handleUsdcStakedForDelegationInCircle(
   staker.totalStaked = staker.totalStaked.plus(event.params.amount);
   staker.save();
 
-  const stakeRecordKey = Bytes.fromHexString(
-    `${event.params.circleId.toString()}-${event.params.user.toHexString()}`,
-  );
+  const stakeRecordKey = circleAccountId(event.params.circleId, event.params.user);
   const stakeRecord = loadCircleUsdcStakeRecords(stakeRecordKey, event);
   stakeRecord.circle = circle.id;
   stakeRecord.staker = staker.id;
