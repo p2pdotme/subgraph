@@ -1,4 +1,4 @@
-import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   Circle,
   CircleDailyMetrics,
@@ -143,6 +143,17 @@ export function loadCircleOrderMetricsByMonth(
   metrics.transactionHash = event.transaction.hash;
 
   return metrics;
+}
+
+// Per-(circle, account) id for CirclePermission, CircleUsdcStakeRecords and
+// CircleUsdcUnstakeRecords: the UTF-8 bytes of "<circleId>-0x<account>".
+// These ids used to be Bytes.fromHexString of that same string, which is not
+// hex: even digit-count circleIds (10-99, ...) aborted the handler (circle 20
+// halted indexing at block 52506326) and odd ones parsed into junk bytes. The
+// grafted 0.3.x deployments kept the junk ids for circles 1-9 and 100-999;
+// a full resync writes every circle with this one format.
+export function circleAccountId(circleId: BigInt, account: Address): Bytes {
+  return Bytes.fromUTF8(`${circleId.toString()}-${account.toHexString()}`);
 }
 
 export function loadCirclePermission(
