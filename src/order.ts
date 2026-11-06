@@ -11,7 +11,9 @@ import {
   OrderAppealed as OrderAppealedEvent,
   EmergencyPauseSet as EmergencyPauseSetEvent,
   DisputeDecided as DisputeDecidedEvent,
-  DisputeAppealed as DisputeAppealedEvent,
+  DisputeRaised as DisputeRaisedEvent,
+  DisputeEscalated as DisputeEscalatedEvent,
+  DisputeSettled as DisputeSettledEvent,
   DisputeAppealWindowSet as DisputeAppealWindowSetEvent,
   DisputeDecisionSlaSet as DisputeDecisionSlaSetEvent,
   CircleDisputeRejectionSuppressed as CircleDisputeRejectionSuppressedEvent,
@@ -22,13 +24,10 @@ import {
   loadCurrency,
 } from "./lib";
 import {
-  DisputeActivity,
   CircleDisputeRejectionSuppression,
 } from "../generated/schema";
 import { logKey } from "./utils";
 import {
-  DISPUTE_ACTION_APPEALED,
-  DISPUTE_ACTION_DECIDED,
 } from "./constants/status";
 import {
   backfillMerchantCircle,
@@ -53,6 +52,7 @@ import {
   applyTrustFirewall,
   checkBootstrapGraduation,
   loadMerchantDailyMetrics,
+  appendDisputeStep,
 } from "./lib";
 import {
   CircleMetrics,
@@ -74,6 +74,10 @@ import {
   FAULT_TYPE_USER,
   FAULT_TYPE_MERCHANT,
   FAULT_TYPE_BANK,
+  DISPUTE_STEP_RAISED,
+  DISPUTE_STEP_DECIDED,
+  DISPUTE_STEP_ESCALATED,
+  DISPUTE_STEP_SETTLED,
 } from "./constants/status";
 import {
   CancelledOrders as CancelledOrdersEvent,
@@ -200,6 +204,13 @@ export function handleOrderDisputeWithFaultType(
     );
     _order.disputePlacedAt = event.block.timestamp;
     _order.disputeFaultType = event.params.faultType;
+    // A dispute raised before the ladder upgrade never emitted DisputeRaised,
+    // so its tier would stay 0 until it is decided. The contract reads tier 0
+    // as tier 1 (`e.tier == 0 ? 1 : e.tier`), and so does this. Since the raise
+    // tx emits DisputeRaised first, this only fills a gap and never overrides.
+    if (_order.disputeTier == 0) {
+      _order.disputeTier = 1;
+    }
     _order.save();
   } else if (
     event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED
@@ -210,7 +221,9 @@ export function handleOrderDisputeWithFaultType(
     );
     _order.disputeSettledAt = event.block.timestamp;
     _order.disputeFaultType = event.params.faultType;
-    _order.disputeSettledByAddr = event.transaction.from;
+    // `by` is the decider; finalizeDispute may be sent by anyone
+    _order.disputeSettledByAddr = event.params.by;
+    _order.disputeAppealableUntil = BigInt.fromI32(0);
     _order.save();
   }
 
@@ -583,6 +596,95 @@ export function handleOrderAppealed(event: OrderAppealedEvent): void {
   );
   order.appealedAt = event.params.appealedAt;
   order.appealedByMerchantAddress = event.params.merchant;
+  order.save();
+}
+
+export function handleDisputeRaised(event: DisputeRaisedEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.disputeTier = event.params.tier;
+  appendDisputeStep(
+    order,
+    event,
+    DISPUTE_STEP_RAISED,
+    event.params.tier,
+    0,
+    0,
+    event.params.by,
+    Bytes.empty(),
+    event.params.appealableAt,
+    false,
+  );
+  order.save();
+}
+
+export function handleDisputeDecided(event: DisputeDecidedEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.disputeTier = event.params.decisionTier;
+  // 0 for a tier-3 decision: final, executes in the same transaction
+  order.disputeAppealableUntil = event.params.appealableUntil;
+  appendDisputeStep(
+    order,
+    event,
+    DISPUTE_STEP_DECIDED,
+    event.params.decisionTier,
+    0,
+    event.params.faultType,
+    event.params.by,
+    Bytes.empty(),
+    event.params.appealableUntil,
+    false,
+  );
+  order.save();
+}
+
+export function handleDisputeEscalated(event: DisputeEscalatedEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.disputeTier = event.params.toTier;
+  // Escalation drops the pending decision; the DECIDED step stays in history
+  order.disputeAppealableUntil = BigInt.fromI32(0);
+  appendDisputeStep(
+    order,
+    event,
+    DISPUTE_STEP_ESCALATED,
+    event.params.toTier,
+    event.params.fromTier,
+    0,
+    event.params.by,
+    Bytes.empty(),
+    BigInt.fromI32(0),
+    event.params.slaLapsed,
+  );
+  order.save();
+}
+
+export function handleDisputeSettled(event: DisputeSettledEvent): void {
+  // Fault type, decider and settled-at come from OrderDispute in the same tx
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.disputeFinalizedByAddr = event.params.finalizedBy;
+  appendDisputeStep(
+    order,
+    event,
+    DISPUTE_STEP_SETTLED,
+    event.params.tier,
+    0,
+    event.params.faultType,
+    event.params.decidedBy,
+    event.params.finalizedBy,
+    BigInt.fromI32(0),
+    false,
+  );
   order.save();
 }
 
@@ -1508,69 +1610,11 @@ export function handleEmergencyPauseSet(event: EmergencyPauseSetEvent): void {
   newEmergencyPauseActivity(event, event.params.by, event.params.paused).save();
 }
 
-// ─────────────────────── R8.2 tiered disputes ────────────────────────────
+// ─────────────────────── R8.2 dispute settings ───────────────────────────
 //
-// A decision is RECORDED, not executed: it takes effect at `appealableUntil`
-// unless a party appeals first, so a decided dispute is not a settled one.
-// Keep `disputeDecidedAt` and `disputeSettledAt` apart when reporting outcomes.
-// `DisputeAppealed` is also NOT the same event as `OrderAppealed` — see the
-// note on `Orders.appealedAt` in the schema.
+// The ladder itself (raise, decide, escalate, settle) is indexed by the
+// handleDispute* functions above as an ordered DisputeStep history.
 
-export function handleDisputeDecided(event: DisputeDecidedEvent): void {
-  const orderKey = Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId));
-  const order = loadOrders(orderKey, event);
-  order.disputeDecisionTier = event.params.decisionTier;
-  order.disputeFaultType = event.params.faultType;
-  order.disputeDecidedBy = event.params.by;
-  order.disputeDecidedAt = event.block.timestamp;
-  order.disputeAppealableUntil = event.params.appealableUntil;
-  order.save();
-
-  const activity = new DisputeActivity(
-    logKey(event.transaction.hash, event.logIndex),
-  );
-  activity.orderId = event.params.orderId;
-  activity.order = orderKey;
-  activity.action = DISPUTE_ACTION_DECIDED;
-  activity.by = event.params.by;
-  activity.decisionTier = event.params.decisionTier;
-  activity.faultType = event.params.faultType;
-  activity.appealableUntil = event.params.appealableUntil;
-  activity.blockNumber = event.block.number;
-  activity.blockTimestamp = event.block.timestamp;
-  activity.transactionHash = event.transaction.hash;
-  activity.save();
-}
-
-export function handleDisputeAppealed(event: DisputeAppealedEvent): void {
-  const orderKey = Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId));
-  const order = loadOrders(orderKey, event);
-  order.disputeTier = event.params.tier;
-  order.disputeAppealCount = order.disputeAppealCount + 1;
-  order.disputeLastAppealedBy = event.params.by;
-  order.disputeLastAppealedAt = event.block.timestamp;
-  // The pending decision is gone: either it was appealed, or the dispute was
-  // never decided and its tier missed the SLA. Leaving the old window would
-  // show a decision as still about to execute.
-  order.disputeAppealableUntil = null;
-  order.save();
-
-  const activity = new DisputeActivity(
-    logKey(event.transaction.hash, event.logIndex),
-  );
-  activity.orderId = event.params.orderId;
-  activity.order = orderKey;
-  activity.action = DISPUTE_ACTION_APPEALED;
-  activity.by = event.params.by;
-  activity.tier = event.params.tier;
-  activity.blockNumber = event.block.number;
-  activity.blockTimestamp = event.block.timestamp;
-  activity.transactionHash = event.transaction.hash;
-  activity.save();
-}
-
-// Per-currency dispute settings. 0 means "follow the network default" (24h
-// appeal window; 24h / 72h decision SLAs), never zero seconds.
 export function handleDisputeAppealWindowSet(
   event: DisputeAppealWindowSetEvent,
 ): void {
