@@ -190,6 +190,13 @@ export function handleOrderDisputeWithFaultType(
     );
     _order.disputePlacedAt = event.block.timestamp;
     _order.disputeFaultType = event.params.faultType;
+    // A dispute raised before the ladder upgrade never emitted DisputeRaised,
+    // so its tier would stay 0 until it is decided. The contract reads tier 0
+    // as tier 1 (`e.tier == 0 ? 1 : e.tier`), and so does this. Since the raise
+    // tx emits DisputeRaised first, this only fills a gap and never overrides.
+    if (_order.disputeTier == 0) {
+      _order.disputeTier = 1;
+    }
     _order.save();
   } else if (
     event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED
