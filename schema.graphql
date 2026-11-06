@@ -286,6 +286,16 @@ type Orders @entity(immutable: false) {
   disputeFaultType: Int!
   disputePlacedAt: BigInt!
   disputeSettledAt: BigInt!
+  # DISPUTE LADDER - current state
+  # Tier the dispute is at: 1 circle, 2 country admin, 3 ops lead (0 = not raised)
+  disputeTier: Int!
+  # Appeal deadline of the pending tier-1/tier-2 decision (0 = none pending)
+  disputeAppealableUntil: BigInt!
+  # Who executed the settlement (decider for tier 3, else the finalizer)
+  disputeFinalizedByAddr: Bytes!
+
+  # DISPUTE LADDER - history, in order: raise, decisions, escalations, settlement
+  disputeHistory: [DisputeStep!]!
 
   # APPEAL DETAILS
   appealedAt: BigInt!
@@ -293,6 +303,7 @@ type Orders @entity(immutable: false) {
 
   # INSURANCE CLAIMS
   claimSubmissions: [InsuranceClaim!] @derivedFrom(field: "order")
+
 
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -1007,6 +1018,32 @@ type PIPRefillRequest @entity(immutable: false) {
   # Actual amount approved (set on PIPRefillApproved, may differ from requestedAmount)
   approvedAmount: BigInt!
 
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+# DISPUTE STEP
+# One step of an order's dispute ladder. Appended to Orders.disputeHistory.
+type DisputeStep @entity(immutable: true) {
+  id: Bytes! # txHash + logIndex
+  orderId: BigInt!
+  # 0=RAISED, 1=DECIDED, 2=ESCALATED, 3=SETTLED
+  kind: Int!
+  # RAISED: 1. DECIDED: deciding tier. ESCALATED: tier moved to. SETTLED: deciding tier.
+  tier: Int!
+  # ESCALATED only: tier moved from
+  fromTier: Int!
+  # DECIDED / SETTLED: FaultType (0=DEFAULT,1=USER,2=MERCHANT,3=BANK)
+  faultType: Int!
+  # RAISED: raiser. DECIDED: decider. ESCALATED: appealer. SETTLED: decider.
+  by: Bytes!
+  # SETTLED only: who executed the settlement (decider for tier 3, else finalizer)
+  finalizedBy: Bytes!
+  # RAISED: tier-1 decision SLA deadline. DECIDED: appeal deadline (0 = final).
+  deadline: BigInt!
+  # ESCALATED only: true when escalated because the tier missed its SLA
+  slaLapsed: Boolean!
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
