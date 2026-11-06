@@ -1,4 +1,3 @@
-import { Bytes } from "@graphprotocol/graph-ts";
 import {
   PaymentChannelConfigChanged,
   CurrencyToggled,
@@ -7,13 +6,17 @@ import {
   MonthlyVolumeLimit,
 } from "../generated/CountryFacet/CountryFacet";
 import { PaymentChannelConfig } from "../generated/schema";
-import { applyMonthlyVolumeLimit, loadCountry, loadCurrency } from "./lib";
+import {
+  applyMonthlyVolumeLimit,
+  loadCountry,
+  loadCurrency,
+  paymentChannelConfigId,
+} from "./lib";
 
 export function handlePaymentChannelConfigChanged(
   event: PaymentChannelConfigChanged,
 ): void {
-  // Use paymentChannelId as the entity ID
-  const id = Bytes.fromI32(event.params.cfg.paymentChannelId.toI32());
+  const id = paymentChannelConfigId(event.params.cfg.paymentChannelId);
 
   let config = PaymentChannelConfig.load(id);
   if (!config) {

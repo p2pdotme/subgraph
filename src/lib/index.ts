@@ -22,6 +22,7 @@ export {
   backfillMerchantCircle,
   loadMerchantPaymentChannels,
   savePaymentChannel,
+  paymentChannelConfigId,
   loadMerchantVolumeByMonth,
   loadMerchantOrderMetricsByMonth,
   loadPaymentChannelMigration,
@@ -36,6 +37,8 @@ export {
   loadMerchantRewards,
   loadCircleAdminRewardClaimLedger,
   loadMerchantRewardClaimLedger,
+  saveCircleAdminRewards,
+  saveMerchantRewards,
 } from "./rewards.lib";
 export {
   loadUser,

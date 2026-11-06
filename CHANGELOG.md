@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [2.0.0] — 2026-11
+
+Goldsky `p2pme-subgraph/2.0.0`. **Full sync only**, never a graft. The data-correctness fixes under Fixed change existing rows, and the new non-null fields on `Orders`, `Currency` and `InsuranceClaim` are rejected by graph-node's graft compatibility check.
+
 ### Added
 
 - `CircleAdminHistorySeeded` as `CircleAdminHistory`: the R8 cut seeds the
@@ -142,6 +148,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- `indexerHints.prune` is a fixed 3,000,000-block window (about 7 days at
+  Base's measured 0.2 s/block) instead of `auto`, so the next version can graft
+  at the block of a contract upgrade. Under `auto`, 1.0.0 kept 7,043 and then
+  3,293 blocks of history on 2026-11-07, so the R8 upgrade block (54009557) was
+  gone within an hour and no graft could start there
 - **R8.2 retires role bits 8 and 10 as well as 9, and moves claim approval back
   to the country `ADMIN`.** Bit 10 (`INSURANCE_ADMIN`) was live for exactly one
   release as claim review split out of `ADMIN`; the R8.2 review read spec §3.6 as
@@ -271,6 +282,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Dispute settlements never reversed an overturned order, and merchant-fault disputes were never counted toward `circleScore` (`adminSettleDispute` emits `OrderDispute` after the cancel/complete it causes)
+- The same dead reversal in the pre-COT legacy dispute handlers
+- Never-accepted cancels were credited to a `0x000…0` merchant, inflating circle 1's monthly cancel counts; user and currency cancel counts now cover every cancel
+- An overturned completion now also leaves the merchant's KPI day (completed count, volume, accept-to-complete speed)
+- Blacklisted users keep 0 reputation points, as on-chain
+- Payment channel configs are stored under one id instead of two
+- `earnedRewards` is derived on every rewards save instead of only on claims
+- B2B `Integrator.activeOrderCount` floors at zero, like the contract
+- `Staker` stake and unstake record lists are persisted
 - Synced to contracts-v4 #464 `ff3f9e5`: the dispute ladder is #83's
   (`DisputeRaised`/`Decided`/`Escalated`/`Settled`); the `DisputeAppealed`
   handler, its order fields and `DisputeActivity` are gone, since #464 no
