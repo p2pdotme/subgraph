@@ -9,7 +9,23 @@ import {
   OrderDispute as OrderDisputeWithFaultTypeEvent,
   CircleStatusUpdated as CircleStatusUpdatedEvent,
   OrderAppealed as OrderAppealedEvent,
+  EmergencyPauseSet as EmergencyPauseSetEvent,
+  DisputeDecided as DisputeDecidedEvent,
+  DisputeRaised as DisputeRaisedEvent,
+  DisputeEscalated as DisputeEscalatedEvent,
+  DisputeSettled as DisputeSettledEvent,
+  DisputeAppealWindowSet as DisputeAppealWindowSetEvent,
+  DisputeDecisionSlaSet as DisputeDecisionSlaSetEvent,
+  CircleDisputeRejectionSuppressed as CircleDisputeRejectionSuppressedEvent,
 } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
+import {
+  loadProtocolAuthState,
+  newEmergencyPauseActivity,
+  loadCurrency,
+} from "./lib";
+import { CircleDisputeRejectionSuppression } from "../generated/schema";
+import { logKey } from "./utils";
+import {} from "./constants/status";
 import {
   backfillMerchantCircle,
   loadAssignedMerchants,
@@ -33,6 +49,7 @@ import {
   applyTrustFirewall,
   checkBootstrapGraduation,
   loadMerchantDailyMetrics,
+  appendDisputeStep,
 } from "./lib";
 import {
   CircleMetrics,
@@ -54,6 +71,10 @@ import {
   FAULT_TYPE_USER,
   FAULT_TYPE_MERCHANT,
   FAULT_TYPE_BANK,
+  DISPUTE_STEP_RAISED,
+  DISPUTE_STEP_DECIDED,
+  DISPUTE_STEP_ESCALATED,
+  DISPUTE_STEP_SETTLED,
 } from "./constants/status";
 import {
   CancelledOrders as CancelledOrdersEvent,
@@ -72,7 +93,6 @@ import {
   loadCampaignRewardRedeemed,
 } from "./lib/campaign.lib";
 
-
 function adjustMerchantMetricsByOrderType(
   metrics: MerchantOrderMetricsByMonth,
   orderType: i32,
@@ -80,20 +100,26 @@ function adjustMerchantMetricsByOrderType(
   cancelledDelta: BigInt,
 ): void {
   if (orderType === ORDER_TYPE_BUY) {
-    metrics.completedBuyOrdersCount =
-      nonNegative(metrics.completedBuyOrdersCount.plus(completedDelta));
-    metrics.cancelledBuyOrdersCount =
-      nonNegative(metrics.cancelledBuyOrdersCount.plus(cancelledDelta));
+    metrics.completedBuyOrdersCount = nonNegative(
+      metrics.completedBuyOrdersCount.plus(completedDelta),
+    );
+    metrics.cancelledBuyOrdersCount = nonNegative(
+      metrics.cancelledBuyOrdersCount.plus(cancelledDelta),
+    );
   } else if (orderType === ORDER_TYPE_SELL) {
-    metrics.completedSellOrdersCount =
-      nonNegative(metrics.completedSellOrdersCount.plus(completedDelta));
-    metrics.cancelledSellOrdersCount =
-      nonNegative(metrics.cancelledSellOrdersCount.plus(cancelledDelta));
+    metrics.completedSellOrdersCount = nonNegative(
+      metrics.completedSellOrdersCount.plus(completedDelta),
+    );
+    metrics.cancelledSellOrdersCount = nonNegative(
+      metrics.cancelledSellOrdersCount.plus(cancelledDelta),
+    );
   } else if (orderType === ORDER_TYPE_PAY) {
-    metrics.completedPayOrdersCount =
-      nonNegative(metrics.completedPayOrdersCount.plus(completedDelta));
-    metrics.cancelledPayOrdersCount =
-      nonNegative(metrics.cancelledPayOrdersCount.plus(cancelledDelta));
+    metrics.completedPayOrdersCount = nonNegative(
+      metrics.completedPayOrdersCount.plus(completedDelta),
+    );
+    metrics.cancelledPayOrdersCount = nonNegative(
+      metrics.cancelledPayOrdersCount.plus(cancelledDelta),
+    );
   }
 }
 
@@ -104,20 +130,26 @@ function adjustCircleMetricsByOrderType(
   cancelledDelta: BigInt,
 ): void {
   if (orderType === ORDER_TYPE_BUY) {
-    metrics.completedBuyOrdersCount =
-      nonNegative(metrics.completedBuyOrdersCount.plus(completedDelta));
-    metrics.cancelledBuyOrdersCount =
-      nonNegative(metrics.cancelledBuyOrdersCount.plus(cancelledDelta));
+    metrics.completedBuyOrdersCount = nonNegative(
+      metrics.completedBuyOrdersCount.plus(completedDelta),
+    );
+    metrics.cancelledBuyOrdersCount = nonNegative(
+      metrics.cancelledBuyOrdersCount.plus(cancelledDelta),
+    );
   } else if (orderType === ORDER_TYPE_SELL) {
-    metrics.completedSellOrdersCount =
-      nonNegative(metrics.completedSellOrdersCount.plus(completedDelta));
-    metrics.cancelledSellOrdersCount =
-      nonNegative(metrics.cancelledSellOrdersCount.plus(cancelledDelta));
+    metrics.completedSellOrdersCount = nonNegative(
+      metrics.completedSellOrdersCount.plus(completedDelta),
+    );
+    metrics.cancelledSellOrdersCount = nonNegative(
+      metrics.cancelledSellOrdersCount.plus(cancelledDelta),
+    );
   } else if (orderType === ORDER_TYPE_PAY) {
-    metrics.completedPayOrdersCount =
-      nonNegative(metrics.completedPayOrdersCount.plus(completedDelta));
-    metrics.cancelledPayOrdersCount =
-      nonNegative(metrics.cancelledPayOrdersCount.plus(cancelledDelta));
+    metrics.completedPayOrdersCount = nonNegative(
+      metrics.completedPayOrdersCount.plus(completedDelta),
+    );
+    metrics.cancelledPayOrdersCount = nonNegative(
+      metrics.cancelledPayOrdersCount.plus(cancelledDelta),
+    );
   }
 }
 
@@ -182,6 +214,13 @@ export function handleOrderDisputeWithFaultType(
     );
     _order.disputePlacedAt = event.block.timestamp;
     _order.disputeFaultType = event.params.faultType;
+    // A dispute raised before the ladder upgrade never emitted DisputeRaised,
+    // so its tier would stay 0 until it is decided. The contract reads tier 0
+    // as tier 1 (`e.tier == 0 ? 1 : e.tier`), and so does this. Since the raise
+    // tx emits DisputeRaised first, this only fills a gap and never overrides.
+    if (_order.disputeTier == 0) {
+      _order.disputeTier = 1;
+    }
     _order.save();
   } else if (
     event.params._order.disputeInfo.status === DISPUTE_STATUS_SETTLED
@@ -192,7 +231,9 @@ export function handleOrderDisputeWithFaultType(
     );
     _order.disputeSettledAt = event.block.timestamp;
     _order.disputeFaultType = event.params.faultType;
-    _order.disputeSettledByAddr = event.transaction.from;
+    // `by` is the decider; finalizeDispute may be sent by anyone
+    _order.disputeSettledByAddr = event.params.by;
+    _order.disputeAppealableUntil = BigInt.fromI32(0);
     _order.save();
   }
 
@@ -271,9 +312,8 @@ export function handleOrderDisputeWithFaultType(
       event,
     );
     if (event.params.faultType === FAULT_TYPE_MERCHANT) {
-      settleDaily.merchantFaultDisputes = settleDaily.merchantFaultDisputes.plus(
-        BigInt.fromI32(1),
-      );
+      settleDaily.merchantFaultDisputes =
+        settleDaily.merchantFaultDisputes.plus(BigInt.fromI32(1));
     } else if (event.params.faultType === FAULT_TYPE_BANK) {
       settleDaily.bankFaultDisputes = settleDaily.bankFaultDisputes.plus(
         BigInt.fromI32(1),
@@ -343,15 +383,35 @@ export function handleOrderDisputeWithFaultType(
     const addNew = newStatusCounted ? BigInt.fromI32(0) : BigInt.fromI32(1);
     if (overturnedCompleted) {
       // COMPLETED → CANCELLED: decrement completed, increment cancelled
-      adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(-1), addNew);
+      adjustMerchantMetricsByOrderType(
+        orderMetrics,
+        orderType,
+        BigInt.fromI32(-1),
+        addNew,
+      );
       adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(-1), addNew);
-      adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(-1), addNew);
+      adjustCircleMetricsByOrderType(
+        circleOrderMetrics,
+        orderType,
+        BigInt.fromI32(-1),
+        addNew,
+      );
       user.totalVolume = nonNegative(user.totalVolume.minus(amount));
     } else if (overturnedCancelled) {
       // CANCELLED → COMPLETED: increment completed, decrement cancelled
-      adjustMerchantMetricsByOrderType(orderMetrics, orderType, addNew, BigInt.fromI32(-1));
+      adjustMerchantMetricsByOrderType(
+        orderMetrics,
+        orderType,
+        addNew,
+        BigInt.fromI32(-1),
+      );
       adjustUserMetricsByOrderType(user, orderType, addNew, BigInt.fromI32(-1));
-      adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, addNew, BigInt.fromI32(-1));
+      adjustCircleMetricsByOrderType(
+        circleOrderMetrics,
+        orderType,
+        addNew,
+        BigInt.fromI32(-1),
+      );
       if (!newStatusCounted) {
         user.totalVolume = user.totalVolume.plus(amount);
       }
@@ -361,30 +421,92 @@ export function handleOrderDisputeWithFaultType(
     ) {
       if (newStatus === ORDER_STATUS_COMPLETED) {
         // fresh → COMPLETED
-        adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(1), BigInt.fromI32(0));
-        adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(1), BigInt.fromI32(0));
-        adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(1), BigInt.fromI32(0));
+        adjustMerchantMetricsByOrderType(
+          orderMetrics,
+          orderType,
+          BigInt.fromI32(1),
+          BigInt.fromI32(0),
+        );
+        adjustUserMetricsByOrderType(
+          user,
+          orderType,
+          BigInt.fromI32(1),
+          BigInt.fromI32(0),
+        );
+        adjustCircleMetricsByOrderType(
+          circleOrderMetrics,
+          orderType,
+          BigInt.fromI32(1),
+          BigInt.fromI32(0),
+        );
         user.totalVolume = user.totalVolume.plus(event.params._order.amount);
       } else if (newStatus === ORDER_STATUS_CANCELLED) {
         // fresh → CANCELLED
-        adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
-        adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
-        adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+        adjustMerchantMetricsByOrderType(
+          orderMetrics,
+          orderType,
+          BigInt.fromI32(0),
+          BigInt.fromI32(1),
+        );
+        adjustUserMetricsByOrderType(
+          user,
+          orderType,
+          BigInt.fromI32(0),
+          BigInt.fromI32(1),
+        );
+        adjustCircleMetricsByOrderType(
+          circleOrderMetrics,
+          orderType,
+          BigInt.fromI32(0),
+          BigInt.fromI32(1),
+        );
       }
     }
     // Update currency metrics (monthly + daily)
     if (overturnedCompleted) {
-      updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(-1), addNew, BigInt.fromI32(0).minus(amount), originalTimestamp, event);
+      updateCurrencyMetrics(
+        event.params._order.currency,
+        orderType,
+        BigInt.fromI32(-1),
+        addNew,
+        BigInt.fromI32(0).minus(amount),
+        originalTimestamp,
+        event,
+      );
     } else if (overturnedCancelled) {
-      updateCurrencyMetrics(event.params._order.currency, orderType, addNew, BigInt.fromI32(-1), newStatusCounted ? BigInt.fromI32(0) : amount, originalTimestamp, event);
+      updateCurrencyMetrics(
+        event.params._order.currency,
+        orderType,
+        addNew,
+        BigInt.fromI32(-1),
+        newStatusCounted ? BigInt.fromI32(0) : amount,
+        originalTimestamp,
+        event,
+      );
     } else if (
       previousStatus !== ORDER_STATUS_COMPLETED &&
       previousStatus !== ORDER_STATUS_CANCELLED
     ) {
       if (newStatus === ORDER_STATUS_COMPLETED) {
-        updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(1), BigInt.fromI32(0), event.params._order.amount, originalTimestamp, event);
+        updateCurrencyMetrics(
+          event.params._order.currency,
+          orderType,
+          BigInt.fromI32(1),
+          BigInt.fromI32(0),
+          event.params._order.amount,
+          originalTimestamp,
+          event,
+        );
       } else if (newStatus === ORDER_STATUS_CANCELLED) {
-        updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(0), BigInt.fromI32(1), BigInt.fromI32(0), originalTimestamp, event);
+        updateCurrencyMetrics(
+          event.params._order.currency,
+          orderType,
+          BigInt.fromI32(0),
+          BigInt.fromI32(1),
+          BigInt.fromI32(0),
+          originalTimestamp,
+          event,
+        );
       }
     }
 
@@ -510,6 +632,95 @@ export function handleOrderAppealed(event: OrderAppealedEvent): void {
   order.save();
 }
 
+export function handleDisputeRaised(event: DisputeRaisedEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.disputeTier = event.params.tier;
+  appendDisputeStep(
+    order,
+    event,
+    DISPUTE_STEP_RAISED,
+    event.params.tier,
+    0,
+    0,
+    event.params.by,
+    Bytes.empty(),
+    event.params.appealableAt,
+    false,
+  );
+  order.save();
+}
+
+export function handleDisputeDecided(event: DisputeDecidedEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.disputeTier = event.params.decisionTier;
+  // 0 for a tier-3 decision: final, executes in the same transaction
+  order.disputeAppealableUntil = event.params.appealableUntil;
+  appendDisputeStep(
+    order,
+    event,
+    DISPUTE_STEP_DECIDED,
+    event.params.decisionTier,
+    0,
+    event.params.faultType,
+    event.params.by,
+    Bytes.empty(),
+    event.params.appealableUntil,
+    false,
+  );
+  order.save();
+}
+
+export function handleDisputeEscalated(event: DisputeEscalatedEvent): void {
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.disputeTier = event.params.toTier;
+  // Escalation drops the pending decision; the DECIDED step stays in history
+  order.disputeAppealableUntil = BigInt.fromI32(0);
+  appendDisputeStep(
+    order,
+    event,
+    DISPUTE_STEP_ESCALATED,
+    event.params.toTier,
+    event.params.fromTier,
+    0,
+    event.params.by,
+    Bytes.empty(),
+    BigInt.fromI32(0),
+    event.params.slaLapsed,
+  );
+  order.save();
+}
+
+export function handleDisputeSettled(event: DisputeSettledEvent): void {
+  // Fault type, decider and settled-at come from OrderDispute in the same tx
+  let order = loadOrders(
+    Bytes.fromByteArray(Bytes.fromBigInt(event.params.orderId)),
+    event,
+  );
+  order.disputeFinalizedByAddr = event.params.finalizedBy;
+  appendDisputeStep(
+    order,
+    event,
+    DISPUTE_STEP_SETTLED,
+    event.params.tier,
+    0,
+    event.params.faultType,
+    event.params.decidedBy,
+    event.params.finalizedBy,
+    BigInt.fromI32(0),
+    false,
+  );
+  order.save();
+}
+
 export function handleCancelledOrders(event: CancelledOrdersEvent): void {
   // Synchronize order data with the latest contract state
   syncOrder(
@@ -572,7 +783,12 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
   // User cancel counts cover every cancel, accepted or not, like currency
   // metrics below and handleLegacyCancelledOrders.
   let user = loadUser(event.params._order.user, event);
-  adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+  adjustUserMetricsByOrderType(
+    user,
+    orderType,
+    BigInt.fromI32(0),
+    BigInt.fromI32(1),
+  );
   user.save();
 
   // Only update merchant stats if an order was accepted by a merchant. This
@@ -605,18 +821,30 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
       );
       orderMetrics.merchant = merchant.id;
       orderMetrics.month = month;
-      adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+      adjustMerchantMetricsByOrderType(
+        orderMetrics,
+        orderType,
+        BigInt.fromI32(0),
+        BigInt.fromI32(1),
+      );
       orderMetrics.save();
 
       // Update circle monthly order metrics
-      const circleMetricsKey = Bytes.fromUTF8(`${circle.toHexString()}-${month}`);
+      const circleMetricsKey = Bytes.fromUTF8(
+        `${circle.toHexString()}-${month}`,
+      );
       const circleOrderMetrics = loadCircleOrderMetricsByMonth(
         circleMetricsKey,
         event,
       );
       circleOrderMetrics.circle = circle;
       circleOrderMetrics.month = month;
-      adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+      adjustCircleMetricsByOrderType(
+        circleOrderMetrics,
+        orderType,
+        BigInt.fromI32(0),
+        BigInt.fromI32(1),
+      );
       circleOrderMetrics.save();
     }
   }
@@ -742,7 +970,11 @@ export function handleMerchantAssignedNewOrder(
   );
   merchant.save();
 
-  const daily = loadMerchantDailyMetrics(merchant, event.block.timestamp, event);
+  const daily = loadMerchantDailyMetrics(
+    merchant,
+    event.block.timestamp,
+    event,
+  );
   daily.assignedCount = daily.assignedCount.plus(BigInt.fromI32(1));
   daily.save();
 }
@@ -811,7 +1043,11 @@ export function handleMerchantReAssignedNewOrder(
   );
   merchant.save();
 
-  const daily = loadMerchantDailyMetrics(merchant, event.block.timestamp, event);
+  const daily = loadMerchantDailyMetrics(
+    merchant,
+    event.block.timestamp,
+    event,
+  );
   daily.assignedCount = daily.assignedCount.plus(BigInt.fromI32(1));
   daily.save();
 }
@@ -984,8 +1220,9 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
   const circle = merchant.circle;
   if (circle && !circle.equals(Bytes.fromI32(0))) {
     let scoreState = loadCircleScoreState(circle, event);
-    scoreState.lifetimeAcceptedOrders =
-      scoreState.lifetimeAcceptedOrders.plus(BigInt.fromI32(1));
+    scoreState.lifetimeAcceptedOrders = scoreState.lifetimeAcceptedOrders.plus(
+      BigInt.fromI32(1),
+    );
     scoreState.save();
 
     // Increment daily bucket accepted orders count (dispute rate denominator)
@@ -1062,9 +1299,10 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
     completedOrderForKpi.acceptedAt.gt(BigInt.zero()) &&
     event.block.timestamp.ge(completedOrderForKpi.acceptedAt)
   ) {
-    kpiDaily.acceptToCompleteSecondsSum = kpiDaily.acceptToCompleteSecondsSum.plus(
-      event.block.timestamp.minus(completedOrderForKpi.acceptedAt),
-    );
+    kpiDaily.acceptToCompleteSecondsSum =
+      kpiDaily.acceptToCompleteSecondsSum.plus(
+        event.block.timestamp.minus(completedOrderForKpi.acceptedAt),
+      );
     kpiDaily.completedWithSpeedCount = kpiDaily.completedWithSpeedCount.plus(
       BigInt.fromI32(1),
     );
@@ -1379,4 +1617,56 @@ export function handleCircleStatusUpdated(
 
   circleMetrics.save();
   scoreState.save();
+}
+
+// ─────────────────────────── R7 break-glass pause ────────────────────────
+
+export function handleEmergencyPauseSet(event: EmergencyPauseSetEvent): void {
+  const state = loadProtocolAuthState(event);
+  state.emergencyPaused = event.params.paused;
+  state.emergencyPausedBy = event.params.by;
+  state.emergencyPausedAt = event.block.timestamp;
+  state.save();
+
+  newEmergencyPauseActivity(event, event.params.by, event.params.paused).save();
+}
+
+// ─────────────────────── R8.2 dispute settings ───────────────────────────
+//
+// The ladder itself (raise, decide, escalate, settle) is indexed by the
+// handleDispute* functions above as an ordered DisputeStep history.
+
+export function handleDisputeAppealWindowSet(
+  event: DisputeAppealWindowSetEvent,
+): void {
+  const currency = loadCurrency(event.params.currency, event);
+  currency.disputeAppealWindowSeconds = event.params.window;
+  currency.save();
+}
+
+export function handleDisputeDecisionSlaSet(
+  event: DisputeDecisionSlaSetEvent,
+): void {
+  const currency = loadCurrency(event.params.currency, event);
+  currency.disputeDecisionSlaTier1 = event.params.tier1;
+  currency.disputeDecisionSlaTier2 = event.params.tier2;
+  currency.save();
+}
+
+// An operator suppressed a circle's dispute-rejection counter. Immutable: the
+// suppression is the fact, and `disputeCounter` is the counter's value at that
+// moment rather than a total to keep updating.
+export function handleCircleDisputeRejectionSuppressed(
+  event: CircleDisputeRejectionSuppressedEvent,
+): void {
+  const row = new CircleDisputeRejectionSuppression(
+    logKey(event.transaction.hash, event.logIndex),
+  );
+  row.circleId = event.params.circleId;
+  row.by = event.params.by;
+  row.disputeCounter = event.params.disputeCounter;
+  row.blockNumber = event.block.number;
+  row.blockTimestamp = event.block.timestamp;
+  row.transactionHash = event.transaction.hash;
+  row.save();
 }
