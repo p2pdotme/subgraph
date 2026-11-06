@@ -5,7 +5,6 @@ import {
   MerchantPaymentChannelUpdate as MerchantPaymentChannelUpdateEvent,
   CurrencyAddedUpdate as CurrencyAddedUpdateEvent,
   CurrencyMonthlyVolumeLimitUpdate as CurrencyMonthlyVolumeLimitUpdateEvent,
-  MonthlyVolumeLimit as MonthlyVolumeLimitEvent,
   MerchantWithdrawFeePercentageUpdate as MerchantWithdrawFeePercentageUpdateEvent,
   PaymentChannelConfigUpdate as PaymentChannelConfigUpdateEvent,
   MerchantClaimableRewardsUpdate as MerchantClaimableRewardsUpdateEvent,
@@ -173,13 +172,9 @@ export function handleMinFiatAmountUpdated(
   currency.save();
 }
 
-// The live setter's primary event. `CurrencyMonthlyVolumeLimitUpdate` below is
-// the replay-only mirror of the same field, kept because the rows it wrote are
-// already indexed — but this is the one that keeps the limit current.
-export function handleMonthlyVolumeLimit(event: MonthlyVolumeLimitEvent): void {
-  applyMonthlyVolumeLimit(event.params.currency, event.params.limit, event);
-}
-
+// The live setter's primary event, MonthlyVolumeLimit, is handled once in
+// country-facet.ts (same Diamond address and signature). This replay-only
+// mirror of the same field stays because the rows it wrote are indexed.
 export function handleCurrencyMonthlyVolumeLimitUpdate(
   event: CurrencyMonthlyVolumeLimitUpdateEvent,
 ): void {

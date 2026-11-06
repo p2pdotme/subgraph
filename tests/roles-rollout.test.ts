@@ -10,12 +10,12 @@ import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   CountryActiveSet,
   CurrencyCountryBound,
+  MonthlyVolumeLimit,
 } from "../generated/CountryFacet/CountryFacet";
 import {
   AdminStatusUpdated,
   MinFiatAmountUpdated,
   SuperAdminUpdated,
-  MonthlyVolumeLimit,
 } from "../generated/SetterFacet/SetterFacet";
 import { GlobalAdminUpdated } from "../generated/CapabilityFacet/CapabilityFacet";
 import { EmergencyPauseSet } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
@@ -43,11 +43,11 @@ import {
 import {
   handleCountryActiveSet,
   handleCurrencyCountryBound,
+  handleMonthlyVolumeLimit,
 } from "../src/country-facet";
 import {
   handleAdminStatusUpdated,
   handleMinFiatAmountUpdated,
-  handleMonthlyVolumeLimit,
   handleSuperAdminUpdated,
 } from "../src/setter-facet";
 import { handleGlobalAdminUpdated } from "../src/capability";
