@@ -353,8 +353,11 @@ dataSources:
           handler: handleCurrencyCountryBound
         # MonthlyVolumeLimit is emitted by CountryFacet (currency launch) and
         # SetterFacet alike, from the same Diamond address and with the same
-        # signature, so it is handled ONCE, on the SetterFacet data source.
-        # Listing it here too ran the handler twice for every log.
+        # signature, so it is handled ONCE, here. Listing it on SetterFacet too
+        # ran the handler twice per log. It lives on this source because
+        # networks.json maps CountryFacet on base-sepolia and SetterFacet not.
+        - event: MonthlyVolumeLimit(indexed bytes32,uint256)
+          handler: handleMonthlyVolumeLimit
       file: ./src/country-facet.ts
   - kind: ethereum
     name: ReputationManager
@@ -495,10 +498,9 @@ dataSources:
           handler: handleMerchantPaymentChannelUpdate
         - event: CurrencyAddedUpdate(indexed bytes32,bool)
           handler: handleCurrencyAddedUpdate
-        # The live setter's primary event; CurrencyMonthlyVolumeLimitUpdate
-        # above/below it is the replay-only mirror of the same field.
-        - event: MonthlyVolumeLimit(indexed bytes32,uint256)
-          handler: handleMonthlyVolumeLimit
+        # MonthlyVolumeLimit (the live setter's primary event) is handled on
+        # the CountryFacet source: same address, same signature. This is the
+        # replay-only mirror of the same field.
         - event: CurrencyMonthlyVolumeLimitUpdate(indexed bytes32,uint256)
           handler: handleCurrencyMonthlyVolumeLimitUpdate
         - event: MerchantWithdrawFeePercentageUpdate(indexed bytes32,uint256)
