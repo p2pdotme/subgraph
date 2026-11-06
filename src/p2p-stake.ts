@@ -6,8 +6,10 @@ import {
   P2PUnstakeClaimed as P2PUnstakeClaimedEvent,
   P2PStakeCooldownExtended as P2PStakeCooldownExtendedEvent,
   P2PStakeSeized as P2PStakeSeizedEvent,
+  P2PStakeSeizedForCountry as P2PStakeSeizedForCountryEvent,
 } from "../generated/P2PStakeBoostFacet/P2PStakeBoostFacet";
 import { loadUserP2PStake, newUserP2PStakeActivity } from "./lib";
+import { bytes32ToAscii } from "./utils";
 import {
   P2P_STAKE_STATUS_ACTIVE,
   P2P_STAKE_STATUS_COOLDOWN,
@@ -174,4 +176,18 @@ export function handleP2PStakeSeized(event: P2PStakeSeizedEvent): void {
   activity.stakedAmountAfter = stake.stakedAmount;
   activity.statusAfter = stake.status;
   activity.save();
+}
+
+// R8.2: the country whose insurance pool a seizure was credited to. Emitted on
+// the line AFTER `P2PStakeSeized`, in the same transaction, for the same act —
+// force-recovery now pays the country pool rather than the caller. So this
+// annotates the seizure the other handler already recorded; it must not touch
+// `totalSeized`, `stakedAmount` or `status`, or every seizure counts twice.
+export function handleP2PStakeSeizedForCountry(
+  event: P2PStakeSeizedForCountryEvent,
+): void {
+  const stake = loadUserP2PStake(event.params.user, event);
+  stake.seizedForCountry = event.params.country;
+  stake.seizedForCountryCode = bytes32ToAscii(event.params.country);
+  stake.save();
 }
