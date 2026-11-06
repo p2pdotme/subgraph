@@ -8,6 +8,7 @@ import {
   GlobalAdminUpdated as GlobalAdminUpdatedEvent,
 } from "../generated/CapabilityFacet/CapabilityFacet";
 import {
+  circleAccountId,
   loadCirclePermission,
   loadCommunityAdmin,
   loadLegacyAdmin,
@@ -35,9 +36,7 @@ function removeSelector(selectors: Bytes[], selector: Bytes): Bytes[] {
 export function handleAccountNameUpdated(
   event: AccountNameUpdatedEvent,
 ): void {
-  const key = Bytes.fromHexString(
-    `${event.params.circleId.toString()}-${event.params.account.toHexString()}`,
-  );
+  const key = circleAccountId(event.params.circleId, event.params.account);
 
   const permission = loadCirclePermission(key, event);
   permission.circleId = event.params.circleId;
@@ -48,9 +47,7 @@ export function handleAccountNameUpdated(
 }
 
 export function handlePermissionGranted(event: PermissionGrantedEvent): void {
-  const key = Bytes.fromHexString(
-    `${event.params.circleId.toString()}-${event.params.account.toHexString()}`,
-  );
+  const key = circleAccountId(event.params.circleId, event.params.account);
 
   const permission = loadCirclePermission(key, event);
   permission.circleId = event.params.circleId;
@@ -90,9 +87,7 @@ export function handleCommunityAdminRemoved(
 }
 
 export function handlePermissionRevoked(event: PermissionRevokedEvent): void {
-  const key = Bytes.fromHexString(
-    `${event.params.circleId.toString()}-${event.params.account.toHexString()}`,
-  );
+  const key = circleAccountId(event.params.circleId, event.params.account);
 
   const permission = loadCirclePermission(key, event);
   permission.circleId = event.params.circleId;

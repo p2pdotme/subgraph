@@ -666,7 +666,9 @@ export function handleMonthlyVolumeUnlimitedFlagUpdated(
   );
   if (
     merchantEntity.circleId.equals(BigInt.zero()) ||
-    event.params.accountNo.toString().length < 4
+    // accountNo is <pcConfigId><4 digits>; with 4 digits or fewer the
+    // prefix is empty and BigInt.fromString("") would abort the handler.
+    event.params.accountNo.toString().length <= 4
   ) {
     return;
   }
