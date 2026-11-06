@@ -8,7 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-**Full sync only**, never a graft. The data-correctness fixes under Fixed change existing rows, and the new non-null fields on `Orders`, `Currency` and `InsuranceClaim` are rejected by graph-node's graft compatibility check.
+---
+
+## [2.0.0] — 2026-11
+
+Goldsky `p2pme-subgraph/2.0.0`. **Full sync only**, never a graft. The data-correctness fixes under Fixed change existing rows, and the new non-null fields on `Orders`, `Currency` and `InsuranceClaim` are rejected by graph-node's graft compatibility check.
 
 ### Added
 
@@ -144,6 +148,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- `indexerHints.prune` is a fixed 3,000,000-block window (about 7 days at
+  Base's measured 0.2 s/block) instead of `auto`, so the next version can graft
+  at the block of a contract upgrade. Under `auto`, 1.0.0 kept 7,043 and then
+  3,293 blocks of history on 2026-11-07, so the R8 upgrade block (54009557) was
+  gone within an hour and no graft could start there
 - **R8.2 retires role bits 8 and 10 as well as 9, and moves claim approval back
   to the country `ADMIN`.** Bit 10 (`INSURANCE_ADMIN`) was live for exactly one
   release as claim review split out of `ADMIN`; the R8.2 review read spec §3.6 as
