@@ -167,11 +167,25 @@ Notes:
   `RpHelper` address, and guessing one would index nothing while looking wired.
   `MerchantRecommenderRewardAccrued` / `RecommenderRewardAccrued` on
   `ReputationManager` remain unindexed for the same pre-existing reason.
-- `InsuranceClaim.rejectionKind` separates the three routes to
+- **Added on contracts-v4 #464 after this list was first written, as of
+  `ff3f9e5`.** Indexed: `DisputeRaised` / `DisputeDecided` / `DisputeEscalated`
+  / `DisputeSettled` (from #83; `DisputeAppealed` no longer exists) and
+  `ContestExpiredClaimRejected`. **Not** indexed: `MinTimelockDelaySet`,
+  `CutAuthorityRegistrySet` and `CashbackTokenPinned` (main Diamond),
+  `ContestClockStarted` (InsuranceRetirementInit, one-shot), and
+  `CampaignPayoutCapsSet`, `CommunityRpLimitsSet` and
+  `SeizedStakeToCashbackPool` (RpHelper/RpHelper1, no data source, as above).
+  After R8 the only pause is `setExchangeStatus`, which emits
+  `UpdatedExchangeStatus`; no handler reads it, so
+  `ProtocolAuthState.emergencyPaused` keeps its last R7 value. Nothing reads
+  that field today; read `getExchangeStatus()` on-chain for the live state.
+- `InsuranceClaim.rejectionKind` separates the four routes to
   `status = 3` (REJECTED), which are otherwise indistinguishable: `1` a reviewer
   rejected a SUBMITTED claim, `2` the super admin force-rejected an APPROVED one
   (`ClaimForceRejected`), `3` a currency approver cancelled an APPROVED one
-  (`ApprovedClaimCancelled`, added on `main` after R6). Filtering on `status`
+  (`ApprovedClaimCancelled`, added on `main` after R6), `4` an Ops contest stood
+  its maximum duration and anyone finalised it (`ContestExpiredClaimRejected`;
+  `resolver` is the contesting Ops Lead, not the caller). Filtering on `status`
   alone cannot tell an approver-level reversal from the break-glass path.
 - `Currency.minFiatAmount` is `0` when no floor is configured. The contract
   appends this per-currency setting by upgrade and reads `0` as "no minimum", so
@@ -199,8 +213,8 @@ Notes:
   evidence that a seat is an EOA: cross it with the seat's own code.
 - Roles are bit positions (`0 DEV_LEAD … 8 CAPABILITY_GRANTEE`, plus
   `10 INSURANCE_ADMIN`, see `src/constants/roles.ts`); `SelectorPolicy.roles` /
-  `roleNames` expand the on-chain bitmask. Three of them — **8, 9 and 10** — are
-  retired as of R8.2 and name no live role; `RoleMember.roleRetired` carries that
+  `roleNames` expand the on-chain bitmask. Four of them — **5, 8, 9 and 10** —
+  are retired and name no registry seat; `RoleMember.roleRetired` carries that
   per row.
 - **Bits 8, 9 and 10 are retired and authorize nothing** (R8.2). None appears in
   any `SelectorPolicy.roles` mask, `grantRole` refuses all three (`RoleRetired`)
@@ -219,16 +233,16 @@ Notes:
   - **10 (`INSURANCE_ADMIN`)** — live for exactly one release as claim review
     split out of `ADMIN`; R8.2 read spec §3.6 as seating claim approval on the
     country Admin and moved the four claim rows **back to `ADMIN`**.
-- **Do not read the retired set from `getRoleCatalog()`.** That view returns
-  `RoleStorage.RETIRED_ROLE_MASK` — bit 9 alone — while `grantRole` gates on
-  `RETIRED_ROLES_MASK` (`8 | 9 | 10`), so as of contracts-v4 r8 `33d3175` the
-  on-chain catalogue **under-reports the retired set by two bits** and would
-  render `CAPABILITY_GRANTEE` and `INSURANCE_ADMIN` as live seats no grant can
-  fill. (An earlier revision of this README said to prefer the live view; that
-  advice was right for R8 and is wrong for R8.2.) The two sources that agree are
-  `RoleStorage.RETIRED_ROLES_MASK` and contracts' own `RETIRED_ROLE_BITS` in
-  `config/rolePolicy.ts`; `getRoleCatalog()`'s other five fields (`maxRole`,
-  `validMask`, the three scoped-role masks) are still the live authority.
+- **5 (`CIRCLE_ADMIN`)** — retired at R8 (contracts-v4 `d6d1ef2`). Unlike 8, 9
+  and 10 the bit stays in the capability rows' policy masks, but `LibAuth`
+  answers it from `circles[id].admin` alone, so a registry membership in bit 5
+  grants nothing. `RoleMember.roleRetired` is true for it; `SelectorPolicy`
+  masks still list it, correctly.
+- **The retired set** is `RoleStorage.RETIRED_ROLES_MASK` = `5 | 8 | 9 | 10` as
+  of contracts-v4 #464 `ff3f9e5`, the same as contracts' `RETIRED_ROLE_BITS` in
+  `config/rolePolicy.ts`. `getRoleCatalog().retiredMask` now returns that mask
+  (`RoleAdminFacet.sol:1182`); the earlier r8 `33d3175` view that returned bit 9
+  alone is gone.
 - **The seat that appointed an address is what stands it down**, which is why
   `RoleGrantRecorded` is indexed rather than derived from `RoleGranted`'s
   operator. Post-flip `grantRole` runs through the lead's TimelockController
