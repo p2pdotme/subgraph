@@ -49,13 +49,16 @@ export const MAX_ROLE: i32 = 10;
  * `RoleStorage.RETIRED_ROLES_MASK` and contracts' own `RETIRED_ROLE_BITS` in
  * `config/rolePolicy.ts`, which are the two places that agree.
  *
- * NOT `RoleAdminFacet.getRoleCatalog().retiredMask`: that view still returns
- * the older `RETIRED_ROLE_MASK` (bit 9 alone) while `grantRole` gates on
- * `RETIRED_ROLES_MASK` (8 | 9 | 10), so the on-chain catalogue UNDER-REPORTS
- * the retired set by two bits as of r8 33d3175. Reading it would render
- * CAPABILITY_GRANTEE and INSURANCE_ADMIN as live seats that no grant can fill.
+ * As of contracts-v4 #464 (ff3f9e5) that mask is 5 | 8 | 9 | 10: CIRCLE_ADMIN
+ * (bit 5) was retired at R8 (d6d1ef2). Its bit stays in the capability rows'
+ * policy masks, but LibAuth answers it from `circles[id].admin` alone, so a
+ * registry membership in bit 5 grants nothing. This list feeds only
+ * `RoleMember.roleRetired`, never a policy mask, so adding bit 5 here does not
+ * mark those policy rows retired. `getRoleCatalog().retiredMask` now returns
+ * the same RETIRED_ROLES_MASK (RoleAdminFacet.sol:1182).
  */
 const RETIRED_ROLE_BITS: i32[] = [
+  ROLE_CIRCLE_ADMIN,
   ROLE_CAPABILITY_GRANTEE,
   ROLE_ADMIN_VALUE_RETIRED,
   ROLE_INSURANCE_ADMIN,
