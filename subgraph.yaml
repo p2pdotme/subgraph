@@ -148,7 +148,7 @@ dataSources:
         - EmergencyPauseActivity
         - Orders
         - Currency
-        - DisputeActivity
+        - DisputeStep
         - CircleDisputeRejectionSuppression
       abis:
         - name: OrderProcessorFacet
@@ -165,12 +165,17 @@ dataSources:
         # Kept so the rows it already wrote stay reachable.
         - event: EmergencyPauseSet(indexed address,bool)
           handler: handleEmergencyPauseSet
-        # R8.2 tiered disputes. A decision is recorded, then executes at
-        # appealableUntil unless appealed; DisputeAppealed is NOT OrderAppealed.
+        # Dispute ladder (#83): raise, decide (executes at appealableUntil
+        # unless escalated), escalate, settle. DisputeEscalated is NOT
+        # OrderAppealed.
+        - event: DisputeRaised(indexed uint256,uint8,indexed address,uint64)
+          handler: handleDisputeRaised
         - event: DisputeDecided(indexed uint256,uint8,uint8,indexed address,uint64)
           handler: handleDisputeDecided
-        - event: DisputeAppealed(indexed uint256,uint8,indexed address)
-          handler: handleDisputeAppealed
+        - event: DisputeEscalated(indexed uint256,uint8,uint8,indexed address,bool)
+          handler: handleDisputeEscalated
+        - event: DisputeSettled(indexed uint256,uint8,uint8,indexed address,address)
+          handler: handleDisputeSettled
         - event: DisputeAppealWindowSet(indexed bytes32,uint32)
           handler: handleDisputeAppealWindowSet
         - event: DisputeDecisionSlaSet(indexed bytes32,uint32,uint32)

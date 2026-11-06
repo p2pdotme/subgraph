@@ -84,3 +84,4 @@ export {
   newDiamondOwnershipTransfer,
   functionNameOf,
 } from "./role-registry.lib";
+export * from "./dispute-step.lib";

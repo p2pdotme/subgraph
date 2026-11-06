@@ -10,8 +10,6 @@ import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   CircleDisputeRejectionSuppressed,
   DisputeAppealWindowSet,
-  DisputeAppealed,
-  DisputeDecided,
   DisputeDecisionSlaSet,
 } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
 import {
@@ -22,8 +20,6 @@ import {
 import {
   handleCircleDisputeRejectionSuppressed,
   handleDisputeAppealWindowSet,
-  handleDisputeAppealed,
-  handleDisputeDecided,
   handleDisputeDecisionSlaSet,
 } from "../src/order";
 import {
@@ -40,8 +36,6 @@ const DIAMOND = Address.fromString(
 const CURRENCY_INR = Bytes.fromHexString(
   "0x494e520000000000000000000000000000000000000000000000000000000000",
 );
-const ORDER_ID = BigInt.fromI32(7);
-const ORDER_KEY = Bytes.fromByteArray(Bytes.fromBigInt(ORDER_ID));
 
 let nextLogIndex = 0;
 
@@ -59,40 +53,6 @@ function baseEvent<T extends ethereum.Event>(): T {
 
 function param(name: string, value: ethereum.Value): ethereum.EventParam {
   return new ethereum.EventParam(name, value);
-}
-
-function decidedEvent(
-  decisionTier: i32,
-  faultType: i32,
-  by: Address,
-  appealableUntil: i32,
-): DisputeDecided {
-  const e = baseEvent<DisputeDecided>();
-  e.parameters.push(
-    param("orderId", ethereum.Value.fromUnsignedBigInt(ORDER_ID)),
-  );
-  e.parameters.push(
-    param("decisionTier", ethereum.Value.fromI32(decisionTier)),
-  );
-  e.parameters.push(param("faultType", ethereum.Value.fromI32(faultType)));
-  e.parameters.push(param("by", ethereum.Value.fromAddress(by)));
-  e.parameters.push(
-    param(
-      "appealableUntil",
-      ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(appealableUntil)),
-    ),
-  );
-  return e;
-}
-
-function appealedEvent(tier: i32, by: Address): DisputeAppealed {
-  const e = baseEvent<DisputeAppealed>();
-  e.parameters.push(
-    param("orderId", ethereum.Value.fromUnsignedBigInt(ORDER_ID)),
-  );
-  e.parameters.push(param("tier", ethereum.Value.fromI32(tier)));
-  e.parameters.push(param("by", ethereum.Value.fromAddress(by)));
-  return e;
 }
 
 function appealWindowEvent(window: i32): DisputeAppealWindowSet {
@@ -188,61 +148,11 @@ function minSellEvent(previous: i32, floor: i32): MinSellTxLimitUpdated {
   return e;
 }
 
-const ORDER_HEX = ORDER_KEY.toHexString();
 const CURRENCY_HEX = CURRENCY_INR.toHexString();
 
-describe("OrderProcessorFacet — R8.2 tiered disputes", () => {
+describe("OrderProcessorFacet — R8.2 dispute settings", () => {
   afterEach(() => {
     clearStore();
-  });
-
-  test("a decision is recorded with its appeal window, not settled", () => {
-    // faultType 2 = MERCHANT. The decision executes at appealableUntil unless
-    // appealed, so disputeSettledAt must stay untouched here — a consumer that
-    // reads "decided" as "settled" reports an outcome that can still reverse.
-    handleDisputeDecided(decidedEvent(1, 2, ALICE, 5000));
-
-    assert.fieldEquals("Orders", ORDER_HEX, "disputeDecisionTier", "1");
-    assert.fieldEquals("Orders", ORDER_HEX, "disputeFaultType", "2");
-    assert.fieldEquals(
-      "Orders",
-      ORDER_HEX,
-      "disputeDecidedBy",
-      ALICE.toHexString(),
-    );
-    assert.fieldEquals("Orders", ORDER_HEX, "disputeAppealableUntil", "5000");
-    assert.fieldEquals("Orders", ORDER_HEX, "disputeSettledAt", "0");
-    assert.entityCount("DisputeActivity", 1);
-  });
-
-  test("an appeal raises the tier and clears the pending window", () => {
-    handleDisputeDecided(decidedEvent(1, 2, ALICE, 5000));
-    handleDisputeAppealed(appealedEvent(2, BOB));
-
-    assert.fieldEquals("Orders", ORDER_HEX, "disputeTier", "2");
-    assert.fieldEquals("Orders", ORDER_HEX, "disputeAppealCount", "1");
-    assert.fieldEquals(
-      "Orders",
-      ORDER_HEX,
-      "disputeLastAppealedBy",
-      BOB.toHexString(),
-    );
-    // The appealed decision is no longer about to execute. Leaving the old
-    // window would show a countdown for a decision that has been superseded.
-    assert.fieldEquals("Orders", ORDER_HEX, "disputeAppealableUntil", "null");
-    assert.entityCount("DisputeActivity", 2);
-  });
-
-  test("an appeal needs no decision first — a missed SLA is grounds too", () => {
-    // R8.2 lets a party appeal an UNDECIDED dispute whose tier missed its
-    // decision SLA, so DECIDED and APPEALED are not a strict alternation and
-    // the appeal count must not assume a decision preceded it.
-    handleDisputeAppealed(appealedEvent(1, BOB));
-
-    assert.fieldEquals("Orders", ORDER_HEX, "disputeTier", "1");
-    assert.fieldEquals("Orders", ORDER_HEX, "disputeAppealCount", "1");
-    assert.fieldEquals("Orders", ORDER_HEX, "disputeDecidedAt", "null");
-    assert.fieldEquals("Orders", ORDER_HEX, "disputeDecisionTier", "0");
   });
 
   test("the per-currency dispute settings land on Currency", () => {
