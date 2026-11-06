@@ -4,10 +4,9 @@ import {
   CurrencyToggled,
   CountryActiveSet,
   CurrencyCountryBound,
-  MonthlyVolumeLimit,
 } from "../generated/CountryFacet/CountryFacet";
 import { PaymentChannelConfig } from "../generated/schema";
-import { applyMonthlyVolumeLimit, loadCountry, loadCurrency } from "./lib";
+import { loadCountry, loadCurrency } from "./lib";
 
 export function handlePaymentChannelConfigChanged(
   event: PaymentChannelConfigChanged,
@@ -58,10 +57,4 @@ export function handleCurrencyCountryBound(event: CurrencyCountryBound): void {
   const currency = loadCurrency(event.params.currency, event);
   currency.country = country.id;
   currency.save();
-}
-
-// A currency launch sets its monthly volume limit, so the same primary event
-// arrives here as well as from SetterFacet's live setter.
-export function handleMonthlyVolumeLimit(event: MonthlyVolumeLimit): void {
-  applyMonthlyVolumeLimit(event.params.currency, event.params.limit, event);
 }
