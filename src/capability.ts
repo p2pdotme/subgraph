@@ -5,11 +5,13 @@ import {
   CommunityAdminRemoved as CommunityAdminRemovedEvent,
   PermissionGranted as PermissionGrantedEvent,
   PermissionRevoked as PermissionRevokedEvent,
+  GlobalAdminUpdated as GlobalAdminUpdatedEvent,
 } from "../generated/CapabilityFacet/CapabilityFacet";
 import {
   circleAccountId,
   loadCirclePermission,
   loadCommunityAdmin,
+  loadLegacyAdmin,
 } from "./lib";
 
 function containsSelector(selectors: Bytes[], selector: Bytes): boolean {
@@ -98,4 +100,13 @@ export function handlePermissionRevoked(event: PermissionRevokedEvent): void {
   }
 
   permission.save();
+}
+
+// Legacy global-admin set (blanket circle access pre-registry). Its setter is
+// removed at R8 and RetirementInit drains the set with status=false.
+export function handleGlobalAdminUpdated(event: GlobalAdminUpdatedEvent): void {
+  const admin = loadLegacyAdmin(event.params.account, event);
+  admin.isGlobalAdmin = event.params.status;
+  admin.updater = event.params.updater;
+  admin.save();
 }

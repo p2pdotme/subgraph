@@ -43,6 +43,14 @@
     "CapabilityFacet": {
       "address": "0xC8E13e8f3D1a675De3DbAa98aBdb4eC8B701d2DA",
       "startBlock": 48010968
+    },
+    "RoleAdminFacet": {
+      "address": "0xC8E13e8f3D1a675De3DbAa98aBdb4eC8B701d2DA",
+      "startBlock": 48010968
+    },
+    "DiamondOwnership": {
+      "address": "0xC8E13e8f3D1a675De3DbAa98aBdb4eC8B701d2DA",
+      "startBlock": 48010968
     }
   },
   "base": {
@@ -121,6 +129,18 @@
     "P2PStakeBoostFacet": {
       "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
       "startBlock": 29875200
+    },
+    "RoleAdminFacet": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 29875200
+    },
+    "DiamondOwnership": {
+      "address": "0x4cad6eC90e65baBec9335cAd728DDC610c316368",
+      "startBlock": 29875200
+    },
+    "InsuranceDiamondOwnership": {
+      "address": "0x17192bd2E8893E4eA0Ab5DB67AdbF38aE42e9931",
+      "startBlock": 45338444
     }
   }
 }

@@ -9,11 +9,26 @@ import {
   OrderDispute as OrderDisputeWithFaultTypeEvent,
   CircleStatusUpdated as CircleStatusUpdatedEvent,
   OrderAppealed as OrderAppealedEvent,
+  EmergencyPauseSet as EmergencyPauseSetEvent,
   DisputeDecided as DisputeDecidedEvent,
   DisputeRaised as DisputeRaisedEvent,
   DisputeEscalated as DisputeEscalatedEvent,
   DisputeSettled as DisputeSettledEvent,
+  DisputeAppealWindowSet as DisputeAppealWindowSetEvent,
+  DisputeDecisionSlaSet as DisputeDecisionSlaSetEvent,
+  CircleDisputeRejectionSuppressed as CircleDisputeRejectionSuppressedEvent,
 } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
+import {
+  loadProtocolAuthState,
+  newEmergencyPauseActivity,
+  loadCurrency,
+} from "./lib";
+import {
+  CircleDisputeRejectionSuppression,
+} from "../generated/schema";
+import { logKey } from "./utils";
+import {
+} from "./constants/status";
 import {
   backfillMerchantCircle,
   loadAssignedMerchants,
@@ -79,7 +94,6 @@ import {
   loadCampaignManagers,
   loadCampaignRewardRedeemed,
 } from "./lib/campaign.lib";
-
 
 function adjustMerchantMetricsByOrderType(
   metrics: MerchantOrderMetricsByMonth,
@@ -267,9 +281,8 @@ export function handleOrderDisputeWithFaultType(
       event,
     );
     if (event.params.faultType === FAULT_TYPE_MERCHANT) {
-      settleDaily.merchantFaultDisputes = settleDaily.merchantFaultDisputes.plus(
-        BigInt.fromI32(1),
-      );
+      settleDaily.merchantFaultDisputes =
+        settleDaily.merchantFaultDisputes.plus(BigInt.fromI32(1));
     } else if (event.params.faultType === FAULT_TYPE_BANK) {
       settleDaily.bankFaultDisputes = settleDaily.bankFaultDisputes.plus(
         BigInt.fromI32(1),
@@ -331,18 +344,48 @@ export function handleOrderDisputeWithFaultType(
       newStatus === ORDER_STATUS_CANCELLED
     ) {
       // COMPLETED → CANCELLED: decrement completed, increment cancelled
-      adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(-1), BigInt.fromI32(1));
-      adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(-1), BigInt.fromI32(1));
-      adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(-1), BigInt.fromI32(1));
+      adjustMerchantMetricsByOrderType(
+        orderMetrics,
+        orderType,
+        BigInt.fromI32(-1),
+        BigInt.fromI32(1),
+      );
+      adjustUserMetricsByOrderType(
+        user,
+        orderType,
+        BigInt.fromI32(-1),
+        BigInt.fromI32(1),
+      );
+      adjustCircleMetricsByOrderType(
+        circleOrderMetrics,
+        orderType,
+        BigInt.fromI32(-1),
+        BigInt.fromI32(1),
+      );
       user.totalVolume = user.totalVolume.minus(event.params._order.amount);
     } else if (
       previousStatus === ORDER_STATUS_CANCELLED &&
       newStatus === ORDER_STATUS_COMPLETED
     ) {
       // CANCELLED → COMPLETED: increment completed, decrement cancelled
-      adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(1), BigInt.fromI32(-1));
-      adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(1), BigInt.fromI32(-1));
-      adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(1), BigInt.fromI32(-1));
+      adjustMerchantMetricsByOrderType(
+        orderMetrics,
+        orderType,
+        BigInt.fromI32(1),
+        BigInt.fromI32(-1),
+      );
+      adjustUserMetricsByOrderType(
+        user,
+        orderType,
+        BigInt.fromI32(1),
+        BigInt.fromI32(-1),
+      );
+      adjustCircleMetricsByOrderType(
+        circleOrderMetrics,
+        orderType,
+        BigInt.fromI32(1),
+        BigInt.fromI32(-1),
+      );
       user.totalVolume = user.totalVolume.plus(event.params._order.amount);
     } else if (
       previousStatus !== ORDER_STATUS_COMPLETED &&
@@ -350,15 +393,45 @@ export function handleOrderDisputeWithFaultType(
     ) {
       if (newStatus === ORDER_STATUS_COMPLETED) {
         // fresh → COMPLETED
-        adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(1), BigInt.fromI32(0));
-        adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(1), BigInt.fromI32(0));
-        adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(1), BigInt.fromI32(0));
+        adjustMerchantMetricsByOrderType(
+          orderMetrics,
+          orderType,
+          BigInt.fromI32(1),
+          BigInt.fromI32(0),
+        );
+        adjustUserMetricsByOrderType(
+          user,
+          orderType,
+          BigInt.fromI32(1),
+          BigInt.fromI32(0),
+        );
+        adjustCircleMetricsByOrderType(
+          circleOrderMetrics,
+          orderType,
+          BigInt.fromI32(1),
+          BigInt.fromI32(0),
+        );
         user.totalVolume = user.totalVolume.plus(event.params._order.amount);
       } else if (newStatus === ORDER_STATUS_CANCELLED) {
         // fresh → CANCELLED
-        adjustMerchantMetricsByOrderType(orderMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
-        adjustUserMetricsByOrderType(user, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
-        adjustCircleMetricsByOrderType(circleOrderMetrics, orderType, BigInt.fromI32(0), BigInt.fromI32(1));
+        adjustMerchantMetricsByOrderType(
+          orderMetrics,
+          orderType,
+          BigInt.fromI32(0),
+          BigInt.fromI32(1),
+        );
+        adjustUserMetricsByOrderType(
+          user,
+          orderType,
+          BigInt.fromI32(0),
+          BigInt.fromI32(1),
+        );
+        adjustCircleMetricsByOrderType(
+          circleOrderMetrics,
+          orderType,
+          BigInt.fromI32(0),
+          BigInt.fromI32(1),
+        );
       }
     }
     // Update currency metrics (monthly + daily)
@@ -366,20 +439,52 @@ export function handleOrderDisputeWithFaultType(
       previousStatus === ORDER_STATUS_COMPLETED &&
       newStatus === ORDER_STATUS_CANCELLED
     ) {
-      updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(-1), BigInt.fromI32(1), BigInt.fromI32(0).minus(event.params._order.amount), originalTimestamp, event);
+      updateCurrencyMetrics(
+        event.params._order.currency,
+        orderType,
+        BigInt.fromI32(-1),
+        BigInt.fromI32(1),
+        BigInt.fromI32(0).minus(event.params._order.amount),
+        originalTimestamp,
+        event,
+      );
     } else if (
       previousStatus === ORDER_STATUS_CANCELLED &&
       newStatus === ORDER_STATUS_COMPLETED
     ) {
-      updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(1), BigInt.fromI32(-1), event.params._order.amount, originalTimestamp, event);
+      updateCurrencyMetrics(
+        event.params._order.currency,
+        orderType,
+        BigInt.fromI32(1),
+        BigInt.fromI32(-1),
+        event.params._order.amount,
+        originalTimestamp,
+        event,
+      );
     } else if (
       previousStatus !== ORDER_STATUS_COMPLETED &&
       previousStatus !== ORDER_STATUS_CANCELLED
     ) {
       if (newStatus === ORDER_STATUS_COMPLETED) {
-        updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(1), BigInt.fromI32(0), event.params._order.amount, originalTimestamp, event);
+        updateCurrencyMetrics(
+          event.params._order.currency,
+          orderType,
+          BigInt.fromI32(1),
+          BigInt.fromI32(0),
+          event.params._order.amount,
+          originalTimestamp,
+          event,
+        );
       } else if (newStatus === ORDER_STATUS_CANCELLED) {
-        updateCurrencyMetrics(event.params._order.currency, orderType, BigInt.fromI32(0), BigInt.fromI32(1), BigInt.fromI32(0), originalTimestamp, event);
+        updateCurrencyMetrics(
+          event.params._order.currency,
+          orderType,
+          BigInt.fromI32(0),
+          BigInt.fromI32(1),
+          BigInt.fromI32(0),
+          originalTimestamp,
+          event,
+        );
       }
     }
 
@@ -436,9 +541,8 @@ export function handleOrderDisputeWithFaultType(
       let completedDaily = loadCircleDailyMetrics(completedDailyKey, event);
       completedDaily.circle = circle;
       completedDaily.dayNumber = BigInt.fromI32(completedDayNum);
-      completedDaily.merchantFaultDisputesCount = completedDaily.merchantFaultDisputesCount.plus(
-        BigInt.fromI32(1),
-      );
+      completedDaily.merchantFaultDisputesCount =
+        completedDaily.merchantFaultDisputesCount.plus(BigInt.fromI32(1));
 
       if (
         (order.type === ORDER_TYPE_SELL || order.type === ORDER_TYPE_PAY) &&
@@ -652,10 +756,10 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
     );
     backfillMerchantCircle(merchant, event.params._order.circleId, event);
 
-      const circle = merchant.circle;
+    const circle = merchant.circle;
 
     // Null when the registration event is missing and no backfill has run yet;
-  // Bytes.fromI32(0) is the legacy placeholder from older deployments.
+    // Bytes.fromI32(0) is the legacy placeholder from older deployments.
     if (!circle || circle.equals(Bytes.fromI32(0))) return;
 
     // Update monthly order metrics
@@ -681,17 +785,23 @@ export function handleCancelledOrders(event: CancelledOrdersEvent): void {
       orderMetrics.cancelledBuyOrdersCount =
         orderMetrics.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
 
-      user.cancelledBuyOrdersCount = user.cancelledBuyOrdersCount.plus(BigInt.fromI32(1));
+      user.cancelledBuyOrdersCount = user.cancelledBuyOrdersCount.plus(
+        BigInt.fromI32(1),
+      );
     } else if (orderType === ORDER_TYPE_SELL) {
       orderMetrics.cancelledSellOrdersCount =
         orderMetrics.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
 
-      user.cancelledSellOrdersCount = user.cancelledSellOrdersCount.plus(BigInt.fromI32(1));
+      user.cancelledSellOrdersCount = user.cancelledSellOrdersCount.plus(
+        BigInt.fromI32(1),
+      );
     } else if (orderType === ORDER_TYPE_PAY) {
       orderMetrics.cancelledPayOrdersCount =
         orderMetrics.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
 
-      user.cancelledPayOrdersCount = user.cancelledPayOrdersCount.plus(BigInt.fromI32(1));
+      user.cancelledPayOrdersCount = user.cancelledPayOrdersCount.plus(
+        BigInt.fromI32(1),
+      );
     }
 
     user.save();
@@ -839,7 +949,11 @@ export function handleMerchantAssignedNewOrder(
   );
   merchant.save();
 
-  const daily = loadMerchantDailyMetrics(merchant, event.block.timestamp, event);
+  const daily = loadMerchantDailyMetrics(
+    merchant,
+    event.block.timestamp,
+    event,
+  );
   daily.assignedCount = daily.assignedCount.plus(BigInt.fromI32(1));
   daily.save();
 }
@@ -908,7 +1022,11 @@ export function handleMerchantReAssignedNewOrder(
   );
   merchant.save();
 
-  const daily = loadMerchantDailyMetrics(merchant, event.block.timestamp, event);
+  const daily = loadMerchantDailyMetrics(
+    merchant,
+    event.block.timestamp,
+    event,
+  );
   daily.assignedCount = daily.assignedCount.plus(BigInt.fromI32(1));
   daily.save();
 }
@@ -1081,8 +1199,9 @@ export function handleOrderAccepted(event: OrderAcceptedEvent): void {
   const circle = merchant.circle;
   if (circle && !circle.equals(Bytes.fromI32(0))) {
     let scoreState = loadCircleScoreState(circle, event);
-    scoreState.lifetimeAcceptedOrders =
-      scoreState.lifetimeAcceptedOrders.plus(BigInt.fromI32(1));
+    scoreState.lifetimeAcceptedOrders = scoreState.lifetimeAcceptedOrders.plus(
+      BigInt.fromI32(1),
+    );
     scoreState.save();
 
     // Increment daily bucket accepted orders count (dispute rate denominator)
@@ -1159,9 +1278,10 @@ export function handleOrderCompleted(event: OrderCompletedEvent): void {
     completedOrderForKpi.acceptedAt.gt(BigInt.zero()) &&
     event.block.timestamp.ge(completedOrderForKpi.acceptedAt)
   ) {
-    kpiDaily.acceptToCompleteSecondsSum = kpiDaily.acceptToCompleteSecondsSum.plus(
-      event.block.timestamp.minus(completedOrderForKpi.acceptedAt),
-    );
+    kpiDaily.acceptToCompleteSecondsSum =
+      kpiDaily.acceptToCompleteSecondsSum.plus(
+        event.block.timestamp.minus(completedOrderForKpi.acceptedAt),
+      );
     kpiDaily.completedWithSpeedCount = kpiDaily.completedWithSpeedCount.plus(
       BigInt.fromI32(1),
     );
@@ -1476,4 +1596,56 @@ export function handleCircleStatusUpdated(
 
   circleMetrics.save();
   scoreState.save();
+}
+
+// ─────────────────────────── R7 break-glass pause ────────────────────────
+
+export function handleEmergencyPauseSet(event: EmergencyPauseSetEvent): void {
+  const state = loadProtocolAuthState(event);
+  state.emergencyPaused = event.params.paused;
+  state.emergencyPausedBy = event.params.by;
+  state.emergencyPausedAt = event.block.timestamp;
+  state.save();
+
+  newEmergencyPauseActivity(event, event.params.by, event.params.paused).save();
+}
+
+// ─────────────────────── R8.2 dispute settings ───────────────────────────
+//
+// The ladder itself (raise, decide, escalate, settle) is indexed by the
+// handleDispute* functions above as an ordered DisputeStep history.
+
+export function handleDisputeAppealWindowSet(
+  event: DisputeAppealWindowSetEvent,
+): void {
+  const currency = loadCurrency(event.params.currency, event);
+  currency.disputeAppealWindowSeconds = event.params.window;
+  currency.save();
+}
+
+export function handleDisputeDecisionSlaSet(
+  event: DisputeDecisionSlaSetEvent,
+): void {
+  const currency = loadCurrency(event.params.currency, event);
+  currency.disputeDecisionSlaTier1 = event.params.tier1;
+  currency.disputeDecisionSlaTier2 = event.params.tier2;
+  currency.save();
+}
+
+// An operator suppressed a circle's dispute-rejection counter. Immutable: the
+// suppression is the fact, and `disputeCounter` is the counter's value at that
+// moment rather than a total to keep updating.
+export function handleCircleDisputeRejectionSuppressed(
+  event: CircleDisputeRejectionSuppressedEvent,
+): void {
+  const row = new CircleDisputeRejectionSuppression(
+    logKey(event.transaction.hash, event.logIndex),
+  );
+  row.circleId = event.params.circleId;
+  row.by = event.params.by;
+  row.disputeCounter = event.params.disputeCounter;
+  row.blockNumber = event.block.number;
+  row.blockTimestamp = event.block.timestamp;
+  row.transactionHash = event.transaction.hash;
+  row.save();
 }
