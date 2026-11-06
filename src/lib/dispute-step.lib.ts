@@ -35,5 +35,9 @@ export function appendDisputeStep(
   step.transactionHash = event.transaction.hash;
   step.save();
 
-  order.disputeHistory = order.disputeHistory.concat([step.id]);
+  // Nullable so this version can graft onto 1.0.0: an order indexed before the
+  // graft block has no history yet.
+  const history = order.disputeHistory;
+  order.disputeHistory =
+    history === null ? [step.id] : history.concat([step.id]);
 }

@@ -288,14 +288,14 @@ type Orders @entity(immutable: false) {
   disputeSettledAt: BigInt!
   # DISPUTE LADDER - current state
   # Tier the dispute is at: 1 circle, 2 country admin, 3 ops lead (0 = not raised)
-  disputeTier: Int!
+  disputeTier: Int
   # Appeal deadline of the pending tier-1/tier-2 decision (0 = none pending)
-  disputeAppealableUntil: BigInt!
+  disputeAppealableUntil: BigInt
   # Who executed the settlement (decider for tier 3, else the finalizer)
-  disputeFinalizedByAddr: Bytes!
+  disputeFinalizedByAddr: Bytes
 
   # DISPUTE LADDER - history, in order: raise, decisions, escalations, settlement
-  disputeHistory: [DisputeStep!]!
+  disputeHistory: [DisputeStep!]
 
   # APPEAL DETAILS
   appealedAt: BigInt!
