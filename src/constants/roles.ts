@@ -145,6 +145,7 @@ export const TIMELOCK_OP_CANCELLED = "CANCELLED";
 // Insurance claim contest activity.
 export const CONTEST_ACTION_CONTESTED = "CONTESTED";
 export const CONTEST_ACTION_REMOVED = "CONTEST_REMOVED";
+export const CONTEST_ACTION_EXPIRED = "CONTEST_EXPIRED";
 
 export function roleName(role: i32): string {
   if (role >= 0 && role < ROLE_NAMES.length) return ROLE_NAMES[role];

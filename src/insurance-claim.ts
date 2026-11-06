@@ -10,6 +10,7 @@ import {
   SuperAdminLargeClaimApproved as SuperAdminLargeClaimApprovedEvent,
   ClaimContested as ClaimContestedEvent,
   ClaimContestRemoved as ClaimContestRemovedEvent,
+  ContestExpiredClaimRejected as ContestExpiredClaimRejectedEvent,
   LegacyAuthUsed as LegacyAuthUsedEvent,
 } from "../generated/InsuranceClaimFacet/InsuranceClaimFacet";
 import {
@@ -23,9 +24,11 @@ import {
   AUTH_SOURCE_INSURANCE_DIAMOND,
   CONTEST_ACTION_CONTESTED,
   CONTEST_ACTION_REMOVED,
+  CONTEST_ACTION_EXPIRED,
 } from "./constants/roles";
 import {
   REJECTION_KIND_APPROVER_CANCEL,
+  REJECTION_KIND_CONTEST_EXPIRED,
   REJECTION_KIND_REVIEWER,
   REJECTION_KIND_SUPER_ADMIN,
 } from "./constants/insurance-claim";
@@ -279,4 +282,27 @@ export function handleLegacyAuthUsed(event: LegacyAuthUsedEvent): void {
     event.params.caller,
     event.params.selector,
   );
+}
+
+// An Ops contest stood CONTEST_MAX_DURATION and someone finalised it with
+// `rejectExpiredContest` (InsuranceClaimFacet, open to anyone). The contract
+// emits only this event, not ClaimRejected, runs the same APPROVED -> REJECTED
+// teardown and then sets the resolver to the contesting Ops Lead rather than
+// the caller. Without this handler the claim would stay APPROVED and
+// contested in the index forever.
+export function handleContestExpiredClaimRejected(
+  event: ContestExpiredClaimRejectedEvent,
+): void {
+  tearDownApprovedClaim(
+    event.params.claimId,
+    event.params.contestedBy,
+    REJECTION_KIND_CONTEST_EXPIRED,
+    event,
+  );
+  newInsuranceClaimContestActivity(
+    event,
+    event.params.claimId,
+    CONTEST_ACTION_EXPIRED,
+    event.params.contestedBy,
+  ).save();
 }

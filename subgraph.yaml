@@ -351,10 +351,10 @@ dataSources:
           handler: handleCountryActiveSet
         - event: CurrencyCountryBound(indexed bytes32,indexed bytes32,bytes32)
           handler: handleCurrencyCountryBound
-        # Currency launch sets the monthly volume limit; same signature as
-        # SetterFacet's, so both write CurrencyConfig through one helper.
-        - event: MonthlyVolumeLimit(indexed bytes32,uint256)
-          handler: handleMonthlyVolumeLimit
+        # MonthlyVolumeLimit is emitted by CountryFacet (currency launch) and
+        # SetterFacet alike, from the same Diamond address and with the same
+        # signature, so it is handled ONCE, on the SetterFacet data source.
+        # Listing it here too ran the handler twice for every log.
       file: ./src/country-facet.ts
   - kind: ethereum
     name: ReputationManager
@@ -602,6 +602,8 @@ dataSources:
           handler: handleClaimContested
         - event: ClaimContestRemoved(indexed uint256,indexed address,uint64)
           handler: handleClaimContestRemoved
+        - event: ContestExpiredClaimRejected(indexed uint256,indexed uint256,address,address)
+          handler: handleContestExpiredClaimRejected
         # Roles & permissions shadow mode (Insurance Diamond emission point)
         - event: LegacyAuthUsed(indexed address,indexed bytes4)
           handler: handleLegacyAuthUsed

@@ -1136,11 +1136,12 @@ type InsuranceClaim @entity(immutable: false) {
   contestedAt: BigInt
   contestCount: Int!
 
-  # Which path took the claim to REJECTED. All three land in status 3, so the
+  # Which path took the claim to REJECTED. All four land in status 3, so the
   # kind is what keeps an approver-level reversal apart from the super-admin
   # escape hatch: 0 = not rejected, 1 = reviewer rejected (ClaimRejected),
   # 2 = super admin force-rejected (ClaimForceRejected), 3 = currency approver
-  # cancelled an already-APPROVED claim (ApprovedClaimCancelled).
+  # cancelled an already-APPROVED claim (ApprovedClaimCancelled), 4 = an Ops
+  # contest stood its maximum duration (ContestExpiredClaimRejected).
   rejectionKind: Int!
 
   # Settlement breakdown
@@ -1777,8 +1778,9 @@ type InsuranceClaimContestActivity @entity(immutable: true) {
   id: Bytes! # txHash ++ logIndex
   claimId: BigInt!
   claim: InsuranceClaim!
-  # CONTESTED | CONTEST_REMOVED
+  # CONTESTED | CONTEST_REMOVED | CONTEST_EXPIRED
   action: String!
+  # CONTEST_EXPIRED: the Ops Lead whose contest stood, not whoever finalised it
   by: Bytes!
   # Set on CONTEST_REMOVED: the fresh 48h window's release timestamp
   newEligibleAt: BigInt
