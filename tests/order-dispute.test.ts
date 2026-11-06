@@ -4,200 +4,88 @@ import {
   test,
   clearStore,
   afterEach,
+  newMockEvent,
 } from "matchstick-as/assembly/index";
-import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
-import {
-  handleCancelledOrders,
-  handleOrderCancelledBy,
-  handleOrderCompleted,
-  handleOrderDisputeWithFaultType,
-} from "../src/order";
-import { getDailyMetricsKey, getDayNumber, loadOrders } from "../src/lib";
-import { getYearMonthFromTimestamp } from "../src/utils/date.utils";
-import {
-  OrderFields,
-  cancelledOrders,
-  orderCancelledBy,
-  orderCompleted,
-  orderDispute,
-} from "./order-events";
+import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { OrderDispute } from "../generated/OrderProcessorFacet/OrderProcessorFacet";
+import { handleOrderDisputeWithFaultType } from "../src/order";
 
-// adminSettleDispute calls completeOrder/cancelOrder before it emits
-// OrderDispute, so on mainnet the settle tx logs CancelledOrders (or
-// OrderCompleted), then OrderCancelledBy, then OrderDispute (tx 0x33ce92c5…:
-// logs 153, 154, 156). These tests replay that order.
+// OrderDispute(by, orderId, order, faultType) is what #464 emits on raise
+// (OrderProcessorFacet.sol:245, by = raiser) and on settle (:702, by = the
+// decider, while finalizeDispute itself may be sent by anyone).
+const DECIDER = "0x000000000000000000000000000000000000000c";
+const FINALIZER = "0x000000000000000000000000000000000000000d";
+const MERCHANT = "0x000000000000000000000000000000000000000e";
+const USER = "0x000000000000000000000000000000000000000b";
+const ORDER_ID = BigInt.fromI32(7);
 
-const USER = Address.fromString("0x00000000000000000000000000000000000000bb");
-const MERCHANT = Address.fromString(
-  "0x00000000000000000000000000000000000000aa",
-);
-const ADMIN = Address.fromString("0x00000000000000000000000000000000000000cc");
-
-const T1 = 1785000000; // 2026-07-25, completion (or first cancel)
-const T2 = 1788000000; // 2026-08-29, dispute settlement
-
-const FAULT_USER = 1;
-const FAULT_MERCHANT = 2;
-
-function circleKey(): Bytes {
-  return Bytes.fromByteArray(Bytes.fromBigInt(BigInt.fromI32(2)));
+function orderKey(): string {
+  return Bytes.fromByteArray(Bytes.fromBigInt(ORDER_ID)).toHexString();
 }
 
-function merchantMonth(ts: i32): string {
-  const month = getYearMonthFromTimestamp(BigInt.fromI32(ts));
-  return Bytes.fromUTF8(`${MERCHANT.toHexString()}-${month}`).toHexString();
+function u256(v: i32): ethereum.Value {
+  return ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(v));
 }
 
-function circleMonth(ts: i32): string {
-  const month = getYearMonthFromTimestamp(BigInt.fromI32(ts));
-  return Bytes.fromUTF8(`${circleKey().toHexString()}-${month}`).toHexString();
+function orderDispute(by: string, disputeStatus: i32, txFrom: string): OrderDispute {
+  const mock = newMockEvent();
+  mock.block.timestamp = BigInt.fromI32(1_000);
+  mock.transaction.from = Address.fromString(txFrom);
+  const e = new OrderDispute(
+    mock.address, mock.logIndex, mock.transactionLogIndex, mock.logType,
+    mock.block, mock.transaction, mock.parameters, mock.receipt,
+  );
+
+  const disputeInfo = new ethereum.Tuple();
+  disputeInfo.push(ethereum.Value.fromI32(1)); // raisedBy
+  disputeInfo.push(ethereum.Value.fromI32(disputeStatus));
+  disputeInfo.push(u256(0)); // redactTransId
+  disputeInfo.push(u256(0)); // accountNumber
+
+  const order = new ethereum.Tuple();
+  order.push(u256(100)); // amount
+  order.push(u256(9_000)); // fiatAmount
+  order.push(u256(900)); // placedTimestamp
+  order.push(u256(950)); // completedTimestamp
+  order.push(u256(0)); // userCompletedTimestamp
+  order.push(ethereum.Value.fromAddress(Address.fromString(MERCHANT)));
+  order.push(ethereum.Value.fromAddress(Address.fromString(USER)));
+  order.push(ethereum.Value.fromAddress(Address.fromString(USER)));
+  order.push(ethereum.Value.fromString("")); // pubkey
+  order.push(ethereum.Value.fromString("")); // encUpi
+  order.push(ethereum.Value.fromBoolean(false));
+  order.push(ethereum.Value.fromI32(3)); // status
+  order.push(ethereum.Value.fromI32(0)); // orderType
+  order.push(ethereum.Value.fromTuple(disputeInfo));
+  order.push(u256(7)); // id
+  order.push(ethereum.Value.fromString("")); // userPubKey
+  order.push(ethereum.Value.fromString("")); // encMerchantUpi
+  order.push(u256(0)); // acceptedAccountNo
+  order.push(ethereum.Value.fromUnsignedBigIntArray([]));
+  order.push(ethereum.Value.fromFixedBytes(Bytes.fromHexString("0x494e520000000000000000000000000000000000000000000000000000000000")));
+  order.push(u256(0)); // preferredPaymentChannelConfigId
+  order.push(u256(0)); // circleId
+
+  e.parameters = new Array<ethereum.EventParam>();
+  e.parameters.push(new ethereum.EventParam("by", ethereum.Value.fromAddress(Address.fromString(by))));
+  e.parameters.push(new ethereum.EventParam("orderId", u256(7)));
+  e.parameters.push(new ethereum.EventParam("_order", ethereum.Value.fromTuple(order)));
+  e.parameters.push(new ethereum.EventParam("faultType", ethereum.Value.fromI32(1)));
+  return e;
 }
 
-function circleDay(ts: i32): string {
-  return getDailyMetricsKey(
-    circleKey(),
-    getDayNumber(BigInt.fromI32(ts)),
-  ).toHexString();
-}
-
-function merchantDay(ts: i32): string {
-  const day = (ts as i64) / 86400;
-  return Bytes.fromUTF8(`${MERCHANT.toHexString()}-${day.toString()}`).toHexString();
-}
-
-function sellOrder(): OrderFields {
-  const f = new OrderFields();
-  f.orderType = 1;
-  f.user = USER;
-  f.merchant = MERCHANT;
-  return f;
-}
-
-describe("dispute settlement", () => {
+describe("OrderDispute (fault-type variant)", () => {
   afterEach(() => {
     clearStore();
   });
 
-  test("merchant fault overturning a completed SELL reverses the completion", () => {
-    const f = sellOrder();
-    f.status = 3;
-    f.completedTimestamp = T1;
-    handleOrderCompleted(orderCompleted(f, T1));
-    assert.fieldEquals("CircleMerchant", MERCHANT.toHexString(), "lifetimeCompletedCount", "1");
-
-    // Settle tx: CancelledOrders (dispute still RAISED), OrderCancelledBy,
-    // then OrderDispute (SETTLED). completedTimestamp stays set on-chain.
-    f.status = 4;
-    f.disputeStatus = 1;
-    handleCancelledOrders(cancelledOrders(f, T2));
-    handleOrderCancelledBy(orderCancelledBy(f, ADMIN, T2));
-    f.disputeStatus = 2;
-    handleOrderDisputeWithFaultType(orderDispute(f, FAULT_MERCHANT, ADMIN, T2));
-
-    assert.fieldEquals("CircleMerchant", MERCHANT.toHexString(), "lifetimeCompletedCount", "0");
-    // Completion month: completed comes off, nothing cancelled lands there
-    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T1), "completedSellOrdersCount", "0");
-    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T1), "cancelledSellOrdersCount", "0");
-    assert.fieldEquals("CircleOrderMetricsByMonth", circleMonth(T1), "completedSellOrdersCount", "0");
-    // Settle month: the cancel is counted exactly once (by CancelledOrders)
-    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T2), "cancelledSellOrdersCount", "1");
-    assert.fieldEquals("CircleOrderMetricsByMonth", circleMonth(T2), "cancelledSellOrdersCount", "1");
-    assert.fieldEquals("User", USER.toHexString(), "completedSellOrdersCount", "0");
-    assert.fieldEquals("User", USER.toHexString(), "cancelledSellOrdersCount", "1");
-    assert.fieldEquals("User", USER.toHexString(), "totalVolume", "0");
-    // The dispute counts toward the circle score, on the settle day
-    assert.fieldEquals("CircleScoreState", circleKey().toHexString(), "merchantFaultDisputesCount", "1");
-    assert.fieldEquals("CircleDailyMetrics", circleDay(T2), "merchantFaultDisputesCount", "1");
+  test("settled: settler is the decider in `by`, not whoever sent the tx", () => {
+    handleOrderDisputeWithFaultType(orderDispute(DECIDER, 2, FINALIZER));
+    assert.fieldEquals("Orders", orderKey(), "disputeSettledByAddr", DECIDER);
   });
 
-  test("an overturned completion also leaves the merchant's speed stats", () => {
-    const f = sellOrder();
-    f.status = 3;
-    f.completedTimestamp = T1;
-    const completed = orderCompleted(f, T1);
-    // Accepted 600s before completion
-    const order = loadOrders(
-      Bytes.fromByteArray(Bytes.fromBigInt(BigInt.fromI32(f.id))),
-      completed,
-    );
-    order.acceptedAt = BigInt.fromI32(T1 - 600);
-    order.save();
-    handleOrderCompleted(completed);
-    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T1), "acceptToCompleteSecondsSum", "600");
-    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T1), "completedWithSpeedCount", "1");
-
-    f.status = 4;
-    f.disputeStatus = 1;
-    handleCancelledOrders(cancelledOrders(f, T2));
-    f.disputeStatus = 2;
-    handleOrderDisputeWithFaultType(orderDispute(f, FAULT_MERCHANT, ADMIN, T2));
-
-    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T1), "completedCount", "0");
-    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T1), "usdcVolume", "0");
-    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T1), "acceptToCompleteSecondsSum", "0");
-    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T1), "completedWithSpeedCount", "0");
-  });
-
-  test("merchant fault on a never-completed SELL counts the dispute only", () => {
-    const f = sellOrder();
-    f.status = 4;
-    f.disputeStatus = 1;
-    handleCancelledOrders(cancelledOrders(f, T2));
-    handleOrderCancelledBy(orderCancelledBy(f, ADMIN, T2));
-    f.disputeStatus = 2;
-    handleOrderDisputeWithFaultType(orderDispute(f, FAULT_MERCHANT, ADMIN, T2));
-
-    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T2), "cancelledSellOrdersCount", "1");
-    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T2), "completedSellOrdersCount", "0");
-    assert.fieldEquals("CircleMerchant", MERCHANT.toHexString(), "lifetimeCompletedCount", "0");
-    assert.fieldEquals("CircleScoreState", circleKey().toHexString(), "merchantFaultDisputesCount", "1");
-  });
-
-  test("merchant fault reopening a cancelled BUY to COMPLETED reverses the cancel", () => {
-    const f = sellOrder();
-    f.orderType = 0;
-    f.status = 4;
-    handleCancelledOrders(cancelledOrders(f, T1));
-    handleOrderCancelledBy(orderCancelledBy(f, USER, T1));
-
-    f.status = 3;
-    f.disputeStatus = 1;
-    f.completedTimestamp = T2;
-    handleOrderCompleted(orderCompleted(f, T2));
-    f.disputeStatus = 2;
-    handleOrderDisputeWithFaultType(orderDispute(f, FAULT_MERCHANT, ADMIN, T2));
-
-    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T1), "cancelledBuyOrdersCount", "0");
-    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T2), "completedBuyOrdersCount", "1");
-    assert.fieldEquals("User", USER.toHexString(), "cancelledBuyOrdersCount", "0");
-    assert.fieldEquals("User", USER.toHexString(), "completedBuyOrdersCount", "1");
-    assert.fieldEquals("CircleScoreState", circleKey().toHexString(), "merchantFaultDisputesCount", "1");
-  });
-
-  test("user fault leaves the order and the score alone", () => {
-    const f = sellOrder();
-    f.status = 2; // PAID
-    f.disputeStatus = 2;
-    handleOrderDisputeWithFaultType(orderDispute(f, FAULT_USER, ADMIN, T2));
-
-    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T2), "completedSellOrdersCount", "0");
-    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T2), "cancelledSellOrdersCount", "0");
-    assert.fieldEquals("CircleScoreState", circleKey().toHexString(), "merchantFaultDisputesCount", "0");
-  });
-
-  test("a missed CancelledOrders log still swaps completed for cancelled", () => {
-    const f = sellOrder();
-    f.status = 3;
-    f.completedTimestamp = T1;
-    handleOrderCompleted(orderCompleted(f, T1));
-
-    f.status = 4;
-    f.disputeStatus = 2;
-    handleOrderDisputeWithFaultType(orderDispute(f, FAULT_MERCHANT, ADMIN, T2));
-
-    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T1), "completedSellOrdersCount", "0");
-    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T1), "cancelledSellOrdersCount", "1");
-    assert.fieldEquals("CircleMerchant", MERCHANT.toHexString(), "lifetimeCompletedCount", "0");
-    assert.fieldEquals("CircleScoreState", circleKey().toHexString(), "merchantFaultDisputesCount", "1");
+  test("raised with no DisputeRaised before it (pre-upgrade): tier reads as 1", () => {
+    handleOrderDisputeWithFaultType(orderDispute(USER, 1, USER));
+    assert.fieldEquals("Orders", orderKey(), "disputeTier", "1");
   });
 });
