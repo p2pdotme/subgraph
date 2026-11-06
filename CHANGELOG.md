@@ -271,6 +271,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Synced to contracts-v4 #464 `ff3f9e5`: the dispute ladder is #83's
+  (`DisputeRaised`/`Decided`/`Escalated`/`Settled`); the `DisputeAppealed`
+  handler, its order fields and `DisputeActivity` are gone, since #464 no
+  longer emits that event
+- `ContestExpiredClaimRejected` indexed: a contest that stood its maximum
+  duration rejects the claim (`rejectionKind` 4, `resolver` = the Ops Lead);
+  it used to stay APPROVED and contested
+- Role bit 5 (`CIRCLE_ADMIN`, retired at R8) now reads `roleRetired: true`
+- `MonthlyVolumeLimit` handled once (SetterFacet) instead of twice
+- base-sepolia `RoleAdminFacet` / `DiamondOwnership` moved to the
+  `0xC8E1…` diamond with the other sources
+- Selector map regenerated from #464 `ff3f9e5` + `dev` (20 added)
+
 - The capability-gated set is **twelve** selectors, not ten. contracts-v4 now
   publishes `docs/roles-exclusions.json` — the machine-readable answer to which
   of the four readings a zeroed `getSelectorPolicy` struct means (retired /
