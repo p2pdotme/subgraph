@@ -4,6 +4,7 @@ import {
   CircleAdminUpdated as CircleAdminUpdatedEvent,
   CircleCommunityUrlUpdated as CircleCommunityUrlUpdatedEvent,
   CircleAdminCommunityUrlUpdated as CircleAdminCommunityUrlUpdatedEvent,
+  CircleAutoApprovePaymentChannelsUpdated as CircleAutoApprovePaymentChannelsUpdatedEvent,
   // CircleProtocolTokenStaked as CircleProtocolTokenStakedEvent,
   CircleAdminP2PStakeReturned as CircleAdminP2PStakeReturnedEvent,
   CircleAdminHistorySeeded as CircleAdminHistorySeededEvent,
@@ -70,6 +71,21 @@ export function handleCircleAdminCommunityUrlUpdated(
   const circle = loadCircle(key, event);
 
   circle.adminLink = event.params.newAdminCommunityUrl;
+
+  circle.save();
+}
+
+/**
+ * The circle admin turned payment-channel auto-approval on or off after
+ * creation. Until this event the flag only ever came from `CircleCreated`.
+ */
+export function handleCircleAutoApprovePaymentChannelsUpdated(
+  event: CircleAutoApprovePaymentChannelsUpdatedEvent
+): void {
+  const key = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
+  const circle = loadCircle(key, event);
+
+  circle.isAutoApprovedPCEnabled = event.params.autoApprove;
 
   circle.save();
 }

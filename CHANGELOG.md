@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `CircleAutoApprovePaymentChannelsUpdated` onto `Circle.isAutoApprovedPCEnabled`:
+  contracts-v4 #536 lets a circle's admin turn payment-channel auto-approval on
+  or off after creation (`updateCircleAutoApprovePaymentChannels`). Until then
+  the field was written once, from `CircleCreated`, and would have gone stale on
+  the first change. No schema change, so this is graft-compatible. The event is
+  emitted only once the CircleFacet carrying it is cut into the Diamond
+
 ---
 
 ## [2.0.0] — 2026-11
