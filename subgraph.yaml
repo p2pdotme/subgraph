@@ -66,6 +66,10 @@ dataSources:
           handler: handleCircleCommunityUrlUpdated
         - event: CircleAdminCommunityUrlUpdated(indexed uint256,string)
           handler: handleCircleAdminCommunityUrlUpdated
+        # contracts-v4 #536: the circle admin turns auto-approval on or off
+        # after creation (updateCircleAutoApprovePaymentChannels)
+        - event: CircleAutoApprovePaymentChannelsUpdated(indexed uint256,bool)
+          handler: handleCircleAutoApprovePaymentChannelsUpdated
         # R1 fund-custody drain (roles & permissions rollout)
         - event: CircleAdminP2PStakeReturned(indexed address,indexed address,uint256)
           handler: handleCircleAdminP2PStakeReturned
