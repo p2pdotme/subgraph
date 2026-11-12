@@ -1,4 +1,7 @@
 specVersion: 1.3.0
+# Required for `goldsky subgraph deploy --graft-from`; harmless on a full sync.
+features:
+  - grafting
 indexerHints:
   prune: 3000000
 schema:
