@@ -347,6 +347,25 @@
         },
         {
           "indexed": false,
+          "internalType": "bool",
+          "name": "autoApprove",
+          "type": "bool"
+        }
+      ],
+      "name": "CircleAutoApprovePaymentChannelsUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "circleId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
           "internalType": "string",
           "name": "newCommunityUrl",
           "type": "string"
@@ -1174,6 +1193,19 @@
         }
       ],
       "name": "updateCircleAdminCommunityUrl",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "autoApprove",
+          "type": "bool"
+        }
+      ],
+      "name": "updateCircleAutoApprovePaymentChannels",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
