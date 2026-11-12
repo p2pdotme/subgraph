@@ -26,7 +26,6 @@ export {
   loadMerchantVolumeByMonth,
   loadMerchantOrderMetricsByMonth,
   loadPaymentChannelMigration,
-  loadFCMToken,
   loadMerchantWithdrawFeePercentage,
   loadMerchantStakeHistory,
   loadMerchantReferralClaimed,
