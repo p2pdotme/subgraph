@@ -5,8 +5,15 @@ import {
   CircleCommunityUrlUpdated as CircleCommunityUrlUpdatedEvent,
   CircleAdminCommunityUrlUpdated as CircleAdminCommunityUrlUpdatedEvent,
   // CircleProtocolTokenStaked as CircleProtocolTokenStakedEvent,
+  CircleAdminP2PStakeReturned as CircleAdminP2PStakeReturnedEvent,
+  CircleAdminHistorySeeded as CircleAdminHistorySeededEvent,
 } from "../generated/CircleFacet/CircleFacet";
+import {
+  CircleAdminHistory,
+  CircleAdminP2PStakeReturn,
+} from "../generated/schema";
 import { loadCircle, loadCircleMetrics } from "./lib";
+import { logKey } from "./utils";
 
 export function handleCircleCreated(event: CircleCreatedEvent): void {
   const key = changetype<Bytes>(Bytes.fromBigInt(event.params.circleId));
@@ -114,3 +121,47 @@ export function handleCircleAdminCommunityUrlUpdated(
 
 //   circleMetrics.save();
 // }
+
+// ─────────────────────────── R1 fund-custody drain ───────────────────────
+// `returnCircleAdminP2PStake` hands an admin their whole circle $P2P stake
+// back (cancelling any pending unstake first). It is the only exit left once
+// circle-admin staking is retired at R7 / removed at R8; the R8 runbook
+// enumerates these events against the remaining stake balances.
+export function handleCircleAdminP2PStakeReturned(
+  event: CircleAdminP2PStakeReturnedEvent,
+): void {
+  const entity = new CircleAdminP2PStakeReturn(
+    logKey(event.transaction.hash, event.logIndex),
+  );
+  entity.caller = event.params.caller;
+  entity.circleAdmin = event.params.circleAdmin;
+  entity.amount = event.params.amount;
+  entity.blockNumber = event.block.number;
+  entity.blockTimestamp = event.block.timestamp;
+  entity.transactionHash = event.transaction.hash;
+  entity.save();
+}
+
+// R8.2: the cut seeds the circle-admin seats `updateCircleAdmin` had already
+// replaced, which the contract never stored — a dispute over a past decision
+// needs to know who held the seat then. Emitted by `RetirementInit` as a
+// `delegatecall` from the Diamond, so the log arrives on this data source even
+// though the event is declared on the initializer.
+//
+// Seeded, not observed: the list is calldata to the cut, validated against the
+// Diamond's circles but otherwise as good as whoever assembled it. Seats
+// replaced after the cut come from `CircleAdminUpdated` instead.
+export function handleCircleAdminHistorySeeded(
+  event: CircleAdminHistorySeededEvent,
+): void {
+  const row = new CircleAdminHistory(
+    logKey(event.transaction.hash, event.logIndex),
+  );
+  row.circleId = event.params.circleId;
+  row.admin = event.params.admin;
+  row.until = event.params.until;
+  row.blockNumber = event.block.number;
+  row.blockTimestamp = event.block.timestamp;
+  row.transactionHash = event.transaction.hash;
+  row.save();
+}

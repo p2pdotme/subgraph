@@ -30,3 +30,18 @@ export const ORDER_TYPE_PAY: i32 = 2;
 export const FAULT_TYPE_USER: i32 = 1;
 export const FAULT_TYPE_MERCHANT: i32 = 2;
 export const FAULT_TYPE_BANK: i32 = 3;
+
+// R8.2 seized-stake movements recorded by the Insurance Diamond. RECORDED and
+// RELEASED move the token+country ledger; MERCHANT_STAKE_TO_CAIP credits a
+// circle's own pool instead. The main Diamond's `P2PStakeSeizedForCountry` is
+// not one of these — it fires alongside `P2PStakeSeized` for the same act, so
+// counting it here would double every user stake seizure.
+export const SEIZED_ACTION_RECORDED = "RECORDED";
+export const SEIZED_ACTION_RELEASED = "RELEASED";
+export const SEIZED_ACTION_MERCHANT_STAKE_TO_CAIP = "MERCHANT_STAKE_TO_CAIP";
+
+// DisputeStep.kind
+export const DISPUTE_STEP_RAISED = 0;
+export const DISPUTE_STEP_DECIDED = 1;
+export const DISPUTE_STEP_ESCALATED = 2;
+export const DISPUTE_STEP_SETTLED = 3;

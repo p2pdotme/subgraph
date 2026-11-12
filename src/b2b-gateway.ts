@@ -7,10 +7,14 @@ import {
   B2BOrderCompleted as B2BOrderCompletedEvent,
   B2BOrderCancelled as B2BOrderCancelledEvent,
   B2BIntegratorCallbackFailed as B2BIntegratorCallbackFailedEvent,
+  CoSignConsumed as CoSignConsumedEvent,
 } from "../generated/B2BGatewayFacet/B2BGatewayFacet";
 import { B2BOrder, B2BIntegratorCallbackFailure } from "../generated/schema";
 import { loadIntegrator } from "./lib/b2b-gateway.lib";
+import { loadCoSign } from "./lib";
+import { COSIGN_STATUS_CONSUMED } from "./constants/roles";
 import { ORDER_TYPE_BUY, ORDER_TYPE_SELL } from "./constants/status";
+import { nonNegative } from "./utils/math.utils";
 
 // ─── Integrator Registration ──────────────────────────────────────
 
@@ -80,9 +84,12 @@ export function handleB2BSellOrderPlaced(event: B2BSellOrderPlacedEvent): void {
 
 export function handleB2BOrderCompleted(event: B2BOrderCompletedEvent): void {
   // Only fired for BUY orders by B2BGatewayFacet.onB2BOrderComplete.
+  // Floors at 0 like the contract (`if (activeOrderCount > 0) --`): a BUY
+  // order cancelled and then completed by a merchant-fault dispute fires
+  // both B2BOrderCancelled and B2BOrderCompleted for one placement.
   let integrator = loadIntegrator(event.params.integrator, event);
-  integrator.activeOrderCount = integrator.activeOrderCount.minus(
-    BigInt.fromI32(1),
+  integrator.activeOrderCount = nonNegative(
+    integrator.activeOrderCount.minus(BigInt.fromI32(1)),
   );
   integrator.save();
 }
@@ -91,8 +98,8 @@ export function handleB2BOrderCancelled(event: B2BOrderCancelledEvent): void {
   // Only fired for BUY orders by B2BGatewayFacet.onB2BOrderCancelled
   // (wired from OrderFlowFacet._cancelOrder for BUY-type B2B orders).
   let integrator = loadIntegrator(event.params.integrator, event);
-  integrator.activeOrderCount = integrator.activeOrderCount.minus(
-    BigInt.fromI32(1),
+  integrator.activeOrderCount = nonNegative(
+    integrator.activeOrderCount.minus(BigInt.fromI32(1)),
   );
   integrator.cancelledOrderCount = integrator.cancelledOrderCount.plus(
     BigInt.fromI32(1),
@@ -130,4 +137,18 @@ export function handleB2BIntegratorCallbackFailed(
   failure.blockTimestamp = event.block.timestamp;
   failure.transactionHash = event.transaction.hash;
   failure.save();
+}
+
+// ─────────────────────────── R7 dual-sign consumption ────────────────────
+// Emitted by LibAuth.passesConsumingCoSign from the main Diamond address when
+// a dual-signed call (today: the three B2B admin entrypoints) consumes the
+// standing co-sign for its exact arguments. Single-use: the record is gone.
+export function handleCoSignConsumed(event: CoSignConsumedEvent): void {
+  const coSign = loadCoSign(event.params.key, event);
+  if (coSign.selector.length == 0) coSign.selector = event.params.selector;
+  if (coSign.proposer.length == 0) coSign.proposer = event.params.proposer;
+  coSign.status = COSIGN_STATUS_CONSUMED;
+  coSign.executor = event.params.executor;
+  coSign.resolvedAt = event.block.timestamp;
+  coSign.save();
 }

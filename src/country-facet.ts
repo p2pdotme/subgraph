@@ -1,16 +1,22 @@
-import { Bytes } from "@graphprotocol/graph-ts";
 import {
   PaymentChannelConfigChanged,
   CurrencyToggled,
+  CountryActiveSet,
+  CurrencyCountryBound,
+  MonthlyVolumeLimit,
 } from "../generated/CountryFacet/CountryFacet";
 import { PaymentChannelConfig } from "../generated/schema";
-import { loadCurrency } from "./lib";
+import {
+  applyMonthlyVolumeLimit,
+  loadCountry,
+  loadCurrency,
+  paymentChannelConfigId,
+} from "./lib";
 
 export function handlePaymentChannelConfigChanged(
   event: PaymentChannelConfigChanged,
 ): void {
-  // Use paymentChannelId as the entity ID
-  const id = Bytes.fromI32(event.params.cfg.paymentChannelId.toI32());
+  const id = paymentChannelConfigId(event.params.cfg.paymentChannelId);
 
   let config = PaymentChannelConfig.load(id);
   if (!config) {
@@ -36,4 +42,29 @@ export function handleCurrencyToggled(event: CurrencyToggled): void {
   currency.isActive = event.params.isActive;
 
   currency.save();
+}
+
+// ─────────────────────────── R5 country scope ────────────────────────────
+
+export function handleCountryActiveSet(event: CountryActiveSet): void {
+  const country = loadCountry(event.params.country, event);
+  country.isActive = event.params.active;
+  country.save();
+}
+
+export function handleCurrencyCountryBound(event: CurrencyCountryBound): void {
+  // Binding does not require the country to have been activated in an
+  // indexed block, so make sure its row exists before linking.
+  const country = loadCountry(event.params.country, event);
+  country.save();
+
+  const currency = loadCurrency(event.params.currency, event);
+  currency.country = country.id;
+  currency.save();
+}
+
+// A currency launch sets its monthly volume limit, so the same primary event
+// arrives here as well as from SetterFacet's live setter.
+export function handleMonthlyVolumeLimit(event: MonthlyVolumeLimit): void {
+  applyMonthlyVolumeLimit(event.params.currency, event.params.limit, event);
 }
