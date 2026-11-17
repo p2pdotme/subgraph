@@ -71,6 +71,7 @@ import {
   FAULT_TYPE_USER,
   FAULT_TYPE_MERCHANT,
   FAULT_TYPE_BANK,
+  FAULT_TYPE_CS_REFUND,
   DISPUTE_STEP_RAISED,
   DISPUTE_STEP_DECIDED,
   DISPUTE_STEP_ESCALATED,
@@ -322,6 +323,12 @@ export function handleOrderDisputeWithFaultType(
       settleDaily.userFaultDisputes = settleDaily.userFaultDisputes.plus(
         BigInt.fromI32(1),
       );
+    } else if (event.params.faultType === FAULT_TYPE_CS_REFUND) {
+      // Nullable (graft-compatible): a row created before this field reads null.
+      const prev = settleDaily.csRefundDisputes;
+      settleDaily.csRefundDisputes = (
+        prev === null ? BigInt.zero() : prev
+      ).plus(BigInt.fromI32(1));
     }
     settleDaily.save();
 

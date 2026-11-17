@@ -30,6 +30,9 @@ export const ORDER_TYPE_PAY: i32 = 2;
 export const FAULT_TYPE_USER: i32 = 1;
 export const FAULT_TYPE_MERCHANT: i32 = 2;
 export const FAULT_TYPE_BANK: i32 = 3;
+// Support refunded the user, no party at fault (contracts-v4 CS_REFUND): the
+// order ends CANCELLED, no circle dispute count.
+export const FAULT_TYPE_CS_REFUND: i32 = 4;
 
 // R8.2 seized-stake movements recorded by the Insurance Diamond. RECORDED and
 // RELEASED move the token+country ledger; MERCHANT_STAKE_TO_CAIP credits a

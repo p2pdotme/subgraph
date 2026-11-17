@@ -354,6 +354,9 @@ type MerchantDailyMetrics @entity(immutable: false) {
   merchantFaultDisputes: BigInt!
   bankFaultDisputes: BigInt!
   userFaultDisputes: BigInt!
+  # CS_REFUND settlements (support refund, no party at fault). Nullable so the
+  # schema stays graft-compatible: rows written before it read null, i.e. 0.
+  csRefundDisputes: BigInt
 
   onlineSeconds: BigInt!
   busySeconds: BigInt!
@@ -1070,7 +1073,7 @@ type DisputeStep @entity(immutable: true) {
   tier: Int!
   # ESCALATED only: tier moved from
   fromTier: Int!
-  # DECIDED / SETTLED: FaultType (0=DEFAULT,1=USER,2=MERCHANT,3=BANK)
+  # DECIDED / SETTLED: FaultType (0=DEFAULT,1=USER,2=MERCHANT,3=BANK,4=CS_REFUND)
   faultType: Int!
   # RAISED: raiser. DECIDED: decider. ESCALATED: appealer. SETTLED: decider.
   by: Bytes!
