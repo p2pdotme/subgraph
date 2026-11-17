@@ -17,6 +17,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   the first change. No schema change, so this is graft-compatible. The event is
   emitted only once the CircleFacet carrying it is cut into the Diamond
 
+- `CS_REFUND` dispute outcome (contracts-v4 `FaultType` 4: support refunded
+  the user, no party at fault). `FAULT_TYPE_CS_REFUND` in `constants/status.ts`;
+  a CS_REFUND settlement moves the order like any non-USER one (a COMPLETED
+  SELL / PAY overturned to CANCELLED is reversed; a disputed BUY is already
+  CANCELLED) and is counted in the new `MerchantDailyMetrics.csRefundDisputes`,
+  not in a fault bucket or the circle score. `Orders.disputeFaultType` and
+  `DisputeStep.faultType` carry `4`. The new field is nullable, so this stays
+  graft-compatible: rows written before it read null (0)
+
 ### Changed
 
 - `subgraph.yaml` declares `features: [grafting]` again, so this release can

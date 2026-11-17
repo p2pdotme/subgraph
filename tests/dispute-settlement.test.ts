@@ -38,6 +38,7 @@ const T2 = 1788000000; // 2026-08-29, dispute settlement
 
 const FAULT_USER = 1;
 const FAULT_MERCHANT = 2;
+const FAULT_CS_REFUND = 4;
 
 function circleKey(): Bytes {
   return Bytes.fromByteArray(Bytes.fromBigInt(BigInt.fromI32(2)));
@@ -108,6 +109,33 @@ describe("dispute settlement", () => {
     // The dispute counts toward the circle score, on the settle day
     assert.fieldEquals("CircleScoreState", circleKey().toHexString(), "merchantFaultDisputesCount", "1");
     assert.fieldEquals("CircleDailyMetrics", circleDay(T2), "merchantFaultDisputesCount", "1");
+  });
+
+  test("a CS_REFUND overturning a completed SELL reverses the completion but blames no one", () => {
+    const f = sellOrder();
+    f.status = 3;
+    f.completedTimestamp = T1;
+    handleOrderCompleted(orderCompleted(f, T1));
+
+    f.status = 4;
+    f.disputeStatus = 1;
+    handleCancelledOrders(cancelledOrders(f, T2));
+    handleOrderCancelledBy(orderCancelledBy(f, ADMIN, T2));
+    f.disputeStatus = 2;
+    handleOrderDisputeWithFaultType(orderDispute(f, FAULT_CS_REFUND, ADMIN, T2));
+
+    // The order moves like any non-USER settlement
+    assert.fieldEquals("CircleMerchant", MERCHANT.toHexString(), "lifetimeCompletedCount", "0");
+    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T1), "completedSellOrdersCount", "0");
+    assert.fieldEquals("MerchantOrderMetricsByMonth", merchantMonth(T2), "cancelledSellOrdersCount", "1");
+    assert.fieldEquals("User", USER.toHexString(), "totalVolume", "0");
+    // …but lands in its own bucket, not a fault one, and not the circle score
+    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T2), "csRefundDisputes", "1");
+    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T2), "merchantFaultDisputes", "0");
+    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T2), "bankFaultDisputes", "0");
+    assert.fieldEquals("MerchantDailyMetrics", merchantDay(T2), "userFaultDisputes", "0");
+    assert.fieldEquals("CircleScoreState", circleKey().toHexString(), "merchantFaultDisputesCount", "0");
+    assert.fieldEquals("Orders", Bytes.fromByteArray(Bytes.fromBigInt(BigInt.fromI32(f.id))).toHexString(), "disputeFaultType", "4");
   });
 
   test("an overturned completion also leaves the merchant's speed stats", () => {

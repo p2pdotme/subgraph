@@ -33,6 +33,7 @@ export function loadMerchantDailyMetrics(
     metrics.merchantFaultDisputes = BigInt.zero();
     metrics.bankFaultDisputes = BigInt.zero();
     metrics.userFaultDisputes = BigInt.zero();
+    metrics.csRefundDisputes = BigInt.zero();
     metrics.onlineSeconds = BigInt.zero();
     metrics.busySeconds = BigInt.zero();
   }
