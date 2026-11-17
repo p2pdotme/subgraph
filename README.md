@@ -593,11 +593,6 @@ erDiagram
         BigInt toFiatBalance
     }
 
-    FCMToken {
-        Bytes address
-        StringArray tokens
-    }
-
     MerchantRewards {
         BigInt lockedRewards
         BigInt earnedRewards
@@ -625,7 +620,6 @@ erDiagram
     CircleMerchant ||--o{ MerchantOrderMetricsByMonth : "monthly order stats"
     CircleMerchant ||--o{ MerchantDelegationRecord : "delegation history"
     CircleMerchant ||--o{ PaymentChannelMigration : "migration requests"
-    CircleMerchant ||--o{ FCMToken : "push tokens"
     CircleMerchant ||--o{ MerchantReferralRevenueClaimed : "referral revenue"
     CircleMerchant ||--o{ Orders : "accepted orders"
     CircleMerchant ||--o{ AssignedMerchants : "order assignments"
